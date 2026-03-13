@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
+import { z } from "zod";
 
 export interface SceneScript {
   scriptText: string;
@@ -69,18 +70,17 @@ export async function generateScript(topic: string): Promise<SceneScript[]> {
   );
 
   const text = result.response.text();
-  const parsed = JSON.parse(text) as { scenes: SceneScript[] };
 
-  if (!parsed.scenes || !Array.isArray(parsed.scenes)) {
-    throw new Error("Gemini response missing 'scenes' array");
-  }
+  // Validate LLM output at the trust boundary before anything hits the DB
+  const SceneSchema = z.object({
+    scriptText: z.string().min(1, "scriptText must not be empty"),
+    searchKeyword: z.string().min(1, "searchKeyword must not be empty"),
+  });
+  const ResponseSchema = z.object({
+    scenes: z.array(SceneSchema).min(1, "scenes array must not be empty"),
+  });
 
-  // Validate each scene
-  for (const scene of parsed.scenes) {
-    if (!scene.scriptText || !scene.searchKeyword) {
-      throw new Error("Scene missing required fields");
-    }
-  }
+  const parsed = ResponseSchema.parse(JSON.parse(text));
 
   return parsed.scenes;
 }

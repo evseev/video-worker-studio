@@ -14,11 +14,11 @@ function getWorkerClient() {
 }
 
 /** Helper: update project status via RPC (bypasses RLS) */
-async function updateStatus(db: ReturnType<typeof getWorkerClient>, projectId: string, status: string, videoUrl?: string) {
+async function updateStatus(db: ReturnType<typeof getWorkerClient>, projectId: string, status: string, videoUrl: string | null = null) {
   const { error } = await db.rpc("worker_update_project_status", {
     p_project_id: projectId,
     p_status: status,
-    ...(videoUrl ? { p_video_url: videoUrl } : {}),
+    p_video_url: videoUrl,
   });
   if (error) console.error(`[updateStatus] Failed to set ${status}:`, error);
 }

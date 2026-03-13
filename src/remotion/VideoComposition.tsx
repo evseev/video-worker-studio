@@ -20,25 +20,34 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       <TransitionSeries>
-        {scenes.map((scene, index) => (
-          <TransitionSeries.Sequence
-            key={index}
-            durationInFrames={sceneDurationFrames}
-          >
-            <Scene
-              scriptText={scene.scriptText}
-              assetUrl={scene.assetUrl}
-              index={index}
-              totalScenes={scenes.length}
-            />
-            {index < scenes.length - 1 && (
+        {scenes.flatMap((scene, index) => {
+          const elements = [
+            <TransitionSeries.Sequence
+              key={`scene-${index}`}
+              durationInFrames={sceneDurationFrames}
+            >
+              <Scene
+                scriptText={scene.scriptText}
+                assetUrl={scene.assetUrl}
+                index={index}
+                totalScenes={scenes.length}
+              />
+            </TransitionSeries.Sequence>,
+          ];
+
+          // Transition must be a direct sibling of Sequence, not nested inside
+          if (index < scenes.length - 1) {
+            elements.push(
               <TransitionSeries.Transition
+                key={`transition-${index}`}
                 presentation={fade()}
                 timing={linearTiming({ durationInFrames: transitionFrames })}
               />
-            )}
-          </TransitionSeries.Sequence>
-        ))}
+            );
+          }
+
+          return elements;
+        })}
       </TransitionSeries>
     </AbsoluteFill>
   );
