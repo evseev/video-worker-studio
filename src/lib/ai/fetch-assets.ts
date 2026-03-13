@@ -17,7 +17,8 @@ export async function fetchAssets(
   keywords: string[],
   projectId: string
 ): Promise<(string | null)[]> {
-  const baseDir = path.join(os.tmpdir(), "vws-assets", projectId);
+  const assetPath = process.env.TMP_ASSETS_PATH || "public/tmp_assets";
+  const baseDir = path.join(process.cwd(), assetPath, "vws-assets", projectId);
   await fs.promises.mkdir(baseDir, { recursive: true });
 
   const results: (string | null)[] = [];
