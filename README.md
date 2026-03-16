@@ -4,11 +4,21 @@ An AI-powered short-form video generation pipeline. Give it a topic, get back a 
 
 ## How It Works
 
-```
+There are **two** ways to generate videos:
+
+**1. One-Click Generation:**
+```text
 User enters topic → Gemini writes script → Pinterest assets fetched → Remotion renders MP4 → Supabase stores video
 ```
+Triggered via `/api/generate` and powered entirely by a 5-step Inngest background worker.
 
-The core pipeline is a 5-step Inngest function (`VideoGenerationWorker`):
+**2. Video Generation Wizard:**
+```text
+Draft Idea → Enhance Setup → Structure Scenes → Final Script → Fetch Assets → Render Video
+```
+A multi-step interactive pipeline directly in the app UI, giving granular user control before rendering in the background. Powered by `/api/wizard/*` endpoints.
+
+The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
 | Step | What happens | Tech |
 |---|---|---|
@@ -117,19 +127,22 @@ The app runs at [http://localhost:3000](http://localhost:3000) and the Inngest d
 
 ## Project Structure
 
-```
+```text
 src/
 ├── app/
 │   ├── api/
-│   │   ├── generate/       # POST endpoint to trigger video generation
-│   │   └── inngest/        # Inngest webhook endpoint
+│   │   ├── generate/       # POST endpoint to trigger one-click video generation
+│   │   ├── inngest/        # Inngest webhook endpoint
+│   │   └── wizard/         # Multi-step endpoints (draft, enhance-idea, script, etc.)
 │   ├── auth/               # Supabase auth callback handler
 │   ├── login/              # Login page
+│   ├── wizard/             # Interactive video generation UI workflows
 │   ├── page.tsx            # Dashboard (server component, auth-gated)
 │   └── layout.tsx          # Root layout
 ├── components/
 │   └── dashboard.tsx       # Main dashboard UI
 ├── lib/
+│   ├── ai/                 # Gemini integration, prompts, scripts, asset fetching
 │   ├── ai/
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
@@ -157,28 +170,35 @@ docs/
 
 ## Architecture
 
-```
-┌─────────────┐       ┌──────────────────┐       ┌─────────────────┐
-│   Browser   │──────▶│  Next.js App     │◀─────▶│   Supabase      │
-│  (React 19) │       │  (App Router)    │       │  DB / Auth /    │
-└─────────────┘       └────────┬─────────┘       │  Storage        │
-                               │ POST            └─────────────────┘
-                               │ /api/generate            ▲
-                               ▼                          │
-                      ┌────────────────┐                  │
-                      │  Inngest       │                  │
-                      │  (Event Bus)   │                  │
-                      └────────┬───────┘                  │
-                               ▼                          │
-                      ┌────────────────────┐              │
-                      │ VideoGeneration    │              │
-                      │ Worker            │──────────────┘
-                      │  1. Gemini Script │
-                      │  2. Pinterest DL  │
-                      │  3. Save Scenes   │
-                      │  4. Remotion SSR  │
-                      │  5. Upload MP4    │
-                      └────────────────────┘
+```text
+┌─────────────┐       ┌───────────────────┐       ┌─────────────────┐
+│   Browser   │──────▶│  Next.js App      │◀─────▶│   Supabase      │
+│  (React 19) │       │  (App Router)     │       │  DB / Auth /    │
+└─────────────┘       └────────┬────────┬─┘       │  Storage        │
+                               │ POST   │         └─────────────────┘
+                               │        │                 ▲
+              ┌────────────────┘        └────────────────┐│
+              │                                          ││
+              ▼                                          ▼│
+    ┌──────────────────┐                       ┌────────────────┐
+    │ /api/wizard/*    │    (Optional Flow)    │ /api/generate  │
+    │ Interactive Gen  │                       │ (One-Click)    │
+    └──────────────────┘                       └────────┬───────┘
+              │                                         │
+              └────────────────┐       ┌────────────────┘
+                               ▼       ▼
+                       ┌──────────────────────┐
+                       │  Inngest Event Bus   │
+                       └───────────┬──────────┘
+                                   ▼
+                       ┌──────────────────────┐
+                       │ VideoGeneration Worker|
+                       │  1. Gemini Script    │
+                       │  2. Pinterest DL     │
+                       │  3. Save Scenes      │
+                       │  4. Remotion SSR     │
+                       │  5. Upload MP4       │
+                       └──────────────────────┘
 ```
 
 ## Documentation
