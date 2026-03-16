@@ -37,17 +37,20 @@ export const generateVideo = inngest.createFunction(
   { id: "generate-video", retries: 2 },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic } = event.data as {
+    const { projectId, topic, scenes: passedScenes, template } = event.data as {
       projectId: string;
-      topic: string;
+      topic?: string;
+      scenes?: any[];
+      template?: string;
     };
 
     const db = getWorkerClient();
 
-    // Step 1: Generate script via Gemini
-    const scenes = await step.run("generate-script", async () => {
+    // Step 1: Generate script via Gemini (or use passed scenes)
+    const scenes = passedScenes || await step.run("generate-script", async () => {
       console.log(`[generate-script] Project: ${projectId}, Topic: ${topic}`);
       try {
+        if (!topic) throw new Error("Topic is required if scenes are not provided");
         const result = await generateScript(topic);
         console.log(`[generate-script] Generated ${result.length} scenes`);
         return result;
@@ -61,14 +64,20 @@ export const generateVideo = inngest.createFunction(
     const scenesWithAssets = await step.run("fetch-assets", async () => {
       console.log(`[fetch-assets] Fetching assets for ${scenes.length} scenes`);
       try {
-        const results = await fetchAssets(
-          scenes.map((s) => s.searchKeyword),
+        // Only fetch if assetUrl is not already present
+        const keywordsToFetch = scenes.map((s) => s.assetUrl ? null : s.searchKeyword);
+        const fetchResults = await fetchAssets(
+          keywordsToFetch as string[],
           projectId
         );
-        return scenes.map((scene, i) => ({
-          ...scene,
-          assetUrl: results[i] || null,
-        }));
+        
+        return scenes.map((scene, i) => {
+          if (scene.assetUrl) return scene;
+          return {
+            ...scene,
+            assetUrl: fetchResults[i] || null,
+          };
+        });
       } catch (err) {
         await updateStatus(db, projectId, "failed_ai");
         throw err;
@@ -107,7 +116,7 @@ export const generateVideo = inngest.createFunction(
           scriptText: s.scriptText,
           assetUrl: s.assetUrl,
         }));
-        return await renderVideo({ projectId, scenes: renderScenes });
+        return await renderVideo({ projectId, scenes: renderScenes, template });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         throw err;
