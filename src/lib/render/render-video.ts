@@ -9,6 +9,7 @@ type RenderInput = {
     scriptText: string;
     assetUrl: string | null;
   }>;
+  template?: string;
 };
 
 const SCENE_DURATION_SECONDS = 5;
@@ -43,6 +44,7 @@ export async function renderVideo(input: RenderInput): Promise<string> {
     scenes,
     sceneDurationFrames,
     transitionFrames: TRANSITION_FRAMES,
+    template: input.template,
   };
 
   // Select the composition

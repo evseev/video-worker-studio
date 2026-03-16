@@ -11,6 +11,7 @@ type SceneProps = {
   assetUrl: string | null;
   index: number;
   totalScenes: number;
+  template?: string;
 };
 
 /**
@@ -24,6 +25,7 @@ export const Scene: React.FC<SceneProps> = ({
   assetUrl,
   index,
   totalScenes,
+  template = "Slideshow",
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
@@ -91,20 +93,22 @@ export const Scene: React.FC<SceneProps> = ({
         )}
       </AbsoluteFill>
 
-      {/* Dark gradient overlay for text readability */}
-      <AbsoluteFill
-        style={{
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 40%, transparent 60%)",
-        }}
-      />
+      {/* Dark gradient overlay for text readability (Skip for Fact Card to try different style) */}
+      {template !== "Fact Card" && (
+        <AbsoluteFill
+          style={{
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 40%, transparent 60%)",
+          }}
+        />
+      )}
 
       {/* Caption */}
       <AbsoluteFill
         style={{
-          justifyContent: "flex-end",
+          justifyContent: template === "Compilation" ? "center" : "flex-end",
           alignItems: "center",
-          padding: "0 60px 200px 60px",
+          padding: template === "Compilation" ? "0 60px" : template === "Fact Card" ? "0 40px 100px 40px" : "0 60px 200px 60px",
         }}
       >
         <div
@@ -112,19 +116,31 @@ export const Scene: React.FC<SceneProps> = ({
             opacity: captionOpacity,
             transform: `translateY(${captionY}px)`,
             textAlign: "center",
+            ...(template === "Fact Card"
+              ? {
+                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                  padding: "40px 30px",
+                  borderRadius: 24,
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+                  border: "2px solid rgba(0,0,0,0.1)",
+                }
+              : {}),
           }}
         >
           <p
             style={{
-              fontSize: 56,
+              fontSize: template === "Fact Card" ? 48 : 56,
               fontWeight: 800,
-              color: "white",
+              color: template === "Fact Card" ? "#111" : "white",
               lineHeight: 1.3,
-              textShadow: "0 4px 20px rgba(0,0,0,0.6)",
+              textShadow: template === "Fact Card" ? "none" : "0 4px 20px rgba(0,0,0,0.6)",
               fontFamily:
-                "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-              letterSpacing: "-0.02em",
+                template === "Evolution" || template === "Comparison"
+                  ? "system-ui, -apple-system, sans-serif"
+                  : "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+              letterSpacing: template === "Fact Card" ? "0" : "-0.02em",
               margin: 0,
+              textTransform: template === "Compilation" ? "uppercase" : "none",
             }}
           >
             {scriptText}
