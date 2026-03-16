@@ -1,12 +1,11 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
-const PINTEREST_DL_BIN =
-  process.env.PINTEREST_DL_BIN || "/Users/evs/www/pinscrape/.venv/bin/pinterest-dl";
+const PINTEREST_DL_BIN = process.env.PINTEREST_DL_BIN;
 
 /**
  * Fetches one Pinterest image per search keyword using pinterest-dl CLI.
@@ -16,6 +15,10 @@ export async function fetchAssets(
   keywords: string[],
   projectId: string
 ): Promise<(string | null)[]> {
+  if (!PINTEREST_DL_BIN) {
+    console.warn("[fetch-assets] PINTEREST_DL_BIN is not set, asset fetching will fail.");
+  }
+
   const assetPath = process.env.TMP_ASSETS_PATH || "public/tmp_assets";
   const baseDir = path.join(process.cwd(), assetPath, "vws-assets", projectId);
   await fs.promises.mkdir(baseDir, { recursive: true });
@@ -28,11 +31,19 @@ export async function fetchAssets(
     await fs.promises.mkdir(sceneDir, { recursive: true });
 
     try {
-      // Search Pinterest for 1 image matching the keyword
-      const cmd = `"${PINTEREST_DL_BIN}" search "${keyword.replace(/"/g, '\\"')}" -n 1 -o "${sceneDir}" --client api --timeout 15 2>&1`;
-      console.log(`[fetch-assets] Scene ${i}: ${cmd}`);
+      if (!PINTEREST_DL_BIN) {
+        throw new Error("PINTEREST_DL_BIN is not configured");
+      }
 
-      const { stdout, stderr } = await execAsync(cmd, { timeout: 30000 });
+      console.log(`[fetch-assets] Scene ${i}: searching for "${keyword}"`);
+
+      // Use execFile to prevent command injection from LLM-generated keywords
+      const { stdout, stderr } = await execFileAsync(
+        PINTEREST_DL_BIN,
+        ["search", keyword, "-n", "1", "-o", sceneDir, "--client", "api", "--timeout", "15"],
+        { timeout: 30000 }
+      );
+      
       console.log(`[fetch-assets] Scene ${i} stdout: ${stdout.slice(0, 200)}`);
       if (stderr) console.log(`[fetch-assets] Scene ${i} stderr: ${stderr.slice(0, 200)}`);
 
