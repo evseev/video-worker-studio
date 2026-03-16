@@ -1,0 +1,39 @@
+{
+  "name": "video-worker-studio",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "remotion:preview": "npx remotion studio src/remotion/index.ts",
+    "remotion:render": "npx remotion render src/remotion/index.ts VideoWorker out/video.mp4"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@remotion/bundler": "^4.0.435",
+    "@remotion/cli": "^4.0.435",
+    "@remotion/renderer": "^4.0.435",
+    "@remotion/transitions": "^4.0.435",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.99.1",
+    "inngest": "^3.52.6",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "^4.0.435",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
