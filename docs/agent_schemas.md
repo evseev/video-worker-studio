@@ -4,7 +4,7 @@ The AI generation pipeline consists of a single Gemini prompting pipeline that a
 
 ## The Orchestrator Prompt
 
-**Model:** `gemini-pro` (via `google-genai` SDK)
+**Model:** `gemini-2.5-flash` (via `google-genai` SDK)
 
 **System Prompt Example:**
 ```text
@@ -51,11 +51,9 @@ export default inngest.createFunction(
     
     // 1. Call Gemini
     const script = await step.run("generate-script", async () => {
-      const response = await ai.generateContent({
-        model: 'gemini-pro',
+        model: 'gemini-2.5-flash',
         contents: event.data.topic,
         responseSchema: VideoScriptSchema
-      });
       return response.text();
     });
 
