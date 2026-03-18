@@ -80,7 +80,7 @@ export function Dashboard({
   user: User;
   projects: Project[];
 }) {
-  const [projects, setProjects] = useState(initialProjects);
+  const projects = initialProjects;
   const [topic, setTopic] = useState("");
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -101,7 +101,7 @@ export function Dashboard({
       .single();
 
     if (error) {
-      console.error("Failed to create project:", error);
+      console.error("Failed to create project:", error, JSON.stringify(error));
       setCreating(false);
       return;
     }

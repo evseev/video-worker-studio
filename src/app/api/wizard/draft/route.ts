@@ -21,11 +21,11 @@ export async function PUT(request: Request) {
       );
     }
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     if (topic !== undefined) updates.topic = topic;
     if (wizard_step !== undefined) updates.wizard_step = wizard_step;
     if (draft_scenes !== undefined) updates.draft_scenes = draft_scenes;
-    if (template !== undefined) updates.template = template;
+    if (template !== undefined) updates.selected_template = template;
 
     if (Object.keys(updates).length > 0) {
       const { error } = await supabase

@@ -40,6 +40,7 @@ export const generateVideo = inngest.createFunction(
     const { projectId, topic, scenes: passedScenes, template } = event.data as {
       projectId: string;
       topic?: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       scenes?: any[];
       template?: string;
     };

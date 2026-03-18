@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       await supabase
         .from("projects")
         .update({ 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           trend_validation_data: trendData as any,
           wizard_step: "validation"
         })

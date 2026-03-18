@@ -17,14 +17,42 @@ export function WizardClient({ project }: { project: Project }) {
   // Step 1 State
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
   const [ideas, setIdeas] = useState<{title: string, description: string, trendScore: number}[]>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     project.trend_validation_data ? (typeof project.trend_validation_data === "string" ? JSON.parse(project.trend_validation_data) : project.trend_validation_data) as any : []
   );
 
   // Step 2 State
   const [generatingScript, setGeneratingScript] = useState(false);
-  const [scenes, setScenes] = useState<{scriptText: string, searchKeyword: string}[]>(
+  const [scenes, setScenes] = useState<{scriptText: string, searchKeyword: string, assetUrl?: string}[]>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     project.draft_scenes ? (typeof project.draft_scenes === "string" ? JSON.parse(project.draft_scenes) : project.draft_scenes) as any : []
   );
+  const [fetchingAssets, setFetchingAssets] = useState(false);
+
+  async function fetchAssetsData() {
+    setFetchingAssets(true);
+    try {
+      const res = await fetch("/api/wizard/fetch-assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, scenes }),
+      });
+      const data = await res.json();
+      if (data.assets) {
+        // map assets back to scenes
+        const newScenes = scenes.map((scene, idx) => ({
+          ...scene,
+          assetUrl: data.assets[idx]?.file_path || scene.assetUrl,
+        }));
+        setScenes(newScenes);
+        await saveProgress({ draft_scenes: newScenes });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFetchingAssets(false);
+    }
+  }
 
   // Step 3 State
   const [selectedTemplate, setSelectedTemplate] = useState<string>("minimalist");
@@ -91,14 +119,14 @@ export function WizardClient({ project }: { project: Project }) {
       setGeneratingScript(false);
     }
   }
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function startGeneration() {
     setSaving(true);
     try {
       await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, topic, scenes }),
+        body: JSON.stringify({ projectId: project.id, topic, scenes, template: selectedTemplate }),
       });
       // Redirect or go to a progress screen, etc.
       window.location.href = `/project/${project.id}`;
@@ -145,7 +173,7 @@ export function WizardClient({ project }: { project: Project }) {
           {currentStep === "idea" && (
             <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl font-semibold text-white mb-2">Refine your idea</h2>
-              <p className="text-zinc-400 mb-8">Let's find the best angle for your topic.</p>
+              <p className="text-zinc-400 mb-8">Let&apos;s find the best angle for your topic.</p>
 
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8">
                 <label className="block text-sm font-medium text-zinc-300 mb-2">Your Original Topic</label>
@@ -223,9 +251,32 @@ export function WizardClient({ project }: { project: Project }) {
 
               {scenes.length > 0 && (
                 <div className="space-y-4 mb-8">
-                  <h3 className="text-sm font-medium text-zinc-400">Generated Scenes</h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-medium text-zinc-400">Generated Scenes</h3>
+                    <button
+                      onClick={fetchAssetsData}
+                      disabled={fetchingAssets}
+                      className="text-xs px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded transition-colors disabled:opacity-50"
+                    >
+                      {fetchingAssets ? "Fetching Images..." : "Fetch Images for Scenes"}
+                    </button>
+                  </div>
                   {scenes.map((scene, idx) => (
-                    <div key={idx} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                    <div key={idx} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 flex gap-4">
+                      {/* Image Preview */}
+                      <div className="w-24 h-32 shrink-0 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center">
+                        {scene.assetUrl ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={scene.assetUrl} alt={scene.searchKeyword} className="w-full h-full object-cover" />
+                          </>
+                        ) : (
+                          <span className="text-xs text-zinc-600">No image</span>
+                        )}
+                      </div>
+                      
+                      {/* Text & Keyword */}
+                      <div className="flex-1 min-w-0 flex flex-col">
                       <div className="mb-2 flex justify-between items-center">
                         <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Scene {idx + 1}</span>
                         <input
@@ -247,9 +298,10 @@ export function WizardClient({ project }: { project: Project }) {
                           newScenes[idx].scriptText = e.target.value;
                           setScenes(newScenes);
                         }}
-                        className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 min-h-[80px] resize-y"
+                        className="w-full flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 min-h-[80px] resize-y"
                         placeholder="Script text"
                       />
+                      </div>
                     </div>
                   ))}
                 </div>

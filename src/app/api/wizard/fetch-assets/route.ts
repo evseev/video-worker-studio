@@ -36,20 +36,17 @@ export async function POST(request: Request) {
             // The frontend expects /tmp_assets/... 
             const publicPath = filePath.split('/public')[1] || filePath;
             
-            const { data: asset, error } = await supabase
-              .from("assets")
-              .insert({
-                project_id: projectId,
-                file_path: publicPath,
-                type: "image",
-                metadata: { sceneIndex: i, keyword: keywords[i] }
-              })
-              .select("*")
-              .single();
-              
-            if (!error && asset) {
-              assetRecords.push(asset);
-            }
+            assetRecords.push({
+              file_path: publicPath,
+              type: "image",
+              metadata: { sceneIndex: i, keyword: keywords[i] }
+            });
+        } else {
+            assetRecords.push({
+              file_path: null,
+              type: "none",
+              metadata: { sceneIndex: i, keyword: keywords[i] }
+            });
         }
     }
 

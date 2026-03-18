@@ -29,6 +29,7 @@ export async function POST(request: Request) {
         .from("projects")
         .update({ 
           selected_template: template,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           draft_scenes: scenes as any,
           wizard_step: "structure"
         })
