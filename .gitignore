@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Temporary Assets
 /public/tmp_assets
+
+# Sentry Config File
+.env.sentry-build-plugin

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [
@@ -15,4 +16,21 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default nextConfig;
+const org = process.env.SENTRY_ORG;
+const project = process.env.SENTRY_PROJECT;
+const authToken = process.env.SENTRY_AUTH_TOKEN;
+
+const shouldEnableSentryBuild = Boolean(org && project);
+
+export default shouldEnableSentryBuild
+  ? withSentryConfig(nextConfig, {
+      org: org as string,
+      project: project as string,
+      authToken,
+
+      widenClientFileUpload: true,
+      tunnelRoute: "/monitoring",
+
+      silent: !process.env.CI,
+    })
+  : nextConfig;
