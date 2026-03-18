@@ -1,6 +1,30 @@
+---
+description: Main Agents instructions
+alwaysApply: true
+---
+
 # AGENTS.md — Video Worker Studio Operating Manual
 
 > Read this before touching any code. It defines what's allowed, what's owned by whom, and what will break if you ignore it.
+
+---
+
+## 0. Mandatory Agent Preflight (Read Before Any Action)
+
+This preflight is mandatory for every run and every delegated run.
+
+Required sequence:
+1. Read this entire `AGENTS.md` file first.
+2. Confirm applicable constraints before doing anything else (tool call, edit, shell command, commit, PR action, or browser action).
+3. When delegating work, require each subagent to perform the same preflight before taking action.
+
+Scope of enforcement:
+- Primary agent
+- Subagents
+- Skill-driven workflows
+
+Non-compliance rule:
+- If any action is started before `AGENTS.md` is read, stop immediately, discard that execution path, and restart from preflight.
 
 ---
 
