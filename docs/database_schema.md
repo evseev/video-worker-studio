@@ -29,7 +29,7 @@ Represents the individual blocks of a video timeline.
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `uuid` | PK, Default `uuid_generate_v4()` | Unique identifier |
-| `project_id` | `uuid` | FK to `projects(id)` | Parent project |
+| `project_id` | `uuid` | FK to `projects(id)` **ON DELETE CASCADE** | Parent project |
 | `sequence_order` | `int` | Not Null | 0-indexed position in the timeline |
 | `script_text` | `text` | Not Null | The caption/voiceover text for this scene |
 | `search_keywords` | `text` | Not Null | The query used to fetch the background asset |

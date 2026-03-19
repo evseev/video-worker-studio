@@ -82,12 +82,13 @@ Required environment variables:
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
 | `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |
-| `TMP_ASSETS_PATH` | Directory for downloaded assets (default: `public/tmp_assets`) |
+| `TMP_ASSETS_PATH` | Directory for downloaded assets, **relative to the app root** (default: `public/tmp_assets`). Avoid absolute paths or `..` segments so cleanup stays scoped. |
 | `LOCAL_RENDER_ASSET_BASE_URL` | Base URL for local renders (e.g. `http://localhost:3000`) |
 | `RENDER_BACKEND` | `lambda` (default) or `local` |
 | `REMOTION_AWS_REGION` | AWS region for Remotion Lambda |
 | `REMOTION_LAMBDA_FUNCTION_NAME` | Remotion Lambda function name |
 | `REMOTION_SERVE_URL` | Remotion site URL used for Lambda renders |
+| `REMOTION_OUTPUT_BUCKET` | Optional. When set, Lambda output deletion requires the URL’s bucket to match this value (and key `videos/{projectId}.mp4`). When unset, deletion still runs for recognized S3 URL shapes with that key—set this in production to constrain which bucket can be targeted. |
 | `AWS_ACCESS_KEY_ID` | AWS credentials for Lambda render calls |
 | `AWS_SECRET_ACCESS_KEY` | AWS credentials for Lambda render calls |
 
