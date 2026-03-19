@@ -103,7 +103,7 @@ supabase/
 - **Inngest is the only job runner.** Do not add `setTimeout`, `setInterval`, or other async fire-and-forget patterns in route handlers. All background work goes through Inngest events.
 - **RLS is active.** Row-Level Security is enforced on all tables. The Inngest worker bypasses RLS via two SECURITY DEFINER RPC functions: `worker_insert_scenes` and `worker_update_project_status`. Do not bypass RLS any other way.
 - **The Inngest webhook endpoint (`/api/inngest`) must remain unauthenticated.** The middleware matcher explicitly excludes it. Do not add auth to this route.
-- **Remotion runs locally** (not AWS Lambda). The render happens inside the Next.js process via `@remotion/bundler` and `@remotion/renderer`. Do not introduce `@remotion/lambda` without a discussion.
+- **Remotion renders on AWS Lambda by default.** The worker dispatches renders via `@remotion/lambda`, while `RENDER_BACKEND=local` remains a fallback for emergency rollback and debugging.
 - **Sentry is the observability layer.** Do not add other error tracking tools. Sentry is initialised in `src/instrumentation.ts` and `src/instrumentation-client.ts`.
 
 ---
@@ -207,7 +207,7 @@ draft → processing → rendering → completed
 
 - **Never log or return secrets.** Supabase keys, Gemini API key, Sentry DSN — none of these should appear in client-side code or logs.
 - **`NEXT_PUBLIC_` env vars are exposed to the browser.** Only put values in `NEXT_PUBLIC_` that are safe to be public (Supabase URL and anon key are intentionally public; service role key must never be `NEXT_PUBLIC_`).
-- **Remotion renders are CPU-intensive.** Do not trigger simultaneous renders per user. The Inngest worker currently renders synchronously; concurrency is managed by Inngest's retry/throttle settings.
+- **Remotion renders are async and cost-sensitive.** Keep per-user render concurrency constrained in Inngest and apply a global cap to avoid runaway Lambda spend.
 - **Pinterest scraping is rate-limited by `pinscrape-dl`.** Do not increase the number of scenes beyond 10 without testing scrape reliability.
 - **Video files are large.** Remotion output goes to `/tmp` then immediately uploaded to Supabase Storage and deleted. Do not persist render artifacts on disk.
 

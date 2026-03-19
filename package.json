@@ -28,6 +28,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@remotion/lambda": "^4.0.436",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
