@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3.0] - 2026-03-19
+
+### Added
+- You can **delete a project** from the dashboard; the app removes the database row, cascades scenes, and cleans up rendered files in Storage (and local temp assets when possible).
+- The **dashboard auto-refreshes** every few seconds while any project is still drafting, generating, or rendering—no more stale status badges.
+- The **wizard** now walks Idea → Script → Render: AI hook ideas, script + Pinterest images per scene, then pick a template (`minimalist`, `bold`, `neon`, `corporate`) and start the render from the UI.
+- **Local Remotion renders** now upload the finished MP4 to Supabase Storage so completed projects get a real `video_url`, same idea as Lambda output.
+
+### For contributors
+- Six **AWS-focused agent skills** live under `.agents/skills/` (`aws-s3`, `aws-billing`, `aws-ec2`, `aws-cloudwatch`, `aws-lambda`, `aws-iam`) for AI-assisted cloud operations—see `AGENTS.md`.
+
+### Changed
+- Clearer **readability** on descriptive copy in the dashboard and wizard (16px-class body text).
+- **Stricter Storage policies** for worker uploads; **render pipeline** handles local asset URLs and Lambda polling more reliably.
+
+### Fixed
+- Worker could not update project error context in some setups—**grants** corrected.
+- Removed unused wizard **dead code** (`startGeneration`).
+
 ## [0.2.2.0] - 2026-03-19
 
 ### Added

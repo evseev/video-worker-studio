@@ -12,39 +12,32 @@ This document details the layout, state requirements, and primary user interacti
 *   **Interactions:** User logs in and is redirected to the Dashboard.
 
 ## 2. Dashboard (`/`)
-**Purpose:** View past projects, check statuses, and start new ones.
-*   **Layout:** Sidebar navigation. Main content area contains a grid of project cards and a "One-Click Quick Start" bar.
+**Purpose:** View past projects, check statuses, start new ones, and delete projects.
+*   **Layout:** Top nav (branding, email, sign out). Main area: heading, project count, **New Video** button, and a responsive grid of project cards.
 *   **Components:** 
-    *   **Quick Start Form:** A text input and template dropdown allowing users to generate a video in one click without entering the wizard.
-    *   **"Advanced Wizard" CTA:** A button that creates a `draft` project and drops the user into the interactive wizard.
-    *   **Project Grid:** Shows cards with thumbnail, title, status (`draft`, `processing`, `rendering`, `completed`), and created date.
+    *   **New Video:** Opens a modal with a topic textarea; submitting creates a `draft` project and navigates to `/wizard/[id]?step=idea`.
+    *   **Project Grid:** Cards show topic, status badge (`draft`, `processing`, `rendering`, `completed`, `failed_ai`, `failed_render`), created date, and a delete (trash) control.
+    *   **Auto-refresh:** While any visible project is `draft`, `processing`, or `rendering`, the dashboard refreshes on an interval so status updates without a manual reload.
 *   **Interactions:** 
-    *   Submit Quick Start -> Project is created, Inngest job dispatched, card appears in "processing" state.
-    *   Click "Advanced Wizard" -> API creates a blank `draft` Project -> Navigates to `/wizard/[id]`.
+    *   Click a **draft** card → `/wizard/[id]` at the saved `wizard_step`.
+    *   Click a **completed** card with `video_url` → opens the MP4 URL.
+    *   Delete → confirm modal → `DELETE /api/projects/[id]`; optional warnings if storage/temp cleanup partially fails.
 
 ## 3. Interactive Wizard (`/wizard/[id]`)
-**Purpose:** A guided, step-by-step experience to construct a video project.
-*   **Layout:** Centered card with a stepped progress bar at the top (`Template -> Script -> Settings -> Generate`).
+**Purpose:** A guided flow to refine a topic, generate a script with assets, pick a template, and start rendering.
+*   **Layout:** Full-width layout with sticky header (back to home, topic title, step labels: **Idea**, **Script**, **Render**). URL query `?step=` tracks the active step.
 
-### Step 1: Template Selection
-*   **Components:** Grid of available Remotion templates (e.g., "Slideshow", "Split Screen", "Quote").
-*   **Interactions:** User selects a template. State updates locally.
+### Step: Idea
+*   **Components:** Topic input; optional **Generate Hooks** (AI-suggested angles) from `/api/wizard/ideas`.
+*   **Interactions:** Continue saves `topic` / `wizard_step` via `/api/wizard/draft` and moves to Script.
 
-### Step 2: Scripting & Topic
-*   **Components:** Large text area for the user to describe the video topic.
-*   **Interactions:** User types their prompt. This is what the Gemini 2.5 Flash model will use to build the scenes.
+### Step: Script
+*   **Components:** **Generate Script with AI** (`/api/wizard/script`); list of scenes with editable keywords and script text; **Fetch Images for Scenes** (`/api/wizard/fetch-assets`).
+*   **Interactions:** Continue advances to Render when at least one scene exists; draft scenes persist through `/api/wizard/draft`.
 
-### Step 3: Settings & Review
-*   **Components:** Summary of choices. Future expansion point for specific LLM instructions, duration sliders, and asset style selectors.
-*   **Interactions:** User confirms settings.
-
-### Step 4: Generating
-*   **Components:** A loading state with playful text ("Summoning AI...", "Painting pixels...").
-*   **Interactions:** 
-    *   Click "Generate" -> Makes `PUT /api/projects/[id]` to save `topic` and `selected_template`.
-    *   Makes `POST /api/generate` to dispatch the Inngest worker.
-    *   The wizard begins polling (or subscribing via Supabase realtime) for the project status to change to `completed`.
-    *   When `completed`, it displays the final video or provides a link to download.
+### Step: Render
+*   **Components:** Grid of style presets (e.g. minimalist, bold, neon, corporate). **Generate Video** calls `/api/wizard/render` with `projectId`, `scenes`, and `template`.
+*   **Interactions:** On success, user is returned to the dashboard (`/`); status progresses via the worker/render pipeline. Errors surface with a simple alert and the button re-enables.
 
 ## 4. Final Result & Render Screen (Within Wizard or Dashboard Card)
 *   **Components:**

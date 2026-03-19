@@ -119,23 +119,7 @@ export function WizardClient({ project }: { project: Project }) {
       setGeneratingScript(false);
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async function startGeneration() {
-    setSaving(true);
-    try {
-      await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, topic, scenes, template: selectedTemplate }),
-      });
-      // Redirect or go to a progress screen, etc.
-      window.location.href = `/project/${project.id}`;
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSaving(false);
-    }
-  }
+
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
@@ -173,10 +157,10 @@ export function WizardClient({ project }: { project: Project }) {
           {currentStep === "idea" && (
             <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl font-semibold text-white mb-2">Refine your idea</h2>
-              <p className="text-zinc-400 mb-8">Let&apos;s find the best angle for your topic.</p>
+              <p className="text-zinc-400 mb-8 text-base">Let&apos;s find the best angle for your topic.</p>
 
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8">
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Your Original Topic</label>
+                <label className="block text-base font-medium text-zinc-300 mb-2">Your Original Topic</label>
                 <div className="flex gap-3">
                   <input 
                     type="text" 
@@ -213,7 +197,7 @@ export function WizardClient({ project }: { project: Project }) {
                           {idea.trendScore}/100
                         </div>
                       </div>
-                      <p className="text-sm text-zinc-400 leading-relaxed">{idea.description}</p>
+                      <p className="text-base text-zinc-400 leading-relaxed">{idea.description}</p>
                     </div>
                   ))}
                 </div>
@@ -237,7 +221,7 @@ export function WizardClient({ project }: { project: Project }) {
           {currentStep === "script" && (
             <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl font-semibold text-white mb-2">Generate Script</h2>
-              <p className="text-zinc-400 mb-8">Let AI write a script and pick templates for your video.</p>
+              <p className="text-zinc-400 mb-8 text-base">Let AI write a script and pick templates for your video.</p>
 
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8">
                 <button
@@ -252,7 +236,7 @@ export function WizardClient({ project }: { project: Project }) {
               {scenes.length > 0 && (
                 <div className="space-y-4 mb-8">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-medium text-zinc-400">Generated Scenes</h3>
+                    <h3 className="text-base font-medium text-zinc-400">Generated Scenes</h3>
                     <button
                       onClick={fetchAssetsData}
                       disabled={fetchingAssets}
@@ -298,7 +282,7 @@ export function WizardClient({ project }: { project: Project }) {
                           newScenes[idx].scriptText = e.target.value;
                           setScenes(newScenes);
                         }}
-                        className="w-full flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 min-h-[80px] resize-y"
+                        className="w-full flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-base focus:outline-none focus:border-violet-500/50 min-h-[80px] resize-y"
                         placeholder="Script text"
                       />
                       </div>
@@ -325,7 +309,7 @@ export function WizardClient({ project }: { project: Project }) {
           {currentStep === "render" && (
             <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl font-semibold text-white mb-2">Final Polish</h2>
-              <p className="text-zinc-400 mb-8">Choose a visual template and start rendering your final video.</p>
+              <p className="text-zinc-400 mb-8 text-base">Choose a visual template and start rendering your final video.</p>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
                 {["minimalist", "bold", "neon", "corporate"].map((templateOption) => (

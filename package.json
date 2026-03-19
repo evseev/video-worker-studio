@@ -11,6 +11,7 @@
     "remotion:render": "npx remotion render src/remotion/index.ts VideoWorker out/video.mp4"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.986.0",
     "@google/generative-ai": "^0.24.1",
     "@remotion/bundler": "4.0.436",
     "@remotion/cli": "4.0.436",
