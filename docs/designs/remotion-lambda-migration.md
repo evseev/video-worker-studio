@@ -29,7 +29,7 @@ Replace local Remotion rendering with `@remotion/lambda`. Lambda handles bundlin
 | # | Change | Rationale |
 |---|--------|-----------|
 | Core | Replace `@remotion/bundler` + `@remotion/renderer` with `@remotion/lambda` | Primary goal |
-| 2 | Lambda writes output directly to S3; store S3 URL in `projects.video_url` | Removes entire upload-video step |
+| 2 | Lambda writes output directly to S3; store S3 URL in `projects.video_url` | Removes dedicated upload step in the Lambda path |
 | 3 | Inngest user-keyed `concurrency` with `limit: 3` (`key: event.data.userId`) | Prevents same-user render pileups and caps cost |
 | 4 | `render_error_context` JSONB column on `projects` + `worker_update_project_error` RPC | Silent `failed_render` with no debug info is unacceptable |
 
@@ -75,7 +75,7 @@ Inngest Worker
        └─ worker_update_project_status(projectId, "completed", s3Url)
 ```
 
-**Eliminated:** `upload-storage.ts` and the `upload-video` Inngest step.
+**Eliminated in Lambda path:** the separate `upload-video` Inngest step.
 
 ---
 
@@ -154,6 +154,8 @@ All server-only — **no `NEXT_PUBLIC_` prefix.**
 
 ```bash
 RENDER_BACKEND=lambda                         # "lambda" | "local" — feature flag
+SUPABASE_SERVICE_ROLE_KEY=...                # required when RENDER_BACKEND=local (Storage upload of MP4)
+LOCAL_RENDER_ASSET_BASE_URL=http://localhost:3000 # base URL for /tmp_assets when running local renders
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 REMOTION_AWS_REGION=us-east-1
@@ -169,12 +171,11 @@ Credential compatibility note: if `AWS_*` vars are missing, runtime aliases `REM
 
 | File | Change |
 |---|---|
-| `src/lib/render/render-video.ts` | Full replacement: local → Lambda dispatch + local escape hatch |
-| `src/lib/render/upload-storage.ts` | **Deleted** |
+| `src/lib/render/render-video.ts` | Lambda dispatch by default with local render/upload fallback behind `RENDER_BACKEND=local` |
 | `src/lib/inngest/functions.ts` | Remove `upload-video` step; add user-keyed `concurrency`; add Zod-validated error context capture |
 | `src/lib/supabase/types.ts` | Regenerate after migration (`supabase gen types typescript`) — no manual edits |
 | `supabase/migrations/20260318194000_add_render_error_context.sql` | New migration |
-| `package.json` | Add `@remotion/lambda`; remove `@remotion/bundler` + `@remotion/renderer` |
+| `package.json` | Add `@remotion/lambda`; keep `@remotion/bundler` + `@remotion/renderer` for local fallback |
 | `AGENTS.md` | Update Section 3 (remove "Remotion runs locally") and Section 10 |
 
 ---
@@ -195,6 +196,7 @@ Credential compatibility note: if `AWS_*` vars are missing, runtime aliases `REM
 ## Security
 
 - All 6 new env vars are server-only (no `NEXT_PUBLIC_` prefix)
+- Local rendering uses `SUPABASE_SERVICE_ROLE_KEY` for Supabase Storage uploads (MP4) and expects storage policies restricted to `renders/videos/*`
 - IAM role should be scoped: `s3:PutObject` on `s3://vws-renders/*` only — not `s3:*`
 - Lambda receives `inputProps` from Inngest (server-controlled) — no user-supplied data enters Lambda directly
 - S3 bucket public-read is acceptable: `projectId` is a UUID (not guessable); no PII in video
@@ -285,7 +287,7 @@ These Lambda values are expected ranges until validated by production telemetry.
 | Scenario | Setup | Expected Result |
 |---|---|---|
 | Lambda happy path | `RENDER_BACKEND=lambda` + valid Lambda env vars | Project reaches `completed`; `projects.video_url` stores S3 URL |
-| Local escape hatch | `RENDER_BACKEND=local` | Project reaches `completed`; local render uploads to storage URL |
+| Local escape hatch | `RENDER_BACKEND=local` + `SUPABASE_SERVICE_ROLE_KEY` + `LOCAL_RENDER_ASSET_BASE_URL` | Project reaches `completed`; local render uploads to storage URL |
 | Missing function name | Unset `REMOTION_LAMBDA_FUNCTION_NAME` | Project reaches `failed_render`; `render_error_context.message` shows env error |
 | Invalid serve URL | Bad `REMOTION_SERVE_URL` | Project reaches `failed_render`; error context persisted |
 | IAM access denied | Remove required IAM permission | Project reaches `failed_render`; error context persisted |
