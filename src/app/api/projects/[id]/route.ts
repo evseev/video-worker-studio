@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
+import { deleteProjectAssets } from "@/lib/projects/delete-project-assets";
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -21,20 +23,49 @@ export async function DELETE(
       return NextResponse.json({ error: "Project ID missing" }, { status: 400 });
     }
 
-    // Supabase will handle cascade deletes for associated assets/generations
-    // based on our schema setup
-    const { error } = await supabase
+    const { data: project, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, video_url")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const { data: deletedRows, error: deleteError } = await supabase
       .from("projects")
       .delete()
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .select("id");
 
-    if (error) {
-      throw error;
+    if (deleteError) {
+      throw deleteError;
     }
 
-    return NextResponse.json({ success: true });
+    if (!deletedRows?.length) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const { warnings } = await deleteProjectAssets(project.id, project.video_url);
+    if (warnings.length > 0) {
+      Sentry.captureMessage("Project delete cleanup warnings", {
+        level: "warning",
+        extra: { projectId: project.id, warnings },
+      });
+    }
+
+    return NextResponse.json(
+      warnings.length > 0 ? { success: true, warnings } : { success: true }
+    );
   } catch (error) {
+    Sentry.captureException(error);
     console.error("Failed to delete project:", error);
     return NextResponse.json(
       { error: "Failed to delete project" },
