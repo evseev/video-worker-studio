@@ -154,6 +154,8 @@ All server-only — **no `NEXT_PUBLIC_` prefix.**
 
 ```bash
 RENDER_BACKEND=lambda                         # "lambda" | "local" — feature flag
+SUPABASE_SERVICE_ROLE_KEY=...                # required when RENDER_BACKEND=local (Storage upload of MP4)
+LOCAL_RENDER_ASSET_BASE_URL=http://localhost:3000 # base URL for /tmp_assets when running local renders
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 REMOTION_AWS_REGION=us-east-1
@@ -194,6 +196,7 @@ Credential compatibility note: if `AWS_*` vars are missing, runtime aliases `REM
 ## Security
 
 - All 6 new env vars are server-only (no `NEXT_PUBLIC_` prefix)
+- Local rendering uses `SUPABASE_SERVICE_ROLE_KEY` for Supabase Storage uploads (MP4) and expects storage policies restricted to `renders/videos/*`
 - IAM role should be scoped: `s3:PutObject` on `s3://vws-renders/*` only — not `s3:*`
 - Lambda receives `inputProps` from Inngest (server-controlled) — no user-supplied data enters Lambda directly
 - S3 bucket public-read is acceptable: `projectId` is a UUID (not guessable); no PII in video
@@ -284,7 +287,7 @@ These Lambda values are expected ranges until validated by production telemetry.
 | Scenario | Setup | Expected Result |
 |---|---|---|
 | Lambda happy path | `RENDER_BACKEND=lambda` + valid Lambda env vars | Project reaches `completed`; `projects.video_url` stores S3 URL |
-| Local escape hatch | `RENDER_BACKEND=local` | Project reaches `completed`; local render uploads to storage URL |
+| Local escape hatch | `RENDER_BACKEND=local` + `SUPABASE_SERVICE_ROLE_KEY` + `LOCAL_RENDER_ASSET_BASE_URL` | Project reaches `completed`; local render uploads to storage URL |
 | Missing function name | Unset `REMOTION_LAMBDA_FUNCTION_NAME` | Project reaches `failed_render`; `render_error_context.message` shows env error |
 | Invalid serve URL | Bad `REMOTION_SERVE_URL` | Project reaches `failed_render`; error context persisted |
 | IAM access denied | Remove required IAM permission | Project reaches `failed_render`; error context persisted |

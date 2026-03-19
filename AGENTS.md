@@ -144,7 +144,8 @@ draft → processing → rendering → completed
 - **Supabase client selection:**
   - Browser / Client Components → `src/lib/supabase/client.ts`
   - Server Components / Route Handlers → `src/lib/supabase/server.ts`
-  - Inngest workers → `createClient()` with anon key (RPC-only, bypasses RLS via SECURITY DEFINER)
+  - Inngest workers → `createClient()` with anon key for SECURITY DEFINER RPC calls (bypasses RLS)
+  - Local render storage uploads require `SUPABASE_SERVICE_ROLE_KEY` (service role must not be `NEXT_PUBLIC_`)
 - **Tailwind v4 class syntax.** Use `bg-white/10` not `bg-white/[0.1]`. Use `bg-linear-to-br` not `bg-gradient-to-br`.
 - **No inline styles.** All styling via Tailwind utility classes.
 - **Path alias `@/`** maps to `src/`. Use it everywhere; do not use relative `../../` imports across domain boundaries.

@@ -76,12 +76,14 @@ Required environment variables:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for local storage uploads) |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `PINTEREST_DL_BIN` | Absolute path to the `pinterest-dl` binary (e.g. `/path/to/.venv/bin/pinterest-dl`) |
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
 | `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |
 | `TMP_ASSETS_PATH` | Directory for downloaded assets (default: `public/tmp_assets`) |
+| `LOCAL_RENDER_ASSET_BASE_URL` | Base URL for local renders (e.g. `http://localhost:3000`) |
 | `RENDER_BACKEND` | `lambda` (default) or `local` |
 | `REMOTION_AWS_REGION` | AWS region for Remotion Lambda |
 | `REMOTION_LAMBDA_FUNCTION_NAME` | Remotion Lambda function name |
@@ -101,6 +103,8 @@ You'll also need two RPC functions used by the worker:
 - `worker_update_project_error(p_project_id, p_error_context)`
 
 Both should be `SECURITY DEFINER` to bypass RLS for background processing.
+
+If you use the local render fallback (`RENDER_BACKEND=local`), ensure your worker can upload the generated MP4 to Supabase Storage by setting `SUPABASE_SERVICE_ROLE_KEY` and keeping storage policies restricted to `renders/videos/*`.
 
 ### 5. Run the dev server
 
