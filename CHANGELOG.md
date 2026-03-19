@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3.0] - 2026-03-19
+
+### Added
+- Added comprehensive AWS infrastructure skill set including `aws-s3`, `aws-billing`, `aws-ec2`, `aws-cloudwatch`, `aws-lambda`, and `aws-iam`.
+- Implemented project deletion flow with local asset cleanup and Supabase storage removal.
+- Enhanced Dashboard with auto-refresh (5s interval) for active projects.
+- Improved Wizard UI with "Generate Hooks" and "Fetch Images" functionality.
+- Added template selection (`minimalist`, `bold`, `neon`, `corporate`) to the render step.
+- Added support for local Remotion rendering with automatic Supabase storage upload.
+
+### Changed
+- Improved accessibility by bumping base font size to 16px for descriptive text in Dashboard and Wizard.
+- Hardened Supabase storage policies for worker uploads.
+- Refined `render-video` module to handle local asset URLs and Lambda polling more reliably.
+
+### Fixed
+- Fixed worker grants for project error updates.
+- Removed unused `startGeneration` dead code in Wizard client.
+
 ## [0.2.2.0] - 2026-03-19
 
 ### Added
