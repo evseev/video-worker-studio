@@ -13,8 +13,9 @@ Tracks the global state of a video generation request.
 | `id` | `uuid` | PK, Default `uuid_generate_v4()` | Unique identifier |
 | `user_id` | `uuid` | FK to `auth.users(id)` | Owner of the project |
 | `topic` | `text` | Not Null | The user's input prompt |
-| `status` | `text` | Not Null, Default `'processing'`| Enum: `'processing'`, `'rendering'`, `'completed'`, `'failed_ai'`, `'failed_render'` |
+| `status` | `text` | Not Null, Default `'draft'`| Enum: `'draft'`, `'processing'`, `'rendering'`, `'completed'`, `'failed_ai'`, `'failed_render'` |
 | `video_url` | `text` | Nullable | S3/Cloudfront URL of the final rendered MP4 |
+| `selected_template` | `text` | Nullable | The ID of the video template chosen (e.g., `'slideshow'`, `'split'`) |
 | `created_at` | `timestamptz` | Default `now()` | Timestamp |
 
 ## 3. `scenes`

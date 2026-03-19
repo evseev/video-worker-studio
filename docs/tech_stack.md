@@ -1,52 +1,52 @@
-# Technical Architecture and Stack Recommendation
+# Technical Architecture and Stack
 
-Based on the MVP requirements of Video Worker Studio—rapid iteration, high dependency on AI orchestrations, heavy asynchronous job processing, and rendering capabilities—the following technology stack is recommended.
+Based on the MVP requirements of Video Worker Studio—rapid iteration, high dependency on AI orchestrations, heavy asynchronous job processing, and rendering capabilities—the following technology stack is currently implemented.
 
 ## 1. Frontend: Next.js + React + Tailwind CSS
-We need a robust framework capable of providing strong UX/UI on the client side, while having built-in capacities for server-side API proxying and SSR.
+We need a robust framework capable of providing strong UX/UI on the client side, while having built-in capacities for server-side API routing.
 
-*   **Framework:** Next.js 16.1
+*   **Framework:** Next.js 15+ (App Router)
 *   **Language:** TypeScript
-*   **Styling:** Tailwind CSS + shadcn/ui. This provides pre-built, accessible, and fast UI components for a clean, modern SaaS look.
-*   **State Management:** Zustand (for complex frontend state like the timeline/scene editor) and React Query / SWR (for data fetching and polling server jobs).
-*   **Forms & Validation:** React Hook Form + Zod.
+*   **Styling:** Tailwind CSS + shadcn/ui. This provides pre-built, accessible, and fast UI components for a clean, modern SaaS look. Focus on dark mode aesthetics.
+*   **State Management:** React state + Zustand (if complex state is needed). UI uses standard React Hooks.
+*   **Icons:** Lucide React.
 
-## 2. Backend API & Core Orchestration: Node.js + Fastify
-To keep the mental model unified and allow sharing of Zod schemas between the backend and frontend, a TypeScript backend is strongly recommended.
+## 2. Backend API & Core Orchestration: Next.js Route Handlers
+We utilize Next.js API routes (`src/app/api`) to handle backend functionality and serve as the orchestrator for webhooks and job queues.
 
-*   **Runtime:** Node.js
-*   **Framework:** Fastify. This serves as our robust backend API and worker host, decoupled from Next.js 16.1.
-*   **Validation:** Zod. Crucial for ensuring that external LLM outputs exactly match our expected data structures.
-*   **AI Integration Framework:** OpenAI SDK / Gemini CLI for AI orchestration.
+*   **Framework:** Next.js Server Components and API Routes.
+*   **Validation:** Zod v4. Crucial for ensuring that external LLM outputs exactly match our expected data structures.
+*   **AI Integration:** Google Gemini 2.5 Flash (`@google/generative-ai`) for extremely fast structured generation.
+*   **Observability:** Sentry (`@sentry/nextjs`) is integrated to track errors, profiling, and traces across both the edge/serverless boundaries and frontend.
 
 ## 3. Database: PostgreSQL via Supabase
-Relational data modeling is perfect here because Video Projects have structured relations (Project -> Scenes -> Assets).
+Relational data modeling for tracking Video Projects and Scenes.
 
-*   **Database:** PostgreSQL.
-*   **ORM:** Prisma. Administered and connected via Supabase MCP for robust AI database access.
-*   **Hosting:** Supabase (gives us Auth and Storage out of the box). 
+*   **Database:** PostgreSQL (hosted on Supabase).
+*   **Client:** Supabase JavaScript Client (`@supabase/supabase-js`). (Prisma was evaluated but we use direct Supabase client for lighter footprint).
+*   **Auth:** Supabase Auth (handled via Next.js Middleware and server/client utilities in `src/utils/supabase`).
 
-## 4. Job Queue & Asynchronous Workers: BullMQ
-For asynchronous processing, a robust local job queue is preferred to run alongside the Fastify Node.js server.
+## 4. Job Queue & Asynchronous Workers: Inngest
+For asynchronous processing and preventing long-running API routes from timing out, we use a managed worker queue.
 
-*   **Tool:** BullMQ (backed by local Redis).
-*   **Why:** Excellent Node.js performance and native support for complex background jobs, retries, and decoupled processes.
-*   **Webhooks:** Utilizing Cloudflare tunnel (`webhook.topstm.com`) to route webhook signals into the local BullMQ/Fastify environment.
+*   **Tool:** Inngest (`inngest` & `@inngest/next`).
+*   **Why:** Serverless-friendly, eliminates the need to run local Redis/BullMQ. It allows us to declare complex step-functions (retries, timeouts, waiting) natively within Next.js API Routes.
+*   **Usage:** Defines background jobs (e.g. `process-video`) that run deterministically and update the Supabase database.
 
 ## 5. Video Rendering Engine: Remotion
-Traditional video generation involves ffmpeg scripts which are notoriously hard to manage and layout. 
+Video generation natively structured as React code.
 
-*   **Framework:** Remotion (React for Video).
-*   **Why:** It allows us to build video templates using standard React, HTML, and CSS (meaning we can use our exact frontend styling skills to design video scenes). Remotion can run in a serverless environment (via AWS Lambda / Remotion Lambda) to render MP4s highly efficiently in parallel.
-*   **Fallback:** If Remotion is unsuitable for any reason, use FFmpeg wrappers (Fluent-ffmpeg) in a Dockerized worker, but Remotion is heavily favored for web-developer productivity.
+*   **Framework:** Remotion.
+*   **Capability:** Allows us to build video templates (e.g. `slideshow`, `split`) using standard React, HTML, and CSS. The templates are stored in `src/remotion`.
+*   **Rendering:** Can render using `@remotion/bundler` and `@remotion/renderer` either on the server or via AWS Lambda.
 
 ## 6. TTS and Asset APIs
-*   **TTS:** ElevenLabs or OpenAI TTS for natural voice-over generation.
-*   **Assets:** Custom `pinscrape-dl` CLI skill for high-fidelity Pinterest scraping, alongside general Pexels/Unsplash assets.
+*   **Assets:** Custom `pinscrape-dl` executed via local exec in the Inngest worker.
+*   *(Future)* TTS: ElevenLabs or standard Web Speech APIs.
 
-## 7. Storage: AWS S3 or Supabase Storage
+## 7. Storage
 *   **Purpose:** Storing user avatars, downloaded Pinterest images, generated audio clips, and final rendered `.mp4` files.
-*   **Delivery:** Served via a CDN (Cloudflare or built-in AWS CloudFront/Supabase CDN).
+*   **Delivery:** Currently mocked as URLs, but will use Supabase Storage.
 
 ---
 
@@ -54,12 +54,13 @@ Traditional video generation involves ffmpeg scripts which are notoriously hard 
 
 | Area | Technology |
 | :--- | :--- |
-| **Monorepo** | Turborepo / pnpm |
-| **Frontend** | Next.js 16.1, React, Tailwind CSS, shadcn/ui, Zustand |
-| **Backend API** | Node.js + Fastify, TypeScript |
-| **Database** | PostgreSQL (hosted on Supabase, via Supabase MCP) |
-| **ORM** | Prisma |
-| **Auth & Storage** | Supabase Auth (Magic Link) |
-| **Background Jobs** | BullMQ + Redis + Cloudflare Tunnel Webhooks |
-| **AI LLM** | OpenAI / Gemini CLI via strict JSON/Schema |
-| **Video Engine** | Remotion + AWS Lambda (via remotion-dev/skills) |
+| **Framework** | Next.js 16+ (App Router) |
+| **Frontend** | React, Tailwind CSS, shadcn/ui, Lucide React |
+| **Backend API** | Next.js Route Handlers |
+| **Database** | PostgreSQL (Supabase) via `@supabase/supabase-js` |
+| **Auth** | Supabase Auth (Middleware protected) |
+| **Background Jobs** | Inngest (Serverless queues + step functions) |
+| **AI LLM** | Google Gemini (Gemini 2.5 Flash) |
+| **Validation** | Zod (v4) |
+| **Video Engine** | Remotion |
+| **Observability** | Sentry (`@sentry/nextjs`) |

@@ -1,80 +1,54 @@
 # Screen-by-Screen UX Specification
 
-This document details the layout, state requirements, and primary user interactions for the MVP of Video Worker Studio.
+This document details the layout, state requirements, and primary user interactions for the current MVP of Video Worker Studio.
 
 ---
 
 ## 1. Login / Landing Screen
 **Purpose:** Entry point for creators.
-*   **Layout:** Simple, centered login card with a compelling headline ("Generate viral videos effortlessly").
+*   **Layout:** Simple, centered login card with a compelling headline.
 *   **Components:** 
-    *   Email input field for Magic Link login.
-    *   OAuth buttons (e.g., "Continue with Google").
-*   **Interactions:** Submit email -> See "Check your inbox" toast.
+    *   Email/Password input field or OAuth buttons.
+*   **Interactions:** User logs in and is redirected to the Dashboard.
 
-## 2. Library (Dashboard)
-**Purpose:** View past projects and start new ones.
-*   **Layout:** Standard SaaS layout. Left sidebar (or top navbar) for navigation. Main content area contains a grid of project cards.
+## 2. Dashboard (`/dashboard`)
+**Purpose:** View past projects, check statuses, and start new ones.
+*   **Layout:** Sidebar navigation. Main content area contains a grid of project cards and a "One-Click Quick Start" bar.
 *   **Components:** 
-    *   "New Project" prominent CTA button.
-    *   Grid of Video Cards (Thumbnail, Title, Status badge, Date created).
+    *   **Quick Start Form:** A text input and template dropdown allowing users to generate a video in one click without entering the wizard.
+    *   **"Advanced Wizard" CTA:** A button that creates a `draft` project and drops the user into the interactive wizard.
+    *   **Project Grid:** Shows cards with thumbnail, title, status (`draft`, `processing`, `rendering`, `completed`), and created date.
 *   **Interactions:** 
-    *   Click "New Project" -> Opens Project Setup Modal.
-    *   Click existing project -> Navigates to the project editor at its current state.
+    *   Submit Quick Start -> Project is created, Inngest job dispatched, card appears in "processing" state.
+    *   Click "Advanced Wizard" -> API creates a blank `draft` Project -> Navigates to `/wizard/[id]`.
 
-## 3. Project Setup Modal
-**Purpose:** Capture initial raw intent from the user.
-*   **Layout:** Overlay modal on the Library screen.
-*   **Components:**
-    *   Textarea for "What is this video about?" (e.g., "A day in the life of a software engineer").
-    *   Dropdown for Aspect Ratio (9:16 default).
-    *   Slider or Dropdown for Target Duration (15s, 30s, 60s).
-    *   "Generate Ideas" primary button.
-*   **Interactions:** Submit -> API creates `Project` -> Navigates to `/project/[id]/idea`.
+## 3. Interactive Wizard (`/wizard/[id]`)
+**Purpose:** A guided, step-by-step experience to construct a video project.
+*   **Layout:** Centered card with a stepped progress bar at the top (`Template -> Script -> Settings -> Generate`).
 
-## 4. Phase 1: Idea Selection Screen (`/project/[id]/idea`)
-**Purpose:** User chooses the best angle/hook from LLM-generated options.
-*   **Layout:** Two-column split. Left side shows the original prompt. Right side shows a vertical list of 3-5 "Idea Cards".
-*   **State:** If the job is `PENDING` or `PROCESSING`, show a loading skeleton with playful text ("Brainstorming viral hooks...").
-*   **Components:**
-    *   Idea Card: Shows `Title` (large font), `Hook` (subtitle), and `Rationale` (small text).
-    *   "Select this Idea" button on each card.
-*   **Interactions:** Click "Select" -> Saves to DB -> Background job starts -> Navigates to Phase 2.
+### Step 1: Template Selection
+*   **Components:** Grid of available Remotion templates (e.g., "Slideshow", "Split Screen", "Quote").
+*   **Interactions:** User selects a template. State updates locally.
 
-## 5. Phase 2: Structure & Timeline Screen (`/project/[id]/structure`)
-**Purpose:** Review the generated script and scene breakdown.
-*   **Layout:** Vertical timeline or storyboard grid.
-*   **State:** Loading skeleton while LLM generates scenes.
-*   **Components:**
-    *   Header: Shows the selected Title.
-    *   Scene Blocks: Numbered list. Each block displays `duration`, `visualPrompt`, `captionText`, and `ttsText`.
-    *   "Approve Script & Fetch Assets" CTA (sticky at bottom).
-*   **Interactions:** User can technically click to edit a caption here, but primary action is clicking "Approve" -> Background job starts -> Navigates to Phase 3.
+### Step 2: Scripting & Topic
+*   **Components:** Large text area for the user to describe the video topic.
+*   **Interactions:** User types their prompt. This is what the Gemini 2.5 Flash model will use to build the scenes.
 
-## 6. Phase 3: Asset Review & Polish Screen (`/project/[id]/assets`)
-**Purpose:** The core editor where users replace bad AI-selected images before rendering.
-*   **Layout:** Two-pane editor. 
-    *   *Left Pane:* Scrollable list of scenes.
-    *   *Right Pane:* Visual preview of the currently selected scene's asset.
-*   **State:** Assets fetch asynchronously. Shows skeleton on images until loaded.
-*   **Components:**
-    *   Scene Item: Thumbnail of selected asset + caption text.
-    *   Asset Explorer (Right Pane): Shows the currently active image. Below it, a horizontal scrolling list of 4 "Alternative Images" fetched from the API.
-    *   "Upload Custom Image" button.
-    *   "Generate Video" primary CTA.
+### Step 3: Settings & Review
+*   **Components:** Summary of choices. Future expansion point for specific LLM instructions, duration sliders, and asset style selectors.
+*   **Interactions:** User confirms settings.
+
+### Step 4: Generating
+*   **Components:** A loading state with playful text ("Summoning AI...", "Painting pixels...").
 *   **Interactions:** 
-    *   Click alternative image -> Swaps the `isSelected` flag in the DB instantly.
-    *   Edit caption textarea -> Debounced save to DB.
-    *   Click "Generate Video" -> Pushes render job -> Navigates to Phase 4.
+    *   Click "Generate" -> Makes `PUT /api/projects/[id]` to save `topic` and `selected_template`.
+    *   Makes `POST /api/generate` to dispatch the Inngest worker.
+    *   The wizard begins polling (or subscribing via Supabase realtime) for the project status to change to `completed`.
+    *   When `completed`, it displays the final video or provides a link to download.
 
-## 7. Phase 4: Final Result & Render Screen (`/project/[id]/render`)
-**Purpose:** Wait for render, play video, and download.
-*   **Layout:** Centered focus view.
-*   **State:** If job `PROCESSING`, show a rich progress bar or circular progress indicator ("Rendering your video in the cloud...").
+## 4. Final Result & Render Screen (Within Wizard or Dashboard Card)
 *   **Components:**
     *   Video Player (native HTML5 or Remotion Player) playing the resulting MP4.
     *   "Download MP4" button.
-    *   "Edit Assets & Rerender" fallback button.
 *   **Interactions:** 
     *   Click Download -> Triggers file download.
-    *   Click Rerender -> Navigates back to Phase 3, deleting the MP4 URL from DB.

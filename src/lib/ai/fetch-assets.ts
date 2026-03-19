@@ -27,6 +27,11 @@ export async function fetchAssets(
 
   for (let i = 0; i < keywords.length; i++) {
     const keyword = keywords[i];
+    if (!keyword) {
+      results.push(null);
+      continue;
+    }
+
     const sceneDir = path.join(baseDir, `scene-${i}`);
     await fs.promises.mkdir(sceneDir, { recursive: true });
 

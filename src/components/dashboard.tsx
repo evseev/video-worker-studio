@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import type { Tables } from "@/lib/supabase/types";
@@ -8,6 +9,7 @@ import type { Tables } from "@/lib/supabase/types";
 type Project = Tables<"projects">;
 
 const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
   processing: "Generating…",
   rendering: "Rendering…",
   completed: "Completed",
@@ -29,9 +31,16 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ProjectCard({ project }: { project: Project }) {
+  const isDraft = project.status === "draft";
+  const href = isDraft
+    ? `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+    : project.status === "completed" && project.video_url
+    ? project.video_url
+    : "#";
+
   return (
     <a
-      href={project.status === "completed" && project.video_url ? project.video_url : "#"}
+      href={href}
       className="group block rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-violet-500/5"
     >
       {/* Thumbnail placeholder */}
@@ -71,10 +80,11 @@ export function Dashboard({
   user: User;
   projects: Project[];
 }) {
-  const [projects, setProjects] = useState(initialProjects);
+  const projects = initialProjects;
   const [topic, setTopic] = useState("");
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
 
   const supabase = createClient();
 
@@ -86,27 +96,18 @@ export function Dashboard({
     // Insert project
     const { data: project, error } = await supabase
       .from("projects")
-      .insert({ topic: topic.trim(), user_id: user.id })
+      .insert({ topic: topic.trim(), user_id: user.id, status: "draft" })
       .select()
       .single();
 
     if (error) {
-      console.error("Failed to create project:", error);
+      console.error("Failed to create project:", error, JSON.stringify(error));
       setCreating(false);
       return;
     }
 
-    // Trigger the Inngest background worker
-    await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId: project.id, topic: project.topic }),
-    });
-
-    setProjects([project, ...projects]);
-    setTopic("");
-    setShowForm(false);
-    setCreating(false);
+    // Redirect directly to the wizard UI
+    router.push(`/wizard/${project.id}?step=idea`);
   }
 
   async function handleSignOut() {

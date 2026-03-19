@@ -1,29 +1,31 @@
 # System Architecture (Scope Reduced MVP)
 
-The system is a Next.js (App Router) web app backed by Supabase and Inngest. It provides a simple, automated "Idea to Video" pipeline.
+The system is a Next.js (App Router) web app backed by Supabase and Inngest. It provides both a "One-Click Generation" pipeline and an "Interactive Video Wizard".
 
 ## 1. Web Frontend (Next.js)
-*   **Role:** User authentication, project dashboard, and simple wizard input for generating videos.
+*   **Role:** User authentication, project dashboard, one-click creation endpoint (`/api/generate`), and an interactive multi-step wizard (`/wizard/[id]`).
 *   **Tech:** React (Server Components + Client Components), Tailwind CSS, Zustand (client state).
-*   **State:** Polling or subscribing to Supabase real-time to watch the `Project` status change from `processing` -> `rendering` -> `completed`.
+*   **State:** Polling or subscribing to Supabase real-time to watch the `Project` status change: `draft` -> `processing` -> `rendering` -> `completed`.
 
 ## 2. API & Backend Services (Next.js Route Handlers + Supabase)
 *   **Database:** Supabase PostgreSQL handles relational data (`Project`, `Scene`).
 *   **Auth:** Supabase Auth providing JWTs consumed by Next.js middleware.
 *   **Storage:** Supabase Storage (if needed for intermediate caching, otherwise Remotion handles MP4s).
 *   **Orchestration:** The `/api/inngest` route acts as the webhook sink for the Inngest execution engine.
+*   **Observability:** Sentry (`@sentry/nextjs`) is deployed across the frontend and API routes to track errors, unhandled exceptions, and request performance.
 
 ## 3. Worker Engine (Inngest)
-Coordinates the heavy lifting outside the HTTP request lifecycle.
+Coordinates the heavy lifting outside the HTTP request lifecycle and prevents edge/serverless timeouts.
 *   **`VideoGenerationWorker`**: A linear step-function worker:
-    1.  Calls Gemini AI to generate the script and asset search terms.
+    1.  Calls Gemini 2.5 Flash to generate the script and asset search terms.
     2.  Loops through the output and uses `pinscrape-dl` to find image assets for each scene.
-    3.  Commits the fully populated scenes to Supabase and triggers the render.
+    3.  Commits the fully populated scenes to Supabase and advances project status.
+    4.  *(Depending on flow)* Triggers the render or waits for user approval.
 
-## 4. Video Rendering (Remotion + AWS Lambda)
-*   **Role:** Converts the structured JSON (`Project` + `Scenes`) into an MP4.
-*   **Tech:** `@remotion/lambda`.
-*   **Flow:** The Inngest worker kicks off the Lambda render and provides a webhook URL (pointing back to a Next.js API route). When Lambda finishes, Remotion hits the webhook, and the API updates the `Project.video_url`.
+## 4. Video Rendering (Remotion + AWS Lambda/Local)
+*   **Role:** Converts the structured JSON (`Project` + `Scenes`) into an MP4 using React-based templates (`selected_template`).
+*   **Tech:** Remotion via `@remotion/lambda` or local bundler.
+*   **Flow:** The system formats project data into input props, triggers the render process, and upon completion updates the `Project.video_url`.
 
 ## Dependency Graph
 
@@ -33,12 +35,13 @@ Coordinates the heavy lifting outside the HTTP request lifecycle.
        v
 [ Next.js Web App ] <---> [ Supabase DB / Auth ]
        | (Dispatches Event)
+       |--> (Monitored by Sentry)
        v
 [ Inngest Engine ]
        | (Triggers Worker via Webhook)
        v
 [ VideoGenerationWorker ]
-       |---> [ Gemini API ] (Script / Keywords)
+       |---> [ Gemini 2.5 Flash API ] (Script / Keywords)
        |---> [ `pinscrape-dl` CLI ] (Pinterest Assets)
        |---> [ Supabase DB ] (Save complete Scenes)
        |---> [ @remotion/lambda ] (Trigger Render)

@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
 import { inngest } from "@/lib/inngest/client";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
-    const { projectId, topic } = await request.json();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!projectId || !topic) {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { projectId, topic, scenes, template } = await request.json();
+
+    if (!projectId || (!topic && !scenes)) {
       return NextResponse.json(
-        { error: "Missing projectId or topic" },
+        { error: "Missing projectId, topic, or scenes" },
         { status: 400 }
       );
     }
@@ -15,7 +25,7 @@ export async function POST(request: Request) {
     // Send event to Inngest which triggers the VideoGenerationWorker
     await inngest.send({
       name: "video/generate",
-      data: { projectId, topic },
+      data: { projectId, topic, scenes, template },
     });
 
     return NextResponse.json({ success: true });

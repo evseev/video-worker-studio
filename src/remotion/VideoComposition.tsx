@@ -10,12 +10,14 @@ export type VideoCompositionProps = {
   }>;
   sceneDurationFrames: number;
   transitionFrames: number;
+  template?: string;
 };
 
 export const VideoComposition: React.FC<VideoCompositionProps> = ({
   scenes,
   sceneDurationFrames,
   transitionFrames,
+  template,
 }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -31,6 +33,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                 assetUrl={scene.assetUrl}
                 index={index}
                 totalScenes={scenes.length}
+                template={template}
               />
             </TransitionSeries.Sequence>,
           ];
