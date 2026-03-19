@@ -219,7 +219,20 @@ draft → processing → rendering → completed
 
 ---
 
-## 11. gstack Skills
+## 11. Boundaries
+
+- **Ask first**
+  - Large cross-package refactors.
+  - New dependencies with broad impact.
+  - Destructive data or migration changes.
+- **Never**
+  - Commit secrets, credentials, or tokens.
+  - Edit generated files by hand when a generation workflow exists.
+  - Use destructive git operations unless explicitly requested.
+
+---
+
+## 12. gstack Skills
 
 Use `.agents/skills/gstack/browse` for all web browsing.
 
@@ -243,7 +256,7 @@ Use `.agents/skills/gstack/browse` for all web browsing.
 
 ---
 
-## 12. AWS Skills
+## 13. AWS Skills
 
 Use these AWS-focused skills for cloud infrastructure, operations, and cost management tasks.
 

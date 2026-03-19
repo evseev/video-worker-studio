@@ -364,7 +364,8 @@ export function WizardClient({ project }: { project: Project }) {
                       });
                       if (!res.ok) throw new Error("Failed to start render");
                       
-                      router.push("/");
+                      router.replace("/");
+                      router.refresh();
                     } catch (error) {
                       console.error("Render error:", error);
                       alert("Failed to start render. Please try again.");

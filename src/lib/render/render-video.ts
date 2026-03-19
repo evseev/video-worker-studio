@@ -77,6 +77,35 @@ function wait(ms: number): Promise<void> {
   });
 }
 
+function getLocalRenderAssetBaseUrl(): string {
+  const configured =
+    process.env.LOCAL_RENDER_ASSET_BASE_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.APP_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL;
+  return (configured && configured.trim().length > 0
+    ? configured
+    : "http://localhost:3000"
+  ).replace(/\/$/, "");
+}
+
+function normalizeAssetUrlForLocalRender(assetUrl: string | null): string | null {
+  if (!assetUrl) return null;
+  if (/^https?:\/\//i.test(assetUrl) || assetUrl.startsWith("data:")) {
+    return assetUrl;
+  }
+
+  const publicDirPrefix = `${process.cwd()}/public/`;
+  const normalizedFsPath = assetUrl.startsWith(publicDirPrefix)
+    ? assetUrl.slice(publicDirPrefix.length)
+    : assetUrl;
+  const relativePath = normalizedFsPath.startsWith("/")
+    ? normalizedFsPath
+    : `/${normalizedFsPath}`;
+
+  return `${getLocalRenderAssetBaseUrl()}${relativePath}`;
+}
+
 /**
  * Renders a video and returns a public URL.
  */
@@ -150,6 +179,12 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
 
 async function renderVideoLocally(input: RenderInput): Promise<string> {
   const { projectId, scenes } = input;
+  const normalizedScenes = scenes.map((scene) => ({
+    ...scene,
+    // Remotion bundle server runs on a different port than Next dev,
+    // so relative /tmp_assets URLs must point to the app origin explicitly.
+    assetUrl: normalizeAssetUrlForLocalRender(scene.assetUrl),
+  }));
 
   console.log(`[render] Bundling Remotion for project ${projectId}...`);
 
@@ -169,7 +204,7 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     Math.max(0, scenes.length - 1) * TRANSITION_FRAMES;
 
   const inputProps = {
-    scenes,
+    scenes: normalizedScenes,
     sceneDurationFrames,
     transitionFrames: TRANSITION_FRAMES,
     template: input.template,
@@ -189,7 +224,7 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
   const outputPath = path.join(outputDir, `${projectId}.mp4`);
   await fs.promises.mkdir(outputDir, { recursive: true });
 
-  console.log(`[render] Rendering ${scenes.length} scenes → ${outputPath}`);
+  console.log(`[render] Rendering ${normalizedScenes.length} scenes → ${outputPath}`);
 
   await renderMedia({
     composition,
@@ -210,9 +245,10 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
 }
 
 async function uploadLocalRender(filePath: string, projectId: string): Promise<string> {
+  const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
   const supabase = createClient(
     requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    serviceRoleKey
   );
 
   const fileBuffer = await fs.promises.readFile(filePath);
