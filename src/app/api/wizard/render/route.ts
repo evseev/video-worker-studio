@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     // but the worker will read from DB.
     await inngest.send({
       name: "video/generate",
-      data: { projectId, scenes, template },
+      data: { projectId, scenes, template, userId: user.id },
     });
 
     return NextResponse.json({ success: true });

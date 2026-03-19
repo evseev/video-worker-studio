@@ -29,8 +29,8 @@ Replace local Remotion rendering with `@remotion/lambda`. Lambda handles bundlin
 | # | Change | Rationale |
 |---|--------|-----------|
 | Core | Replace `@remotion/bundler` + `@remotion/renderer` with `@remotion/lambda` | Primary goal |
-| 2 | Lambda writes output directly to S3; store S3 URL in `projects.video_url` | Removes entire upload-video step |
-| 3 | Inngest `concurrency: { limit: 3 }` on `generateVideo` function | Prevents runaway Lambda cost |
+| 2 | Lambda writes output directly to S3; store S3 URL in `projects.video_url` | Removes dedicated upload step in the Lambda path |
+| 3 | Inngest user-keyed `concurrency` with `limit: 3` (`key: event.data.userId`) | Prevents same-user render pileups and caps cost |
 | 4 | `render_error_context` JSONB column on `projects` + `worker_update_project_error` RPC | Silent `failed_render` with no debug info is unacceptable |
 
 ### Deferred
@@ -75,7 +75,7 @@ Inngest Worker
        └─ worker_update_project_status(projectId, "completed", s3Url)
 ```
 
-**Eliminated:** `upload-storage.ts` and the `upload-video` Inngest step.
+**Eliminated in Lambda path:** the separate `upload-video` Inngest step.
 
 ---
 
@@ -96,7 +96,7 @@ renderVideo()  [render-video.ts]
     │            outName: `${projectId}.mp4`,
     │            inputProps: { scenes, template, ... }
     │          })
-    │         → returns S3 URL
+    │         → returns renderId, polls progress, then returns S3 URL
     │
     └─ RENDER_BACKEND=local (escape hatch)
           └─ legacy localRender() (kept but not default)
@@ -154,12 +154,16 @@ All server-only — **no `NEXT_PUBLIC_` prefix.**
 
 ```bash
 RENDER_BACKEND=lambda                         # "lambda" | "local" — feature flag
-REMOTION_AWS_ACCESS_KEY_ID=...
-REMOTION_AWS_SECRET_ACCESS_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...                # required when RENDER_BACKEND=local (Storage upload of MP4)
+LOCAL_RENDER_ASSET_BASE_URL=http://localhost:3000 # base URL for /tmp_assets when running local renders
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
 REMOTION_AWS_REGION=us-east-1
 REMOTION_LAMBDA_FUNCTION_NAME=remotion-render-...
 REMOTION_SERVE_URL=https://s3.us-east-1.amazonaws.com/remotion-.../...
 ```
+
+Credential compatibility note: if `AWS_*` vars are missing, runtime aliases `REMOTION_AWS_ACCESS_KEY_ID` / `REMOTION_AWS_SECRET_ACCESS_KEY` into `AWS_*`.
 
 ---
 
@@ -167,12 +171,11 @@ REMOTION_SERVE_URL=https://s3.us-east-1.amazonaws.com/remotion-.../...
 
 | File | Change |
 |---|---|
-| `src/lib/render/render-video.ts` | Full replacement: local → Lambda dispatch + local escape hatch |
-| `src/lib/render/upload-storage.ts` | **Deleted** |
-| `src/lib/inngest/functions.ts` | Remove `upload-video` step; add throttle `concurrency: { limit: 3 }`; add error context capture |
-| `src/lib/supabase/types.ts` | Add `render_error_context: Json \| null` to projects Row/Update |
-| `supabase/migrations/20260318204720_add_render_error_context.sql` | New migration |
-| `package.json` | Add `@remotion/lambda`; remove `@remotion/bundler` + `@remotion/renderer` |
+| `src/lib/render/render-video.ts` | Lambda dispatch by default with local render/upload fallback behind `RENDER_BACKEND=local` |
+| `src/lib/inngest/functions.ts` | Remove `upload-video` step; add user-keyed `concurrency`; add Zod-validated error context capture |
+| `src/lib/supabase/types.ts` | Regenerate after migration (`supabase gen types typescript`) — no manual edits |
+| `supabase/migrations/20260318194000_add_render_error_context.sql` | New migration |
+| `package.json` | Add `@remotion/lambda`; keep `@remotion/bundler` + `@remotion/renderer` for local fallback |
 | `AGENTS.md` | Update Section 3 (remove "Remotion runs locally") and Section 10 |
 
 ---
@@ -193,6 +196,7 @@ REMOTION_SERVE_URL=https://s3.us-east-1.amazonaws.com/remotion-.../...
 ## Security
 
 - All 6 new env vars are server-only (no `NEXT_PUBLIC_` prefix)
+- Local rendering uses `SUPABASE_SERVICE_ROLE_KEY` for Supabase Storage uploads (MP4) and expects storage policies restricted to `renders/videos/*`
 - IAM role should be scoped: `s3:PutObject` on `s3://vws-renders/*` only — not `s3:*`
 - Lambda receives `inputProps` from Inngest (server-controlled) — no user-supplied data enters Lambda directly
 - S3 bucket public-read is acceptable: `projectId` is a UUID (not guessable); no PII in video
@@ -242,7 +246,7 @@ This is a **two-way door**:
 ```
 1. Set RENDER_BACKEND=local in Vercel environment variables
 2. Redeploy (Vercel: ~2 min)
-3. In-flight renders at time of rollback → fall to failed_render; user re-triggers
+3. In-flight renders may complete or fail depending on when config is read; new renders use local backend after deploy
 4. No DB migration rollback needed (render_error_context column is additive/nullable)
 ```
 
@@ -266,6 +270,35 @@ This is a **two-way door**:
 | Concurrent renders | 1 | Up to 3 (Inngest throttle) |
 | Next.js responsiveness during render | Degraded | Unaffected |
 | Cost per render | ~$0 (server CPU) | ~$0.01–0.05 |
+
+These Lambda values are expected ranges until validated by production telemetry.
+
+### Post-deploy measurement checklist
+
+- Capture `P95` render duration for first 50 production renders and compare with local baseline
+- Record cold-start frequency and median cold-start penalty
+- Track Lambda cost per render and total daily render cost
+- Verify `failed_render` rate does not regress after cutover
+
+---
+
+## Acceptance Test Matrix
+
+| Scenario | Setup | Expected Result |
+|---|---|---|
+| Lambda happy path | `RENDER_BACKEND=lambda` + valid Lambda env vars | Project reaches `completed`; `projects.video_url` stores S3 URL |
+| Local escape hatch | `RENDER_BACKEND=local` + `SUPABASE_SERVICE_ROLE_KEY` + `LOCAL_RENDER_ASSET_BASE_URL` | Project reaches `completed`; local render uploads to storage URL |
+| Missing function name | Unset `REMOTION_LAMBDA_FUNCTION_NAME` | Project reaches `failed_render`; `render_error_context.message` shows env error |
+| Invalid serve URL | Bad `REMOTION_SERVE_URL` | Project reaches `failed_render`; error context persisted |
+| IAM access denied | Remove required IAM permission | Project reaches `failed_render`; error context persisted |
+| Error RPC fails | Force `worker_update_project_error` failure | Status still set to `failed_render`; worker logs context RPC failure |
+
+### Smoke gates before merge
+
+1. `npm run dev` boots successfully
+2. `npm run lint` returns zero lint errors
+3. `npm run build` succeeds
+4. Manual flow verifies `draft -> processing -> rendering -> completed` and one forced `failed_render`
 
 ---
 

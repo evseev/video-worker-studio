@@ -5,11 +5,10 @@ Based on the MVP requirements of Video Worker Studio—rapid iteration, high dep
 ## 1. Frontend: Next.js + React + Tailwind CSS
 We need a robust framework capable of providing strong UX/UI on the client side, while having built-in capacities for server-side API routing.
 
-*   **Framework:** Next.js 15+ (App Router)
+*   **Framework:** Next.js 16+ (App Router)
 *   **Language:** TypeScript
-*   **Styling:** Tailwind CSS + shadcn/ui. This provides pre-built, accessible, and fast UI components for a clean, modern SaaS look. Focus on dark mode aesthetics.
+*   **Styling:** Tailwind CSS v4.
 *   **State Management:** React state + Zustand (if complex state is needed). UI uses standard React Hooks.
-*   **Icons:** Lucide React.
 
 ## 2. Backend API & Core Orchestration: Next.js Route Handlers
 We utilize Next.js API routes (`src/app/api`) to handle backend functionality and serve as the orchestrator for webhooks and job queues.
@@ -24,12 +23,12 @@ Relational data modeling for tracking Video Projects and Scenes.
 
 *   **Database:** PostgreSQL (hosted on Supabase).
 *   **Client:** Supabase JavaScript Client (`@supabase/supabase-js`). (Prisma was evaluated but we use direct Supabase client for lighter footprint).
-*   **Auth:** Supabase Auth (handled via Next.js Middleware and server/client utilities in `src/utils/supabase`).
+*   **Auth:** Supabase Auth (handled via Next.js middleware and server/client utilities in `src/lib/supabase`).
 
 ## 4. Job Queue & Asynchronous Workers: Inngest
 For asynchronous processing and preventing long-running API routes from timing out, we use a managed worker queue.
 
-*   **Tool:** Inngest (`inngest` & `@inngest/next`).
+*   **Tool:** Inngest (`inngest`).
 *   **Why:** Serverless-friendly, eliminates the need to run local Redis/BullMQ. It allows us to declare complex step-functions (retries, timeouts, waiting) natively within Next.js API Routes.
 *   **Usage:** Defines background jobs (e.g. `process-video`) that run deterministically and update the Supabase database.
 
@@ -41,7 +40,7 @@ Video generation natively structured as React code.
 *   **Rendering:** Can render using `@remotion/bundler` and `@remotion/renderer` either on the server or via AWS Lambda.
 
 ## 6. TTS and Asset APIs
-*   **Assets:** Custom `pinscrape-dl` executed via local exec in the Inngest worker.
+*   **Assets:** `pinterest-dl` executed via local `execFile` in the Inngest worker.
 *   *(Future)* TTS: ElevenLabs or standard Web Speech APIs.
 
 ## 7. Storage
@@ -55,7 +54,7 @@ Video generation natively structured as React code.
 | Area | Technology |
 | :--- | :--- |
 | **Framework** | Next.js 16+ (App Router) |
-| **Frontend** | React, Tailwind CSS, shadcn/ui, Lucide React |
+| **Frontend** | React, Tailwind CSS v4 |
 | **Backend API** | Next.js Route Handlers |
 | **Database** | PostgreSQL (Supabase) via `@supabase/supabase-js` |
 | **Auth** | Supabase Auth (Middleware protected) |

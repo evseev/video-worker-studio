@@ -18,7 +18,7 @@ The system is a Next.js (App Router) web app backed by Supabase and Inngest. It 
 Coordinates the heavy lifting outside the HTTP request lifecycle and prevents edge/serverless timeouts.
 *   **`VideoGenerationWorker`**: A linear step-function worker:
     1.  Calls Gemini 2.5 Flash to generate the script and asset search terms.
-    2.  Loops through the output and uses `pinscrape-dl` to find image assets for each scene.
+    2.  Loops through the output and uses `pinterest-dl` to find image assets for each scene.
     3.  Commits the fully populated scenes to Supabase and advances project status.
     4.  *(Depending on flow)* Triggers the render or waits for user approval.
 
@@ -42,7 +42,7 @@ Coordinates the heavy lifting outside the HTTP request lifecycle and prevents ed
        v
 [ VideoGenerationWorker ]
        |---> [ Gemini 2.5 Flash API ] (Script / Keywords)
-       |---> [ `pinscrape-dl` CLI ] (Pinterest Assets)
+       |---> [ `pinterest-dl` CLI ] (Pinterest Assets)
        |---> [ Supabase DB ] (Save complete Scenes)
        |---> [ @remotion/lambda ] (Trigger Render)
                      |

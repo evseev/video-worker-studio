@@ -14,9 +14,14 @@ Tracks the global state of a video generation request.
 | `user_id` | `uuid` | FK to `auth.users(id)` | Owner of the project |
 | `topic` | `text` | Not Null | The user's input prompt |
 | `status` | `text` | Not Null, Default `'draft'`| Enum: `'draft'`, `'processing'`, `'rendering'`, `'completed'`, `'failed_ai'`, `'failed_render'` |
-| `video_url` | `text` | Nullable | S3/Cloudfront URL of the final rendered MP4 |
+| `video_url` | `text` | Nullable | Public URL of the final rendered MP4 |
 | `selected_template` | `text` | Nullable | The ID of the video template chosen (e.g., `'slideshow'`, `'split'`) |
+| `wizard_step` | `text` | Nullable | Current wizard step state |
+| `draft_scenes` | `jsonb` | Nullable | Draft scene payload while editing in wizard |
+| `trend_validation_data` | `jsonb` | Nullable | Stored trend-validation response metadata |
+| `render_error_context` | `jsonb` | Nullable | Structured render failure context |
 | `created_at` | `timestamptz` | Default `now()` | Timestamp |
+| `updated_at` | `timestamptz` | Default `now()` | Timestamp |
 
 ## 3. `scenes`
 Represents the individual blocks of a video timeline.
@@ -31,13 +36,13 @@ Represents the individual blocks of a video timeline.
 | `asset_url` | `text` | Nullable | The Pinterest image URL (fetched by the worker) |
 | `created_at` | `timestamptz` | Default `now()` | Timestamp |
 
-## 4. `user_settings`
-Optional table for future credit balances or profile preferences.
+## 4. Worker RPC Functions
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `user_id` | `uuid` | PK, FK to `auth.users(id)` | The user |
-| `credits` | `int` | Default `10` | For rate-limiting or billing |
+The background worker updates data through SECURITY DEFINER RPC functions:
+
+- `worker_insert_scenes(p_project_id, p_scenes)`
+- `worker_update_project_status(p_project_id, p_status, p_video_url)`
+- `worker_update_project_error(p_project_id, p_error_context)`
 
 ---
 
@@ -45,4 +50,4 @@ Optional table for future credit balances or profile preferences.
 
 All tables must have RLS enabled.
 *   **Projects/Scenes/Settings**: Users can only `SELECT`, `INSERT`, `UPDATE`, or `DELETE` rows where `user_id = auth.uid()`.
-*   Workers (Inngest) will use the `service_role` key to bypass RLS for background updates (e.g. setting the `video_url`).
+*   Workers (Inngest) use SECURITY DEFINER RPC functions to bypass RLS for background updates (for example setting `video_url` and `render_error_context`).

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -87,6 +87,24 @@ export function Dashboard({
   const router = useRouter();
 
   const supabase = createClient();
+
+  useEffect(() => {
+    const hasActiveProjects = projects.some((project) =>
+      project.status === "draft" ||
+      project.status === "processing" ||
+      project.status === "rendering"
+    );
+
+    if (!hasActiveProjects) return;
+
+    const interval = window.setInterval(() => {
+      router.refresh();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [projects, router]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();

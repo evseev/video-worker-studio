@@ -1,7 +1,7 @@
 # ADR-001: Upgrade Script Generation Model to Gemini 3.0 Flash
 
 **Date:** 2026-03-14
-**Status:** Accepted
+**Status:** Superseded (current runtime uses `gemini-2.5-flash`)
 **Affects:** `src/lib/ai/generate-script.ts`
 
 ## Context
@@ -24,3 +24,7 @@ Upgrade the model identifier from `gemini-2.0-flash` to `gemini-3-flash`.
 - Script quality should improve (better hooks, more visual keywords).
 - If Google deprecates the preview tag, the model string may need updating to a versioned alias (e.g. `gemini-3-flash-001`).
 - No breaking changes to downstream consumers — the Zod validation schema remains identical.
+
+## Superseded Note
+
+The active code path currently targets `gemini-2.5-flash` in `src/lib/ai/generate-script.ts` and wizard AI helpers. This ADR remains as historical context for the earlier model-evaluation decision.

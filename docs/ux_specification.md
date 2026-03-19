@@ -11,7 +11,7 @@ This document details the layout, state requirements, and primary user interacti
     *   Email/Password input field or OAuth buttons.
 *   **Interactions:** User logs in and is redirected to the Dashboard.
 
-## 2. Dashboard (`/dashboard`)
+## 2. Dashboard (`/`)
 **Purpose:** View past projects, check statuses, and start new ones.
 *   **Layout:** Sidebar navigation. Main content area contains a grid of project cards and a "One-Click Quick Start" bar.
 *   **Components:** 

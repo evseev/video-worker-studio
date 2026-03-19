@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     // Send event to Inngest which triggers the VideoGenerationWorker
     await inngest.send({
       name: "video/generate",
-      data: { projectId, topic, scenes, template },
+      data: { projectId, topic, scenes, template, userId: user.id },
     });
 
     return NextResponse.json({ success: true });
