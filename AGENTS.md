@@ -234,3 +234,18 @@ Use `.agents/skills/gstack/browse` for all web browsing.
 | `.agents/skills/gstack/office-hours` | **YC Office Hours** | Forcing questions on demand, users, and product. |
 | `.agents/skills/gstack/debug` | **Debugger** | Systematic root-cause debugging. Iron Law: no fixes without investigation. |
 | `.agents/skills/gstack/document-release` | **Technical Writer** | Update all project docs to match what you just shipped. |
+
+---
+
+## 12. AWS Skills
+
+Use these AWS-focused skills for cloud infrastructure, operations, and cost management tasks.
+
+| Skill Path | Your specialist | What they do |
+|-------|----------------|--------------|
+| `.agents/skills/aws-s3` | **Cloud Storage Architect** | Manages S3 buckets, objects, lifecycle rules, replication, access controls, and pre-signed URLs with least-privilege IAM practices. |
+| `.agents/skills/aws-billing` | **Cloud Cost Manager** | Orchestrates AWS budgets, spend exploration, and usage reporting via AWS CLI for proactive cost control. |
+| `.agents/skills/aws-ec2` | **Compute Infrastructure Architect** | Launches and manages EC2 instances, AMIs, EBS volumes, security groups, Elastic IPs, and Auto Scaling with least-privilege IAM guidance. |
+| `.agents/skills/aws-cloudwatch` | **Observability Architect** | Builds and manages CloudWatch alarms, dashboards, log queries, metric filters, EventBridge rules, and anomaly detection. |
+| `.agents/skills/aws-lambda` | **Serverless Architecture Specialist** | Creates, deploys, and operates Lambda functions, versions, aliases, layers, event mappings, and concurrency controls. |
+| `.agents/skills/aws-iam` | **Identity & Access Architect** | Designs and manages IAM users, roles, policies, trust relationships, access keys, MFA, and policy simulation with strict least privilege. |
