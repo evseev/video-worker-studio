@@ -23,7 +23,7 @@ const enhanceIdeaSchema: Schema = {
 
 export async function enhanceIdea(rawIdea: string): Promise<string[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash",
+    model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: enhanceIdeaSchema,
@@ -73,7 +73,7 @@ export interface TrendValidation {
 
 export async function validateTrend(idea: string): Promise<TrendValidation> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash",
+    model: "gemini-2.5-flash",
     // In a real app we might use Grounding with Google Search here
     generationConfig: {
       responseMimeType: "application/json",
@@ -130,7 +130,7 @@ const structureSchema: Schema = {
 
 export async function generateStructure(idea: string, template: string): Promise<SceneScript[]> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash",
+    model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: structureSchema,
