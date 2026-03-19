@@ -12,9 +12,11 @@ The MVP workflow has two major pathways: an automated "One-Click" pipeline and a
 
 ### Pathway B: Interactive Wizard
 1. **User Request (Web)**
-   - User navigates to `/wizard` and creates a blank project (Status: `draft`).
-   - The user selects a visual template, enters a topic prompt, and configures the video.
-   - They click "Generate" which transitions the status to `processing` and dispatches the `video/generate` Inngest event.
+   - User creates a `draft` project from the dashboard and lands on `/wizard/[id]` (steps: **Idea** → **Script** → **Render**).
+   - **Idea:** topic + optional AI “hook” suggestions via `/api/wizard/ideas`; progress saved with `/api/wizard/draft`.
+   - **Script:** `/api/wizard/script` generates scenes; `/api/wizard/fetch-assets` attaches Pinterest images per scene.
+   - **Render:** user picks a visual template and calls `/api/wizard/render`, which dispatches the background render job.
+   - **Contrast:** One-click generation without the wizard is Pathway A (`POST /api/generate` on a `processing` project and `video/generate`).
 
 ### Worker Engine: `VideoGenerationWorker`
 Regardless of the pathway, the heavy lifting occurs inside the Inngest worker:

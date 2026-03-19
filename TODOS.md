@@ -1,7 +1,17 @@
 # TODOS
 
 ## Testing
-- **P0:** Bootstrap test framework (Vitest + @testing-library/react + Playwright) for Next.js app.
-  **Priority:** P0
+
+### Bootstrap automated tests (Vitest + Playwright)
+
+**What:** Add Vitest + `@testing-library/react` and Playwright (or agreed stack) with CI-friendly scripts.
+
+**Why:** Ship and refactor safely without relying only on manual smoke tests.
+
+**Context:** `.gstack/no-test-bootstrap` defers setup; remove it when starting. Prefer `src/__tests__/` once a framework is chosen per `AGENTS.md`.
+
+**Effort:** M  
+**Priority:** P0  
+**Depends on:** None
 
 ## Completed

@@ -14,9 +14,9 @@ Triggered via `/api/generate` and powered entirely by a 5-step Inngest backgroun
 
 **2. Video Generation Wizard:**
 ```text
-Draft Idea → Enhance Setup → Structure Scenes → Final Script → Fetch Assets → Render Video
+Idea (topic + AI hook ideas) → Script (generate scenes + fetch images) → Render (template + start render)
 ```
-A multi-step interactive pipeline directly in the app UI, giving granular user control before rendering in the background. Powered by `/api/wizard/*` endpoints.
+A three-step interactive flow at `/wizard/[id]`, with draft progress saved via `/api/wizard/draft`. Rendering from the wizard uses `/api/wizard/render`; other wizard steps call `/api/wizard/*` (ideas, script, fetch-assets, etc.).
 
 The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
@@ -25,7 +25,7 @@ The core rendering pipeline (whether triggered immediately or after the wizard) 
 | 1. **Generate Script** | AI writes a scene-by-scene script with visual keywords | Gemini 2.5 Flash |
 | 2. **Fetch Assets** | Downloads a background image per scene from Pinterest | `pinterest-dl` CLI |
 | 3. **Save Scenes** | Commits scenes to the database via RPC (bypasses RLS) | Supabase PostgreSQL |
-| 4. **Render Video** | Compiles scenes into an MP4 with transitions | Remotion Lambda (default) |
+| 4. **Render Video** | Compiles scenes into an MP4 with transitions | Remotion Lambda (default) or local (`RENDER_BACKEND=local`) |
 | 5. **Persist Result** | Stores the final video URL and updates project status | Supabase PostgreSQL |
 
 ## Tech Stack
@@ -119,6 +119,8 @@ npx inngest-cli@latest dev
 
 The app runs at [http://localhost:3000](http://localhost:3000) and the Inngest dashboard at [http://localhost:8288](http://localhost:8288).
 
+**Deleting a project:** From the dashboard, use the trash control on a project card. The app calls `DELETE /api/projects/[id]`, removes the `projects` row (child `scenes` rows cascade), deletes objects in the `renders` bucket when possible, and cleans up local temp assets under `TMP_ASSETS_PATH`.
+
 ## Available Scripts
 
 | Script | Description |
@@ -151,6 +153,8 @@ src/
 │   ├── ai/
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
+│   ├── projects/
+│   │   └── delete-project-assets.ts  # Storage + temp cleanup when deleting a project
 │   ├── inngest/
 │   │   ├── client.ts            # Inngest client instance
 │   │   └── functions.ts         # VideoGenerationWorker (5-step pipeline)
@@ -204,14 +208,14 @@ docs/
                        │  1. Gemini Script    │
                        │  2. Pinterest DL     │
                        │  3. Save Scenes      │
-                       │  4. Remotion SSR     │
-                       │  5. Upload MP4       │
+                       │  4. Remotion render  │
+                       │  5. Upload / URL     │
                        └──────────────────────┘
 ```
 
 ## Documentation
 
-Detailed design docs are in the [`docs/`](docs/) directory:
+Detailed design docs are in the [`docs/`](docs/) directory. Internal engineering follow-ups live in [`TODOS.md`](TODOS.md). Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
 
 - [System Architecture](docs/system_architecture.md)
 - [Database Schema](docs/database_schema.md)

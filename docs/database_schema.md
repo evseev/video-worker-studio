@@ -51,3 +51,7 @@ The background worker updates data through SECURITY DEFINER RPC functions:
 All tables must have RLS enabled.
 *   **Projects/Scenes/Settings**: Users can only `SELECT`, `INSERT`, `UPDATE`, or `DELETE` rows where `user_id = auth.uid()`.
 *   Workers (Inngest) use SECURITY DEFINER RPC functions to bypass RLS for background updates (for example setting `video_url` and `render_error_context`).
+
+## Application deletes
+
+Deleting a project from the app (`DELETE /api/projects/[id]`, authenticated, owner-only) removes the `projects` row. Child `scenes` rows are removed via **ON DELETE CASCADE** on `scenes.project_id`. The route handler also attempts to delete the rendered MP4 in Supabase Storage (when the URL matches the expected shape) and to remove local temp assets under `TMP_ASSETS_PATH`; failures there are surfaced as warnings but do not block row deletion.

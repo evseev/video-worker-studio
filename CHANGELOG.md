@@ -8,21 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.3.0] - 2026-03-19
 
 ### Added
-- Added comprehensive AWS infrastructure skill set including `aws-s3`, `aws-billing`, `aws-ec2`, `aws-cloudwatch`, `aws-lambda`, and `aws-iam`.
-- Implemented project deletion flow with local asset cleanup and Supabase storage removal.
-- Enhanced Dashboard with auto-refresh (5s interval) for active projects.
-- Improved Wizard UI with "Generate Hooks" and "Fetch Images" functionality.
-- Added template selection (`minimalist`, `bold`, `neon`, `corporate`) to the render step.
-- Added support for local Remotion rendering with automatic Supabase storage upload.
+- You can **delete a project** from the dashboard; the app removes the database row, cascades scenes, and cleans up rendered files in Storage (and local temp assets when possible).
+- The **dashboard auto-refreshes** every few seconds while any project is still drafting, generating, or rendering—no more stale status badges.
+- The **wizard** now walks Idea → Script → Render: AI hook ideas, script + Pinterest images per scene, then pick a template (`minimalist`, `bold`, `neon`, `corporate`) and start the render from the UI.
+- **Local Remotion renders** now upload the finished MP4 to Supabase Storage so completed projects get a real `video_url`, same idea as Lambda output.
+
+### For contributors
+- Six **AWS-focused agent skills** live under `.agents/skills/` (`aws-s3`, `aws-billing`, `aws-ec2`, `aws-cloudwatch`, `aws-lambda`, `aws-iam`) for AI-assisted cloud operations—see `AGENTS.md`.
 
 ### Changed
-- Improved accessibility by bumping base font size to 16px for descriptive text in Dashboard and Wizard.
-- Hardened Supabase storage policies for worker uploads.
-- Refined `render-video` module to handle local asset URLs and Lambda polling more reliably.
+- Clearer **readability** on descriptive copy in the dashboard and wizard (16px-class body text).
+- **Stricter Storage policies** for worker uploads; **render pipeline** handles local asset URLs and Lambda polling more reliably.
 
 ### Fixed
-- Fixed worker grants for project error updates.
-- Removed unused `startGeneration` dead code in Wizard client.
+- Worker could not update project error context in some setups—**grants** corrected.
+- Removed unused wizard **dead code** (`startGeneration`).
 
 ## [0.2.2.0] - 2026-03-19
 
