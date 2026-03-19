@@ -2,8 +2,8 @@ import { inngest } from "./client";
 import { generateScript } from "@/lib/ai/generate-script";
 import { fetchAssets } from "@/lib/ai/fetch-assets";
 import { renderVideo } from "@/lib/render/render-video";
-import { uploadToStorage } from "@/lib/render/upload-storage";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 // Supabase client for background workers — uses RPC functions with SECURITY DEFINER
 function getWorkerClient() {
@@ -23,6 +23,27 @@ async function updateStatus(db: ReturnType<typeof getWorkerClient>, projectId: s
   if (error) console.error(`[updateStatus] Failed to set ${status}:`, error);
 }
 
+const RenderErrorContextSchema = z.object({
+  message: z.string(),
+  timestamp: z.string(),
+  step: z.literal("render-video"),
+});
+
+async function updateRenderError(
+  db: ReturnType<typeof getWorkerClient>,
+  projectId: string,
+  context: z.infer<typeof RenderErrorContextSchema>
+) {
+  const parsed = RenderErrorContextSchema.parse(context);
+  const { error } = await db.rpc("worker_update_project_error", {
+    p_project_id: projectId,
+    p_error_context: parsed,
+  });
+  if (error) {
+    console.error("[updateRenderError] Failed to persist render error context:", error);
+  }
+}
+
 /**
  * VideoGenerationWorker
  *
@@ -30,11 +51,18 @@ async function updateStatus(db: ReturnType<typeof getWorkerClient>, projectId: s
  *  1. AI script generation (Gemini)
  *  2. Asset fetching (pinterest-dl)
  *  3. DB commit of scenes (via RPC)
- *  4. Video rendering (Remotion)
- *  5. Upload to Supabase Storage + update project URL
+ *  4. Video rendering (Remotion Lambda by default, local fallback)
+ *  5. Status update with final video URL
  */
 export const generateVideo = inngest.createFunction(
-  { id: "generate-video", retries: 2 },
+  {
+    id: "generate-video",
+    retries: 2,
+    concurrency: {
+      limit: 3,
+      key: "event.data.userId",
+    },
+  },
   { event: "video/generate" },
   async ({ event, step }) => {
     const { projectId, topic, scenes: passedScenes, template } = event.data as {
@@ -43,6 +71,7 @@ export const generateVideo = inngest.createFunction(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       scenes?: any[];
       template?: string;
+      userId?: string;
     };
 
     const db = getWorkerClient();
@@ -110,7 +139,7 @@ export const generateVideo = inngest.createFunction(
     });
 
     // Step 4: Render video with Remotion
-    const videoPath = await step.run("render-video", async () => {
+    const videoUrl = await step.run("render-video", async () => {
       console.log(`[render-video] Rendering project ${projectId}`);
       try {
         const renderScenes = scenesWithAssets.map((s) => ({
@@ -120,22 +149,16 @@ export const generateVideo = inngest.createFunction(
         return await renderVideo({ projectId, scenes: renderScenes, template });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
+        await updateRenderError(db, projectId, {
+          message: err instanceof Error ? err.message : "Unknown render error",
+          timestamp: new Date().toISOString(),
+          step: "render-video",
+        });
         throw err;
       }
     });
 
-    // Step 5: Upload to Supabase Storage and update project
-    const videoUrl = await step.run("upload-video", async () => {
-      console.log(`[upload-video] Uploading rendered video for ${projectId}`);
-      try {
-        const url = await uploadToStorage(videoPath, projectId);
-        await updateStatus(db, projectId, "completed", url);
-        return url;
-      } catch (err) {
-        await updateStatus(db, projectId, "failed_render");
-        throw err;
-      }
-    });
+    await updateStatus(db, projectId, "completed", videoUrl);
 
     return { projectId, videoUrl, sceneCount: scenesWithAssets.length };
   }
