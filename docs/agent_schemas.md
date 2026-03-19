@@ -4,7 +4,7 @@ The AI generation pipeline consists of a single Gemini prompting pipeline that a
 
 ## The Orchestrator Prompt
 
-**Model:** `gemini-2.5-flash` (via `google-genai` SDK)
+**Model:** `gemini-2.5-flash` (via `@google/generative-ai`)
 
 **System Prompt Example:**
 ```text
@@ -40,7 +40,7 @@ export type VideoScriptOutput = z.infer<typeof VideoScriptSchema>;
 **Inngest Worker Usage:**
 
 The Inngest `VideoGenerationWorker` calls Gemini using this prompt and schema. 
-It then parses the JSON and immediately invokes the `pinscrape-dl` tool locally. 
+It then parses the JSON and immediately invokes `pinterest-dl` locally. 
 
 ```ts
 // Pseudocode worker logic
@@ -61,7 +61,7 @@ export default inngest.createFunction(
     const scenes = JSON.parse(script).scenes;
     const scenesWithAssets = await step.run("fetch-assets", async () => {
       return Promise.all(scenes.map(async (scene, i) => {
-        const assetUrl = await execPromise(`npx pinscrape-dl "${scene.searchKeyword}" --limit 1`);
+        const assetUrl = await execPromise(`pinterest-dl search "${scene.searchKeyword}" -n 1`);
         return {
           sequenceOrder: i,
           scriptText: scene.scriptText,

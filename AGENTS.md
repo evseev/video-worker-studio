@@ -39,7 +39,7 @@ Non-compliance rule:
 | Auth | Supabase Auth + SSR | `@supabase/ssr` |
 | AI | Google Gemini | `@google/generative-ai` — model: `gemini-2.5-flash` |
 | Job Queue | Inngest | v3 |
-| Video | Remotion (local bundler) | 4.x |
+| Video | Remotion (Lambda default, local fallback) | 4.x |
 | Monitoring | Sentry | `@sentry/nextjs` v10 |
 | State | Zustand | v5 |
 | Validation | Zod | v4 |
@@ -66,14 +66,13 @@ src/
   lib/
     ai/
       generate-script.ts # Gemini script generation
-      fetch-assets.ts    # Pinterest asset scraping via pinscrape-dl
+      fetch-assets.ts    # Pinterest asset scraping via pinterest-dl
       wizard.ts          # Wizard-specific AI helpers
     inngest/
       client.ts          # Inngest client singleton
       functions.ts       # VideoGenerationWorker — the ONLY Inngest function
     render/
-      render-video.ts    # Remotion local bundler render
-      upload-storage.ts  # Supabase Storage upload
+      render-video.ts    # Remotion render dispatcher (Lambda default, local fallback)
     supabase/
       client.ts          # Browser client (anon key)
       server.ts          # Server client (uses cookies)
@@ -101,9 +100,9 @@ supabase/
 
 - **No direct DB access from components.** Components call API routes or Server Actions. Only `lib/supabase/server.ts` and Inngest workers touch the DB directly.
 - **Inngest is the only job runner.** Do not add `setTimeout`, `setInterval`, or other async fire-and-forget patterns in route handlers. All background work goes through Inngest events.
-- **RLS is active.** Row-Level Security is enforced on all tables. The Inngest worker bypasses RLS via two SECURITY DEFINER RPC functions: `worker_insert_scenes` and `worker_update_project_status`. Do not bypass RLS any other way.
+- **RLS is active.** Row-Level Security is enforced on all tables. The Inngest worker bypasses RLS via SECURITY DEFINER RPC functions (`worker_insert_scenes`, `worker_update_project_status`, `worker_update_project_error`). Do not bypass RLS any other way.
 - **The Inngest webhook endpoint (`/api/inngest`) must remain unauthenticated.** The middleware matcher explicitly excludes it. Do not add auth to this route.
-- **Remotion renders on AWS Lambda by default.** The worker dispatches renders via `@remotion/lambda`, while `RENDER_BACKEND=local` remains a fallback for emergency rollback and debugging.
+- **Remotion renders on AWS Lambda by default.** The worker dispatches renders via `@remotion/lambda`, while `RENDER_BACKEND=local` remains a fallback for rollback and debugging.
 - **Sentry is the observability layer.** Do not add other error tracking tools. Sentry is initialised in `src/instrumentation.ts` and `src/instrumentation-client.ts`.
 
 ---
@@ -113,7 +112,7 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `video_url` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 
 ### Project status lifecycle
@@ -159,9 +158,15 @@ draft → processing → rendering → completed
 |---|---|---|---|
 | `/api/inngest` | POST | ❌ Public | Inngest webhook sink — never add auth |
 | `/api/generate` | POST | ✅ | Dispatch `video/generate` Inngest event |
-| `/api/projects` | GET/POST | ✅ | List/create projects |
-| `/api/projects/[id]` | GET/PUT | ✅ | Read/update a single project |
-| `/api/wizard/[id]` | PUT | ✅ | Save wizard step progress |
+| `/api/projects/[id]` | DELETE | ✅ | Delete a project |
+| `/api/wizard/draft` | PUT | ✅ | Save wizard draft progress |
+| `/api/wizard/ideas` | POST | ✅ | Generate idea options |
+| `/api/wizard/enhance-idea` | POST | ✅ | Enhance a raw topic |
+| `/api/wizard/validate-trend` | POST | ✅ | Validate trend signals |
+| `/api/wizard/generate-structure` | POST | ✅ | Generate scene structure |
+| `/api/wizard/script` | POST | ✅ | Generate scene scripts |
+| `/api/wizard/fetch-assets` | POST | ✅ | Fetch scene assets from Pinterest |
+| `/api/wizard/render` | POST | ✅ | Dispatch wizard render job |
 
 - Route handlers must return `NextResponse.json()` consistently.
 - All authenticated routes must validate the Supabase session and return `401` if missing.
@@ -178,6 +183,7 @@ draft → processing → rendering → completed
 | `src/middleware.ts` matcher | Carefully tuned to exclude Inngest + Sentry routes |
 | `worker_insert_scenes` RPC | Bypasses RLS; changing signature breaks the worker |
 | `worker_update_project_status` RPC | Same as above |
+| `worker_update_project_error` RPC | Same as above |
 | `.env.local` | Never commit; never log env values |
 
 ---
@@ -208,7 +214,7 @@ draft → processing → rendering → completed
 - **Never log or return secrets.** Supabase keys, Gemini API key, Sentry DSN — none of these should appear in client-side code or logs.
 - **`NEXT_PUBLIC_` env vars are exposed to the browser.** Only put values in `NEXT_PUBLIC_` that are safe to be public (Supabase URL and anon key are intentionally public; service role key must never be `NEXT_PUBLIC_`).
 - **Remotion renders are async and cost-sensitive.** Keep per-user render concurrency constrained in Inngest and apply a global cap to avoid runaway Lambda spend.
-- **Pinterest scraping is rate-limited by `pinscrape-dl`.** Do not increase the number of scenes beyond 10 without testing scrape reliability.
+- **Pinterest scraping is rate-limited by `pinterest-dl`.** Do not increase the number of scenes beyond 10 without testing scrape reliability.
 - **Video files are large.** Remotion output goes to `/tmp` then immediately uploaded to Supabase Storage and deleted. Do not persist render artifacts on disk.
 
 ---

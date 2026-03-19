@@ -25,8 +25,8 @@
 ## Epic 4: Automated AI Pipeline Worker
 **Description:** The single background worker that orchestrates Gemini and asset fetching automatically without human interaction.
 
-*   [x] **Story 4.1:** Write the `VideoGenerationWorker` using Inngest. Step 1: Call Gemini (via `google-genai` SDK) to generate a JSON structure of Scenes (script + keywords).
-*   [x] **Story 4.2:** Step 2: Iterate through generated Scenes within the worker and call the `pinscrape-dl` CLI skill to fetch the best Pinterest asset URL for each `searchKeyword`.
+*   [x] **Story 4.1:** Write the `VideoGenerationWorker` using Inngest. Step 1: Call Gemini (via `@google/generative-ai`) to generate a JSON structure of scenes (script + keywords).
+*   [x] **Story 4.2:** Step 2: Iterate through generated scenes within the worker and call the `pinterest-dl` CLI tool to fetch the best Pinterest asset URL for each `searchKeyword`.
 *   [x] **Story 4.3:** Step 3: Save all `Scene` rows and their `asset_url` to Supabase. Update Project status to `rendering`.
 
 ## Epic 5: Video Rendering Engine & Delivery

@@ -29,7 +29,7 @@ Replace local Remotion rendering with `@remotion/lambda`. Lambda handles bundlin
 | # | Change | Rationale |
 |---|--------|-----------|
 | Core | Replace `@remotion/bundler` + `@remotion/renderer` with `@remotion/lambda` | Primary goal |
-| 2 | Lambda writes output directly to S3; store S3 URL in `projects.video_url` | Removes entire upload-video step |
+| 2 | Lambda writes output directly to S3; store S3 URL in `projects.video_url` | Removes dedicated upload step in the Lambda path |
 | 3 | Inngest user-keyed `concurrency` with `limit: 3` (`key: event.data.userId`) | Prevents same-user render pileups and caps cost |
 | 4 | `render_error_context` JSONB column on `projects` + `worker_update_project_error` RPC | Silent `failed_render` with no debug info is unacceptable |
 
@@ -75,7 +75,7 @@ Inngest Worker
        └─ worker_update_project_status(projectId, "completed", s3Url)
 ```
 
-**Eliminated:** `upload-storage.ts` and the `upload-video` Inngest step.
+**Eliminated in Lambda path:** the separate `upload-video` Inngest step.
 
 ---
 
@@ -169,12 +169,11 @@ Credential compatibility note: if `AWS_*` vars are missing, runtime aliases `REM
 
 | File | Change |
 |---|---|
-| `src/lib/render/render-video.ts` | Full replacement: local → Lambda dispatch + local escape hatch |
-| `src/lib/render/upload-storage.ts` | **Deleted** |
+| `src/lib/render/render-video.ts` | Lambda dispatch by default with local render/upload fallback behind `RENDER_BACKEND=local` |
 | `src/lib/inngest/functions.ts` | Remove `upload-video` step; add user-keyed `concurrency`; add Zod-validated error context capture |
 | `src/lib/supabase/types.ts` | Regenerate after migration (`supabase gen types typescript`) — no manual edits |
 | `supabase/migrations/20260318194000_add_render_error_context.sql` | New migration |
-| `package.json` | Add `@remotion/lambda`; remove `@remotion/bundler` + `@remotion/renderer` |
+| `package.json` | Add `@remotion/lambda`; keep `@remotion/bundler` + `@remotion/renderer` for local fallback |
 | `AGENTS.md` | Update Section 3 (remove "Remotion runs locally") and Section 10 |
 
 ---
