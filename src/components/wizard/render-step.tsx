@@ -13,16 +13,22 @@ import type { SceneData } from "./scene-card";
 export function RenderStep({
   projectId,
   scenes,
+  defaultAspectRatio,
+  defaultVideoQuality,
+  sceneDuration,
   children,
 }: {
   projectId: string;
   scenes: SceneData[];
+  defaultAspectRatio?: string;
+  defaultVideoQuality?: string;
+  sceneDuration?: number;
   children?: ReactNode;
 }) {
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState("minimalist");
-  const [aspectRatio, setAspectRatio] = useState("9:16");
-  const [videoQuality, setVideoQuality] = useState("1080p");
+  const [aspectRatio, setAspectRatio] = useState(defaultAspectRatio || "9:16");
+  const [videoQuality, setVideoQuality] = useState(defaultVideoQuality || "1080p");
   const [backgroundMusic, setBackgroundMusic] = useState<string | null>(null);
   const [captionStyle, setCaptionStyle] = useState("minimal");
   const [voiceoverUrl, setVoiceoverUrl] = useState<string | null>(null);
@@ -44,6 +50,7 @@ export function RenderStep({
           backgroundMusic,
           captionStyle,
           voiceoverUrl,
+          sceneDuration,
         }),
       });
       if (!res.ok) {

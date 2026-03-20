@@ -7,6 +7,7 @@ import { SceneCard, type SceneData } from "./scene-card";
 export function ScriptStep({
   topic,
   projectId,
+  sceneCount,
   scenes,
   onScenesChange,
   onContinue,
@@ -14,6 +15,7 @@ export function ScriptStep({
 }: {
   topic: string;
   projectId: string;
+  sceneCount: number;
   scenes: SceneData[];
   onScenesChange: (scenes: SceneData[]) => void;
   onContinue: () => void;
@@ -31,7 +33,7 @@ export function ScriptStep({
       const res = await fetch("/api/wizard/script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic, sceneCount }),
       });
       if (!res.ok) throw new Error("Failed to generate script");
       const data = await res.json();

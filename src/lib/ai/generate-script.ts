@@ -15,7 +15,7 @@ For each scene, provide:
 2. "searchKeyword": A single, highly descriptive keyword phrase (e.g., "moody cinematic coffee shop desk") that will be passed to a Pinterest image scraper to find the background asset. Make it visual and specific.
 
 RULES:
-- Video should be 30-60 seconds (roughly 5-8 scenes).
+- Generate exactly the number of scenes requested by the user (default: 5).
 - Hook the viewer in the first scene with a bold claim or question.
 - End with a strong call to action or surprising twist.
 - searchKeyword must be descriptive enough to find a beautiful, cinematic image.
@@ -49,7 +49,7 @@ const responseSchema: Schema = {
 /**
  * Calls Gemini to generate a video script broken into scenes.
  */
-export async function generateScript(topic: string): Promise<SceneScript[]> {
+export async function generateScript(topic: string, sceneCount: number = 5): Promise<SceneScript[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set");
@@ -66,7 +66,7 @@ export async function generateScript(topic: string): Promise<SceneScript[]> {
   });
 
   const result = await model.generateContent(
-    `Create a short-form video script about: ${topic}`
+    `Create a short-form video script about: ${topic}\n\nGenerate exactly ${sceneCount} scenes.`
   );
 
   const text = result.response.text();

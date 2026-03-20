@@ -115,6 +115,7 @@ export function WizardClient({ project }: { project: Project }) {
             <ScriptStep
               topic={topic}
               projectId={project.id}
+              sceneCount={project.scene_count}
               scenes={scenes}
               onScenesChange={setScenes}
               saveProgress={saveProgress}
@@ -126,7 +127,13 @@ export function WizardClient({ project }: { project: Project }) {
           )}
 
           {currentStep === "render" && (
-            <RenderStep projectId={project.id} scenes={scenes}>
+            <RenderStep
+              projectId={project.id}
+              scenes={scenes}
+              defaultAspectRatio={project.aspect_ratio}
+              defaultVideoQuality={project.video_quality}
+              sceneDuration={project.scene_duration}
+            >
               {/* Future sub-components: CaptionStyleSelector, VideoConfigSelector, MusicSelector, VoiceoverUpload */}
             </RenderStep>
           )}

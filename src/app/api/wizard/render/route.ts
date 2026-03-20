@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api/with-auth";
 import { inngest } from "@/lib/inngest/client";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl } = await request.json();
+  const { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl, sceneDuration } = await request.json();
 
   if (!projectId) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
@@ -24,8 +24,8 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     );
   }
 
-  // Save final settings to DB before rendering
-  const updates: Record<string, unknown> = { wizard_step: "render" };
+  // Save final settings and set status to processing before dispatching worker
+  const updates: Record<string, unknown> = { wizard_step: "render", status: "processing" };
   if (scenes) updates.draft_scenes = scenes;
   if (template) updates.selected_template = template;
   if (aspectRatio) updates.aspect_ratio = aspectRatio;
@@ -42,7 +42,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
 
   await inngest.send({
     name: "video/generate",
-    data: { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl, userId: user.id },
+    data: { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl, sceneDuration, userId: user.id },
   });
 
   return NextResponse.json({ success: true });

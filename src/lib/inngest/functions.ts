@@ -23,6 +23,7 @@ interface VideoGenerateEventData {
   backgroundMusic?: string | null;
   captionStyle?: string;
   voiceoverUrl?: string | null;
+  sceneDuration?: number;
   userId?: string;
 }
 
@@ -93,7 +94,7 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl } = event.data as VideoGenerateEventData;
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl, sceneDuration } = event.data as VideoGenerateEventData;
 
 
 
@@ -170,7 +171,7 @@ export const generateVideo = inngest.createFunction(
           scriptText: s.scriptText,
           assetUrl: s.assetUrl ?? null,
         }));
-        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl });
+        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl, sceneDuration });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         await updateRenderError(db, projectId, {

@@ -20,6 +20,7 @@ type RenderInput = {
   backgroundMusic?: string | null;
   captionStyle?: string;
   voiceoverUrl?: string | null;
+  sceneDuration?: number;
 };
 
 const SCENE_DURATION_SECONDS = 5;
@@ -129,8 +130,9 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
   const { region, functionName, serveUrl } = getLambdaConfig();
   const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
   const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
+  const durationPerScene = input.sceneDuration || SCENE_DURATION_SECONDS;
 
-  const sceneDurationFrames = SCENE_DURATION_SECONDS * FPS;
+  const sceneDurationFrames = durationPerScene * FPS;
   const totalFrames =
     scenes.length * sceneDurationFrames -
     Math.max(0, scenes.length - 1) * TRANSITION_FRAMES;
@@ -214,7 +216,8 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     },
   });
 
-  const sceneDurationFrames = SCENE_DURATION_SECONDS * FPS;
+  const durationPerScene = input.sceneDuration || SCENE_DURATION_SECONDS;
+  const sceneDurationFrames = durationPerScene * FPS;
   const totalFrames =
     scenes.length * sceneDurationFrames -
     Math.max(0, scenes.length - 1) * TRANSITION_FRAMES;

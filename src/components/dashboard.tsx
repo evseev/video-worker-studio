@@ -7,7 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import type { Tables } from "@/lib/supabase/types";
 import { ProjectCard } from "./dashboard/project-card";
 import { EmptyState } from "./dashboard/empty-state";
-import { CreateModal } from "./dashboard/create-modal";
+import { CreateModal, type CreateProjectData } from "./dashboard/create-modal";
 import { DeleteModal, type DeleteState } from "./dashboard/delete-modal";
 
 type Project = Tables<"projects">;
@@ -20,7 +20,6 @@ export function Dashboard({
   projects: Project[];
 }) {
   const [projects, setProjects] = useState(initialProjects);
-  const [topic, setTopic] = useState("");
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
@@ -69,14 +68,20 @@ export function Dashboard({
   }, [initialProjects]);
 
   const handleCreate = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!topic.trim()) return;
+    async (data: CreateProjectData) => {
       setCreating(true);
 
       const { data: project, error } = await supabase
         .from("projects")
-        .insert({ topic: topic.trim(), user_id: user.id, status: "draft" })
+        .insert({
+          topic: data.topic,
+          user_id: user.id,
+          status: "draft",
+          scene_count: data.sceneCount,
+          scene_duration: data.sceneDuration,
+          aspect_ratio: data.aspectRatio,
+          video_quality: data.videoQuality,
+        })
         .select()
         .single();
 
@@ -88,7 +93,7 @@ export function Dashboard({
 
       router.push(`/wizard/${project.id}?step=idea`);
     },
-    [topic, supabase, user.id, router]
+    [supabase, user.id, router]
   );
 
   async function handleSignOut() {
@@ -175,9 +180,7 @@ export function Dashboard({
 
         {showForm && (
           <CreateModal
-            topic={topic}
             creating={creating}
-            onTopicChange={setTopic}
             onSubmit={handleCreate}
             onClose={() => setShowForm(false)}
           />

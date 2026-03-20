@@ -23,6 +23,8 @@ export type Database = {
           draft_scenes: Json | null;
           id: string;
           render_error_context: Json | null;
+          scene_count: number;
+          scene_duration: number;
           selected_template: string | null;
           status: string;
           topic: string;
@@ -42,6 +44,8 @@ export type Database = {
           draft_scenes?: Json | null;
           id?: string;
           render_error_context?: Json | null;
+          scene_count?: number;
+          scene_duration?: number;
           selected_template?: string | null;
           status?: string;
           topic: string;
@@ -61,6 +65,8 @@ export type Database = {
           draft_scenes?: Json | null;
           id?: string;
           render_error_context?: Json | null;
+          scene_count?: number;
+          scene_duration?: number;
           selected_template?: string | null;
           status?: string;
           topic?: string;

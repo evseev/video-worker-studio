@@ -5,7 +5,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { getCaptionStyle, type CaptionStyle } from "@/lib/caption-styles";
+import { getCaptionStyle, type CaptionStyle } from "../lib/caption-styles";
 
 type SceneProps = {
   scriptText: string;
