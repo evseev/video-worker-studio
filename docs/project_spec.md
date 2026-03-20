@@ -21,7 +21,7 @@ The system acts like a **virtual video worker**:
 
 The core promise is:
 
-> “Give one idea → get a ready-to-publish video draft with assets, captions, voice-over, and editing structure.”
+“Give one idea → get a ready-to-publish video draft with assets, captions, voice-over, and editing structure.”
 
 ---
 
@@ -57,10 +57,11 @@ Video worker studio productizes this repetitive pipeline and automates it throug
 - Support a small set of high-performing video templates.
 - Accept one prompt and generate a reviewable scene plan.
 - Allow manual replacement/reordering of assets.
-- Render a complete video with captions + transitions + optional voice-over.
+- Render a complete video with transitions + optional voice-over + optional music and optional captions.
 - Support one predefined demo user.
 
 ### 4.3 Non-goals for MVP
+- auto voice-over generation
 - Multi-tenant billing and subscriptions.
 - Team collaboration.
 - Full social publishing automation.
@@ -107,8 +108,8 @@ The platform should be template-first. Each template defines:
 - required asset count per scene,
 - caption zones,
 - transition logic,
-- optional animation/effect rules,
-- optional voice-over synchronization strategy.
+- optional animation/effect rules.
+<!-- optional voice-over synchronization strategy.-->
 
 ### 7.1 Template archetypes for MVP
 
@@ -117,7 +118,6 @@ Each scene contains:
 - 1 image or short video clip,
 - animated zoom/pan effect,
 - caption overlay,
-- optional voice-over sentence,
 - transition to next scene.
 
 **Use cases:**
@@ -157,6 +157,7 @@ Each scene contains:
 - person + younger self,
 - famous couples.
 
+<!---
 #### D. Evolution timeline
 Each scene contains:
 - one year or era label,
@@ -182,7 +183,7 @@ Each scene contains:
 - “Most expensive…”,
 - “5 facts about…”,
 - “Best places…”.
-
+-->
 ---
 
 ## 8. End-to-end user flow
@@ -191,7 +192,9 @@ Each scene contains:
 User provides:
 - raw text idea,
 - number of scenes,
-- duration per scene in seconds.
+- duration per scene in seconds,
+- video aspect ratio (16:9 or 9:16),
+- video quality (HD, full HD, 4K)
 
 Optional later additions:
 - video language,
@@ -229,9 +232,8 @@ User selects:
 AI agent generates:
 - scene-by-scene plan,
 - caption per scene,
-- optional voice-over line per scene,
-- SEO-optimized video description,
-- video tags.
+- SEO-optimized video description for Youtube,
+- video tags for Youtube.
 
 ### Step 5. System suggests best video template
 System recommends template(s) based on idea structure.
@@ -245,25 +247,25 @@ For each scene, the system finds assets from the internet.
 
 Asset sourcing priority for MVP:
 1. Pinterest
-2. Additional public image/video sources (future or fallback)
+2. Additional public image/video sources (fallback to Tavily search API https://docs.tavily.com/documentation/api-reference/introduction)
 
 For each scene the system should retrieve:
-- one or multiple candidate assets per required slot,
+- multiple candidate assets per required slot (at least 3 options),
 - preview thumbnails,
-- source metadata,
-- ranking score based on relevance.
+<!--- source metadata,
+- ranking score based on relevance.-->
 
 ### Step 7. Preview & edit video plan
 The user opens a preview page with:
 - full scene list,
 - selected assets per scene,
-- alternative assets per slot,
-- captions,
-- voice-over settings,
+- alternative assets per slot (at least 2),
+- captions (can edit),
+<!-- voice-over settings,-->
 - music choice,
 - transition/effect configuration,
 - ability to reorder scenes,
-- ability to regenerate scene assets.
+- ability to regenerate scene assets (with option to edit search query).
 
 ### Step 8. Render final video
 After confirmation, the system renders the final video according to:
@@ -271,15 +273,15 @@ After confirmation, the system renders the final video according to:
 - video quality,
 - caption position/style,
 - effects/transitions,
-- music,
-- voice-over.
+- music (optional),
+- voice-over (optional).
 
 ### Step 9. Deliver result
 User sees rendered outputs in their library with:
 - status,
 - preview,
 - download option,
-- project metadata.
+- project metadata with export option (title, description, tags).
 
 ---
 
@@ -301,7 +303,7 @@ User sees rendered outputs in their library with:
 ---
 
 ## 9.2 Video library
-Main application screen.
+Main application screen (dashboard).
 
 Functions:
 - list all user video projects,
@@ -309,7 +311,8 @@ Functions:
 - show project status,
 - open existing project,
 - duplicate project,
-- delete/archive project.
+- delete project,
+- download project files (video, title, description, tags files).
 
 Project statuses:
 - Draft
@@ -338,19 +341,20 @@ Displayed fields:
 Required:
 - idea prompt,
 - number of scenes,
-- seconds per scene.
+- duration per scene in seconds,
+- video aspect ratio (16:9 or 9:16),
+- video quality (HD, full HD, 4K)
 
 Optional:
 - language,
 - target platform (YouTube Shorts / regular video),
 - voice-over on/off,
-- target niche,
-- aspect ratio.
+- YouTube channel niche.
 
 Validation:
-- scene count must be within system limits,
-- scene duration within min/max threshold,
-- total duration must not exceed render constraints for MVP.
+- scene count must be within system limits (from 2 to 100),
+- scene duration within min/max threshold (from 2 to 60 sec),
+- total duration must not exceed render constraints for MVP (120 min).
 
 ---
 
@@ -360,19 +364,16 @@ Validation:
 - rewrite user idea into a stronger, more clickable concept,
 - generate title options,
 - suggest metadata directions,
-- estimate likely format fit,
-- optionally suggest better scene count.
+- estimate likely format fit.
 
 ### Inputs
 - raw prompt,
-- intended length,
 - selected niche/language.
 
 ### Outputs
 - refined concept,
-- 3–10 title options,
+- 3–5 title options,
 - recommended template type,
-- rationale,
 - related tags/keywords,
 - popularity evidence summary.
 
@@ -388,20 +389,20 @@ Validation:
 Purpose: support virality-oriented idea optimization.
 
 ### Inputs
-- proposed titles,
-- keywords,
-- niche context.
+- selected title
+<!--- keywords,
+- niche context.-->
 
 ### External checks
-- Google Trends,
-- YouTube search suggestions/autocomplete,
-- optionally SEO signal aggregators in future.
+- Google Trends
+<!-- YouTube search suggestions/autocomplete,
+- optionally SEO signal aggregators in future.-->
 
 ### Outputs
 - popularity scores,
 - trend relevance notes,
-- suggested keyword variations,
-- warning if title appears weak or too generic.
+- suggested keyword variations (SEO optimized for YouTube),
+- suggested video description (SEO optimized for YouTube).
 
 ### Notes
 For MVP, this may be implemented as a semi-structured signal gathering step rather than a perfect analytics engine.
@@ -418,8 +419,8 @@ Each scene should include:
 - scene purpose,
 - caption text,
 - search intent or asset query,
-- optional voice-over line,
-- optional timing notes,
+<!-- optional voice-over line,
+- optional timing notes,-->
 - required asset slot definitions.
 
 ### Example scene schema
@@ -428,18 +429,16 @@ Each scene should include:
   - layout type
   - asset slot A query
   - asset slot B query (if needed)
-  - caption
-  - VO line
+  - caption (if enabled)
   - transition recommendation
 
 ### Constraints
 - structure must conform to selected template,
 - total number of scenes must match input,
-- text length must fit caption rules,
-- voice-over length should fit scene duration.
+- text length must fit caption rules.
 
 ---
-
+<!--
 ## 9.7 Template suggestion engine
 
 ### Responsibilities
@@ -457,22 +456,22 @@ Each scene should include:
 - accept template,
 - switch template,
 - preview layout definitions.
-
+-->
 ---
 
 ## 9.8 Asset sourcing module
 
 ### Purpose
-Collect all required visual assets for every scene and slot.
+Collect all required visual assets for every scene and slot (at least 3 options for each slot).
 
 ### MVP source priority
 - Pinterest as the main asset source.
+- Fallback to Tavily search API https://docs.tavily.com/documentation/api-reference/introduction
 
 ### Future optional sources
 - Pexels,
 - Pixabay,
 - Unsplash,
-- Wikimedia Commons,
 - user uploads,
 - premium stock APIs.
 
@@ -480,7 +479,6 @@ Collect all required visual assets for every scene and slot.
 For each scene/slot:
 - build search query,
 - fetch several candidates,
-- rank candidates by relevance,
 - save previews and source link,
 - allow retry/regenerate search,
 - allow manual candidate selection.
@@ -494,7 +492,6 @@ For each scene/slot:
 - asset_type,
 - width,
 - height,
-- estimated relevance score,
 - license metadata if available,
 - query used.
 
@@ -517,19 +514,18 @@ For each scene, the user can:
 - preview layout,
 - see current selected assets,
 - switch between alternatives,
-- rerun asset search,
+- rerun asset search (which option to change search query),
 - edit caption text,
-- edit voice-over line,
 - reorder scene position,
 - delete scene,
-- regenerate scene content.
+- regenerate scene assets.
 
 Global settings available on preview page:
 - caption style,
 - font preset,
 - caption position,
 - background music,
-- voice-over voice,
+- voice-over enable/disable,
 - transition style,
 - random transitions on/off,
 - global effects intensity,
@@ -538,10 +534,9 @@ Global settings available on preview page:
 
 ### Required editing controls
 - drag-and-drop scene reorder,
-- per-scene replace asset,
-- per-scene regenerate query,
-- per-scene caption edit,
-- template switch warning if switching invalidates selected assets.
+- per-scene replace assets,
+- per-scene change search query,
+- per-scene caption edit.
 
 ---
 
@@ -557,24 +552,22 @@ Global settings available on preview page:
 - Minimal white subtitle,
 - Bold viral caption,
 - Bottom label strip,
-- Split labels for side-by-side,
-- Timeline year badge.
+- Split labels for side-by-side.
 
 ### Caption settings
-- font preset,
+- font preset (all available options from https://fonts.google.com),
 - size,
 - weight,
 - alignment,
-- background on/off,
-- animation in/out,
-- safe area constraints.
+- animation in/out.
 
 ---
 
 ## 9.11 Voice-over module
 
 ### MVP requirements
-- optional voice-over generation per scene,
+- optional voice-over file uploaded by user (mp3 or wav file)
+<!-- optional voice-over generation per scene,
 - user can choose a voice preset,
 - user can enable/disable VO globally,
 - each scene may have its own voice-over line.
@@ -588,7 +581,7 @@ Global settings available on preview page:
 - multilingual voices,
 - emotion/tone control,
 - pacing control,
-- auto-shortening VO to fit duration.
+- auto-shortening VO to fit duration.-->
 
 ---
 
@@ -596,7 +589,6 @@ Global settings available on preview page:
 
 ### Requirements
 - choose from preset tracks,
-- control music volume relative to VO,
 - optional no music,
 - consistent track across full video in MVP.
 
@@ -617,8 +609,8 @@ Create final video from structured data and selected assets.
 - scenes,
 - assets,
 - captions,
-- voice-over,
-- music,
+- voice-over (optiomnal),
+- music (optiomnal),
 - transitions,
 - aspect ratio,
 - quality settings.
@@ -626,7 +618,7 @@ Create final video from structured data and selected assets.
 ### Output formats for MVP
 - MP4,
 - HD and Full HD,
-- portrait and landscape aspect ratios.
+- portrait and landscape aspect ratios (16:9 or 9:16).
 
 ### Effects for MVP
 - Ken Burns / zoom-pan,
@@ -638,17 +630,16 @@ Create final video from structured data and selected assets.
 ### Caption positions
 - bottom,
 - top,
-- center lower-third,
-- template-specific fixed zones.
+- center lower-third.
 
 ### Rendering requirements
 - asynchronous job processing,
 - progress state tracking,
 - retry on failure,
-- artifact storage with downloadable URL.
+- artifact cloud storage with downloadable URL.
 
 ---
-
+<!--
 ## 9.14 Final delivery page
 
 ### Requirements
@@ -662,7 +653,7 @@ Create final video from structured data and selected assets.
 - export to YouTube,
 - save template as reusable preset,
 - version history.
-
+-->
 ---
 
 ## 10. AI agent architecture
@@ -675,8 +666,8 @@ Use **small specialized agents** rather than one monolithic agent.
 Benefits:
 - easier debugging,
 - predictable outputs,
-- better prompt control,
-- easier replacement of models/providers,
+- better prompt control (all prompts shoud be stored in configuration file),
+- easier replacement of models/providers (models can be changed in configuration file),
 - safer retries and validation.
 
 ## 10.2 Recommended agents
@@ -686,36 +677,36 @@ Benefits:
 **Output:** refined idea, title options, keyword set, virality framing.
 
 ### Agent 2. Trend Validation Agent
-**Input:** titles and tags.  
+**Input:** titles, description and tags.  
 **Output:** popularity/trend evidence, ranked title suggestions, warnings.
 
 ### Agent 3. Video Structure Agent
 **Input:** approved concept + chosen template.  
-**Output:** scene plan, captions, voice-over lines, asset search queries.
+**Output:** scene plan, captions, asset search queries.
 
-### Agent 4. Template Recommender Agent
+<!--### Agent 4. Template Recommender Agent
 **Input:** approved concept.  
-**Output:** ranked template suggestions with rationale.
+**Output:** ranked template suggestions with rationale.-->
 
-### Agent 5. Asset Query Builder Agent
+### Agent 4. Asset Query Builder Agent
 **Input:** scene description and template slot definitions.  
 **Output:** optimized search queries for each scene slot.
 
-### Agent 6. Asset Selection/Ranking Agent
+<!--### Agent 5. Asset Selection/Ranking Agent
 **Input:** raw fetched candidates from providers.  
-**Output:** best candidate ranking, fallback candidates, metadata.
+**Output:** best candidate ranking, fallback candidates, metadata.-->
 
-### Agent 7. SEO Metadata Agent
+### Agent 5. SEO Metadata Agent
 **Input:** approved title + scene structure.  
 **Output:** description, tags, optional hashtags.
 
-### Agent 8. Render Packaging Agent
+### Agent 6. Render Packaging Agent
 **Input:** final user-approved project structure.  
 **Output:** deterministic render manifest for rendering engine.
 
 ---
 
-## 11. Orchestration approach for Claude Code / Antigravity
+## 11. Orchestration approach for Claude Code / Antigravity / Cursor
 
 The project should be structured so agentic implementation is easy to generate and maintain.
 
@@ -741,9 +732,9 @@ Instead:
 ### 11.4 Suggested orchestration stages
 1. Project created
 2. Idea enhancement job
-3. Trend validation job
+3. SEO enhancement job
 4. User confirmation gate
-5. Template recommendation + structure generation
+5. Structure generation
 6. Asset sourcing job
 7. User review gate
 8. Render packaging job
@@ -759,9 +750,10 @@ Instead:
 - password
 - sign in
 
-## 12.2 Video library page
+## 12.2 Video library page (dashboard)
 - create new video button
 - list/grid of existing projects
+- delete project
 - status chips
 - quick open
 
@@ -769,14 +761,13 @@ Instead:
 - idea prompt textarea
 - number of scenes
 - duration per scene
-- language
 - aspect ratio
+- quality select
 - create button
 
 ## 12.4 Idea confirmation page
 - improved idea summary
 - title options
-- trend hints
 - keyword suggestions
 - confirm button
 - edit manually button
@@ -791,7 +782,7 @@ Instead:
 - main area: selected scene preview
 - right panel: candidates/settings
 - global config drawer
-- rerun search actions
+- refresh search action
 - render button
 
 ## 12.7 Rendering state page
@@ -799,11 +790,11 @@ Instead:
 - current stage
 - error/retry state
 
-## 12.8 Final result page
+<!--## 12.8 Final result page
 - video player
 - download
 - rerender
-- back to library
+- back to library-->
 
 ---
 
@@ -811,7 +802,7 @@ Instead:
 
 ## 13.1 Performance
 - idea enhancement should complete within acceptable interactive latency,
-- asset sourcing may be async with visible progress,
+- asset sourcing may be async with visible progress
 
 ## 13.2 Reliability
 - all key jobs retryable,
@@ -892,18 +883,19 @@ MVP is single-user demo-first, but architecture should not block:
 - new project flow,
 - AI idea enhancement,
 - title suggestion,
-- trend-informed refinement,
+- SEO suggestions,
 - template recommendation,
 - scene generation,
 - Pinterest-first asset sourcing,
 - scene preview and manual replacement,
 - caption style selection,
-- optional voice-over,
+- optional voice-over upload,
 - background music preset,
 - render final MP4,
 - download result.
 
 ## Excluded from MVP
+- voice-over auto generation
 - payments/subscriptions,
 - public registration,
 - collaborative editing,
@@ -914,7 +906,7 @@ MVP is single-user demo-first, but architecture should not block:
 - multiple workspace support.
 
 ---
-
+<!--
 ## 17. Roadmap after MVP
 
 ### Phase 2
@@ -941,7 +933,7 @@ MVP is single-user demo-first, but architecture should not block:
 - auto-comment/pinned comment generation,
 - content calendar,
 - agentic series production.
-
+-->
 ---
 
 ## 18. Product principles
@@ -971,5 +963,5 @@ MVP is single-user demo-first, but architecture should not block:
 4. JSON schemas for all AI agents  
 5. PRD backlog in epics and user stories in Linear  
 6. Screen-by-screen UX specification  
-7. Antigravity implementation plan  
-8. Antigravity multi-agent workflow design
+7. Agentic implementation plan  
+8. Multi-agent workflow design
