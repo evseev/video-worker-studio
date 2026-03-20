@@ -5,6 +5,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { getCaptionStyle, type CaptionStyle } from "@/lib/caption-styles";
 
 type SceneProps = {
   scriptText: string;
@@ -12,31 +13,45 @@ type SceneProps = {
   index: number;
   totalScenes: number;
   template?: string;
+  captionStyle?: string;
 };
 
-/**
- * A single scene in the video:
- * - Full-screen background image (with slow Ken Burns zoom)
- * - Gradient overlay for text readability
- * - TikTok-style caption text with fade-in animation
- */
+function resolveCaptionLayout(style: CaptionStyle) {
+  const base: React.CSSProperties = {
+    justifyContent: "flex-end",
+    alignItems: "center",
+    padding: "0 60px 200px 60px",
+  };
+
+  if (style.position === "top") {
+    base.justifyContent = "flex-start";
+    base.padding = "200px 60px 0 60px";
+  } else if (style.position === "center-lower") {
+    base.justifyContent = "center";
+    base.padding = "0 60px";
+    base.paddingTop = "20%";
+  }
+
+  return base;
+}
+
 export const Scene: React.FC<SceneProps> = ({
   scriptText,
   assetUrl,
   index,
   totalScenes,
   template = "Slideshow",
+  captionStyle: captionStyleId,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
+  const style = captionStyleId ? getCaptionStyle(captionStyleId) : null;
 
-  // Ken Burns: slow zoom from 100% to 110%
   const scale = interpolate(frame, [0, durationInFrames], [1, 1.1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // Caption fade in from 0 to full opacity over 0.5s
   const captionOpacity = interpolate(
     frame,
     [0, Math.min(fps * 0.5, durationInFrames)],
@@ -44,7 +59,6 @@ export const Scene: React.FC<SceneProps> = ({
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // Caption slide up
   const captionY = interpolate(
     frame,
     [0, Math.min(fps * 0.5, durationInFrames)],
@@ -52,7 +66,6 @@ export const Scene: React.FC<SceneProps> = ({
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // Fallback gradient colors per scene index
   const gradients = [
     "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
@@ -63,6 +76,68 @@ export const Scene: React.FC<SceneProps> = ({
     "linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)",
     "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)",
   ];
+
+  // Use caption style if provided, otherwise fall back to template-based styling
+  const captionLayout = style
+    ? resolveCaptionLayout(style)
+    : {
+        justifyContent: template === "Compilation" ? "center" : "flex-end",
+        alignItems: "center",
+        padding:
+          template === "Compilation"
+            ? "0 60px"
+            : template === "Fact Card"
+              ? "0 40px 100px 40px"
+              : "0 60px 200px 60px",
+      } as React.CSSProperties;
+
+  const captionTextStyle: React.CSSProperties = style
+    ? {
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        color: style.color,
+        lineHeight: 1.3,
+        textShadow:
+          style.backgroundColor ? "none" : "0 4px 20px rgba(0,0,0,0.6)",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        letterSpacing: "-0.02em",
+        margin: 0,
+        textAlign: style.textAlign,
+      }
+    : {
+        fontSize: template === "Fact Card" ? 48 : 56,
+        fontWeight: 800,
+        color: template === "Fact Card" ? "#111" : "white",
+        lineHeight: 1.3,
+        textShadow:
+          template === "Fact Card" ? "none" : "0 4px 20px rgba(0,0,0,0.6)",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        letterSpacing: template === "Fact Card" ? "0" : "-0.02em",
+        margin: 0,
+        textTransform:
+          template === "Compilation"
+            ? ("uppercase" as const)
+            : ("none" as const),
+      };
+
+  const captionWrapperStyle: React.CSSProperties = style?.backgroundColor
+    ? {
+        backgroundColor: style.backgroundColor,
+        padding: style.id === "strip" ? "16px 30px" : "20px 30px",
+        borderRadius: style.id === "strip" ? 0 : 16,
+        ...(style.id === "strip"
+          ? { width: "100%", position: "absolute" as const, bottom: 0, left: 0 }
+          : {}),
+      }
+    : template === "Fact Card"
+      ? {
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          padding: "40px 30px",
+          borderRadius: 24,
+          boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+          border: "2px solid rgba(0,0,0,0.1)",
+        }
+      : {};
 
   return (
     <AbsoluteFill>
@@ -76,11 +151,7 @@ export const Scene: React.FC<SceneProps> = ({
         {assetUrl ? (
           <Img
             src={assetUrl}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         ) : (
           <div
@@ -93,7 +164,7 @@ export const Scene: React.FC<SceneProps> = ({
         )}
       </AbsoluteFill>
 
-      {/* Dark gradient overlay for text readability (Skip for Fact Card to try different style) */}
+      {/* Dark gradient overlay */}
       {template !== "Fact Card" && (
         <AbsoluteFill
           style={{
@@ -104,47 +175,16 @@ export const Scene: React.FC<SceneProps> = ({
       )}
 
       {/* Caption */}
-      <AbsoluteFill
-        style={{
-          justifyContent: template === "Compilation" ? "center" : "flex-end",
-          alignItems: "center",
-          padding: template === "Compilation" ? "0 60px" : template === "Fact Card" ? "0 40px 100px 40px" : "0 60px 200px 60px",
-        }}
-      >
+      <AbsoluteFill style={captionLayout}>
         <div
           style={{
             opacity: captionOpacity,
             transform: `translateY(${captionY}px)`,
             textAlign: "center",
-            ...(template === "Fact Card"
-              ? {
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  padding: "40px 30px",
-                  borderRadius: 24,
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-                  border: "2px solid rgba(0,0,0,0.1)",
-                }
-              : {}),
+            ...captionWrapperStyle,
           }}
         >
-          <p
-            style={{
-              fontSize: template === "Fact Card" ? 48 : 56,
-              fontWeight: 800,
-              color: template === "Fact Card" ? "#111" : "white",
-              lineHeight: 1.3,
-              textShadow: template === "Fact Card" ? "none" : "0 4px 20px rgba(0,0,0,0.6)",
-              fontFamily:
-                template === "Evolution" || template === "Comparison"
-                  ? "system-ui, -apple-system, sans-serif"
-                  : "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-              letterSpacing: template === "Fact Card" ? "0" : "-0.02em",
-              margin: 0,
-              textTransform: template === "Compilation" ? "uppercase" : "none",
-            }}
-          >
-            {scriptText}
-          </p>
+          <p style={captionTextStyle}>{scriptText}</p>
         </div>
       </AbsoluteFill>
 

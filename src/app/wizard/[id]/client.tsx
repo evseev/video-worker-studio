@@ -1,10 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Tables } from "@/lib/supabase/types";
+import { IdeaStep } from "@/components/wizard/idea-step";
+import { ScriptStep } from "@/components/wizard/script-step";
+import { RenderStep } from "@/components/wizard/render-step";
+import type { SceneData } from "@/components/wizard/scene-card";
 
 type Project = Tables<"projects">;
+
+function parseJsonField<T>(value: unknown, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return parsed as T;
+  } catch {
+    return fallback;
+  }
+}
 
 export function WizardClient({ project }: { project: Project }) {
   const router = useRouter();
@@ -13,113 +27,37 @@ export function WizardClient({ project }: { project: Project }) {
   const [currentStep, setCurrentStep] = useState(urlStep);
   const [saving, setSaving] = useState(false);
   const [topic, setTopic] = useState(project.topic || "");
-
-  // Step 1 State
-  const [generatingIdeas, setGeneratingIdeas] = useState(false);
-  const [ideas, setIdeas] = useState<{title: string, description: string, trendScore: number}[]>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    project.trend_validation_data ? (typeof project.trend_validation_data === "string" ? JSON.parse(project.trend_validation_data) : project.trend_validation_data) as any : []
+  const [scenes, setScenes] = useState<SceneData[]>(
+    parseJsonField(project.draft_scenes, [])
   );
 
-  // Step 2 State
-  const [generatingScript, setGeneratingScript] = useState(false);
-  const [scenes, setScenes] = useState<{scriptText: string, searchKeyword: string, assetUrl?: string}[]>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    project.draft_scenes ? (typeof project.draft_scenes === "string" ? JSON.parse(project.draft_scenes) : project.draft_scenes) as any : []
+  const ideas = parseJsonField<{ title: string; description: string; trendScore: number }[]>(
+    project.trend_validation_data, []
   );
-  const [fetchingAssets, setFetchingAssets] = useState(false);
 
-  async function fetchAssetsData() {
-    setFetchingAssets(true);
-    try {
-      const res = await fetch("/api/wizard/fetch-assets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, scenes }),
-      });
-      const data = await res.json();
-      if (data.assets) {
-        // map assets back to scenes
-        const newScenes = scenes.map((scene, idx) => ({
-          ...scene,
-          assetUrl: data.assets[idx]?.file_path || scene.assetUrl,
-        }));
-        setScenes(newScenes);
-        await saveProgress({ draft_scenes: newScenes });
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setFetchingAssets(false);
-    }
-  }
-
-  // Step 3 State
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("minimalist");
-  const [isRendering, setIsRendering] = useState(false);
-
-  // Update URL when step changes, without reloading the page
   useEffect(() => {
     if (urlStep !== currentStep) {
       router.replace(`/wizard/${project.id}?step=${currentStep}`, { scroll: false });
     }
   }, [currentStep, project.id, router, urlStep]);
 
-  async function saveProgress(updates: Partial<Project>) {
-    setSaving(true);
-    try {
-      await fetch("/api/wizard/draft", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, ...updates }),
-      });
-    } catch (e) {
-      console.error("Failed to save progress", e);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function generateIdeas() {
-    if (!topic.trim()) return;
-    setGeneratingIdeas(true);
-    try {
-      const res = await fetch("/api/wizard/ideas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic }),
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setIdeas(data);
+  const saveProgress = useCallback(
+    async (updates: Record<string, unknown>) => {
+      setSaving(true);
+      try {
+        await fetch("/api/wizard/draft", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: project.id, ...updates }),
+        });
+      } catch (e) {
+        console.error("Failed to save progress", e);
+      } finally {
+        setSaving(false);
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setGeneratingIdeas(false);
-    }
-  }
-
-  async function generateScript() {
-    if (!topic) return;
-    setGeneratingScript(true);
-    try {
-      const res = await fetch("/api/wizard/script", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic }),
-      });
-      const data = await res.json();
-      if (data.scenes) {
-        setScenes(data.scenes);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setGeneratingScript(false);
-    }
-  }
-
+    },
+    [project.id]
+  );
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
@@ -139,13 +77,20 @@ export function WizardClient({ project }: { project: Project }) {
               {topic || "New Video"}
             </span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {saving && <span className="text-xs text-zinc-500">Saving...</span>}
             <div className="flex items-center bg-white/[0.04] rounded-lg p-1">
-              <span className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${currentStep === "idea" ? "bg-white/[0.1] text-white" : "text-zinc-500"}`}>Idea</span>
-              <span className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${currentStep === "script" ? "bg-white/[0.1] text-white" : "text-zinc-500"}`}>Script</span>
-              <span className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${currentStep === "render" ? "bg-white/[0.1] text-white" : "text-zinc-500"}`}>Render</span>
+              {["idea", "script", "render"].map((step) => (
+                <span
+                  key={step}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors capitalize ${
+                    currentStep === step ? "bg-white/[0.1] text-white" : "text-zinc-500"
+                  }`}
+                >
+                  {step}
+                </span>
+              ))}
             </div>
           </div>
         </div>
@@ -155,219 +100,35 @@ export function WizardClient({ project }: { project: Project }) {
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-6xl px-6 py-8">
           {currentStep === "idea" && (
-            <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl font-semibold text-white mb-2">Refine your idea</h2>
-              <p className="text-zinc-400 mb-8 text-base">Let&apos;s find the best angle for your topic.</p>
-
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8">
-                <label className="block text-base font-medium text-zinc-300 mb-2">Your Original Topic</label>
-                <div className="flex gap-3">
-                  <input 
-                    type="text" 
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    className="flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-violet-500/50"
-                  />
-                  <button 
-                    onClick={generateIdeas}
-                    disabled={generatingIdeas || !topic.trim()}
-                    className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {generatingIdeas ? "Thinking..." : "Generate Hooks"}
-                  </button>
-                </div>
-              </div>
-
-              {ideas.length > 0 && (
-                <div className="space-y-4 mb-8">
-                  <h3 className="text-sm font-medium text-zinc-400">AI Suggested Angles</h3>
-                  {ideas.map((idea, idx) => (
-                    <div 
-                      key={idx}
-                      className="group cursor-pointer bg-white/[0.02] border border-white/[0.06] hover:border-violet-500/50 hover:bg-violet-500/[0.02] rounded-xl p-5 transition-all"
-                      onClick={() => {
-                        setTopic(idea.description);
-                        // Optional: auto-advance
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <h4 className="text-white font-medium group-hover:text-violet-400 transition-colors">{idea.title}</h4>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-medium shrink-0">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                          {idea.trendScore}/100
-                        </div>
-                      </div>
-                      <p className="text-base text-zinc-400 leading-relaxed">{idea.description}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex justify-end pt-6 border-t border-white/[0.06]">
-                <button 
-                  disabled={!topic.trim()}
-                  className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={async () => {
-                    await saveProgress({ topic, wizard_step: "script" });
-                    setCurrentStep("script");
-                  }}
-                >
-                  Continue to Script
-                </button>
-              </div>
-            </div>
+            <IdeaStep
+              topic={topic}
+              initialIdeas={ideas}
+              onTopicChange={setTopic}
+              onContinue={async (finalTopic) => {
+                await saveProgress({ topic: finalTopic, wizard_step: "script" });
+                setCurrentStep("script");
+              }}
+            />
           )}
 
           {currentStep === "script" && (
-            <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl font-semibold text-white mb-2">Generate Script</h2>
-              <p className="text-zinc-400 mb-8 text-base">Let AI write a script and pick templates for your video.</p>
-
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8">
-                <button
-                  onClick={generateScript}
-                  disabled={generatingScript || !topic.trim()}
-                  className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {generatingScript ? "Writing script..." : "Generate Script with AI"}
-                </button>
-              </div>
-
-              {scenes.length > 0 && (
-                <div className="space-y-4 mb-8">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-base font-medium text-zinc-400">Generated Scenes</h3>
-                    <button
-                      onClick={fetchAssetsData}
-                      disabled={fetchingAssets}
-                      className="text-xs px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded transition-colors disabled:opacity-50"
-                    >
-                      {fetchingAssets ? "Fetching Images..." : "Fetch Images for Scenes"}
-                    </button>
-                  </div>
-                  {scenes.map((scene, idx) => (
-                    <div key={idx} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 flex gap-4">
-                      {/* Image Preview */}
-                      <div className="w-24 h-32 shrink-0 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center">
-                        {scene.assetUrl ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={scene.assetUrl} alt={scene.searchKeyword} className="w-full h-full object-cover" />
-                          </>
-                        ) : (
-                          <span className="text-xs text-zinc-600">No image</span>
-                        )}
-                      </div>
-                      
-                      {/* Text & Keyword */}
-                      <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="mb-2 flex justify-between items-center">
-                        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Scene {idx + 1}</span>
-                        <input
-                          type="text"
-                          value={scene.searchKeyword}
-                          onChange={(e) => {
-                            const newScenes = [...scenes];
-                            newScenes[idx].searchKeyword = e.target.value;
-                            setScenes(newScenes);
-                          }}
-                          className="px-2 py-1 bg-white/[0.06] border border-white/10 rounded text-xs text-zinc-300 w-1/2 focus:outline-none focus:border-violet-500/50"
-                          placeholder="Search keyword"
-                        />
-                      </div>
-                      <textarea
-                        value={scene.scriptText}
-                        onChange={(e) => {
-                          const newScenes = [...scenes];
-                          newScenes[idx].scriptText = e.target.value;
-                          setScenes(newScenes);
-                        }}
-                        className="w-full flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-base focus:outline-none focus:border-violet-500/50 min-h-[80px] resize-y"
-                        placeholder="Script text"
-                      />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex justify-end pt-6 border-t border-white/[0.06]">
-                <button 
-                  disabled={scenes.length === 0}
-                  className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={async () => {
-                    await saveProgress({ wizard_step: "render" }); // Could save the script here
-                    setCurrentStep("render");
-                  }}
-                >
-                  Continue to Finalize
-                </button>
-              </div>
-            </div>
+            <ScriptStep
+              topic={topic}
+              projectId={project.id}
+              scenes={scenes}
+              onScenesChange={setScenes}
+              saveProgress={saveProgress}
+              onContinue={async () => {
+                await saveProgress({ wizard_step: "render", draft_scenes: scenes });
+                setCurrentStep("render");
+              }}
+            />
           )}
 
           {currentStep === "render" && (
-            <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl font-semibold text-white mb-2">Final Polish</h2>
-              <p className="text-zinc-400 mb-8 text-base">Choose a visual template and start rendering your final video.</p>
-
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                {["minimalist", "bold", "neon", "corporate"].map((templateOption) => (
-                  <button
-                    key={templateOption}
-                    onClick={() => setSelectedTemplate(templateOption)}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      selectedTemplate === templateOption
-                        ? "bg-violet-500/10 border-violet-500 text-white"
-                        : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="font-medium capitalize mb-1">{templateOption}</div>
-                    <div className="text-xs opacity-70">
-                      Visual style for text overlays and transitions.
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex justify-end pt-6 border-t border-white/[0.06] gap-4">
-                <button 
-                  disabled={isRendering}
-                  className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  onClick={async () => {
-                    setIsRendering(true);
-                    try {
-                      const res = await fetch("/api/wizard/render", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          projectId: project.id,
-                          scenes,
-                          template: selectedTemplate
-                        })
-                      });
-                      if (!res.ok) throw new Error("Failed to start render");
-                      
-                      router.replace("/");
-                      router.refresh();
-                    } catch (error) {
-                      console.error("Render error:", error);
-                      alert("Failed to start render. Please try again.");
-                      setIsRendering(false);
-                    }
-                  }}
-                >
-                  {isRendering ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Starting Render...
-                    </>
-                  ) : (
-                    "Generate Video"
-                  )}
-                </button>
-              </div>
-            </div>
+            <RenderStep projectId={project.id} scenes={scenes}>
+              {/* Future sub-components: CaptionStyleSelector, VideoConfigSelector, MusicSelector, VoiceoverUpload */}
+            </RenderStep>
           )}
         </div>
       </main>

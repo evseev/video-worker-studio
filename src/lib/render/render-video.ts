@@ -2,6 +2,8 @@ import { renderMediaOnLambda, getRenderProgress, type AwsRegion } from "@remotio
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { createClient } from "@supabase/supabase-js";
+import { resolveVideoDimensions } from "./dimensions";
+import { getMusicTrack } from "@/lib/music-presets";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -13,6 +15,11 @@ type RenderInput = {
     assetUrl: string | null;
   }>;
   template?: string;
+  aspectRatio?: string;
+  videoQuality?: string;
+  backgroundMusic?: string | null;
+  captionStyle?: string;
+  voiceoverUrl?: string | null;
 };
 
 const SCENE_DURATION_SECONDS = 5;
@@ -118,8 +125,10 @@ export async function renderVideo(input: RenderInput): Promise<string> {
 }
 
 async function renderVideoOnLambda(input: RenderInput): Promise<string> {
-  const { projectId, scenes, template } = input;
+  const { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle } = input;
   const { region, functionName, serveUrl } = getLambdaConfig();
+  const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
+  const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
 
   const sceneDurationFrames = SCENE_DURATION_SECONDS * FPS;
   const totalFrames =
@@ -131,9 +140,12 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
     sceneDurationFrames,
     transitionFrames: TRANSITION_FRAMES,
     template,
+    captionStyle,
+    musicUrl: musicTrack?.url ?? null,
+    voiceoverUrl: input.voiceoverUrl ?? null,
   };
 
-  console.log(`[render] Starting Lambda render for project ${projectId}`);
+  console.log(`[render] Starting Lambda render for project ${projectId} (${width}x${height})`);
   const started = await renderMediaOnLambda({
     region,
     functionName,
@@ -143,6 +155,8 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
     outName: `videos/${projectId}.mp4`,
     privacy: "public",
     forceDurationInFrames: totalFrames,
+    forceWidth: width,
+    forceHeight: height,
     inputProps,
   });
 
@@ -178,7 +192,9 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
 }
 
 async function renderVideoLocally(input: RenderInput): Promise<string> {
-  const { projectId, scenes } = input;
+  const { projectId, scenes, aspectRatio, videoQuality, backgroundMusic } = input;
+  const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
+  const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
   const normalizedScenes = scenes.map((scene) => ({
     ...scene,
     // Remotion bundle server runs on a different port than Next dev,
@@ -208,6 +224,9 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     sceneDurationFrames,
     transitionFrames: TRANSITION_FRAMES,
     template: input.template,
+    captionStyle: input.captionStyle,
+    musicUrl: musicTrack?.url ?? null,
+    voiceoverUrl: input.voiceoverUrl ?? null,
   };
 
   // Select the composition
@@ -217,7 +236,9 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     inputProps,
   });
 
-  // Override duration based on actual scene count
+  // Override dimensions and duration based on actual settings
+  composition.width = width;
+  composition.height = height;
   composition.durationInFrames = totalFrames;
 
   const outputDir = path.join(os.tmpdir(), "vws-renders");

@@ -16,42 +16,60 @@ export type Database = {
     Tables: {
       projects: {
         Row: {
+          aspect_ratio: string;
+          background_music: string | null;
+          caption_style: string | null;
           created_at: string;
           draft_scenes: Json | null;
           id: string;
+          render_error_context: Json | null;
           selected_template: string | null;
           status: string;
           topic: string;
           trend_validation_data: Json | null;
           updated_at: string;
           user_id: string;
+          video_quality: string;
           video_url: string | null;
+          voiceover_url: string | null;
           wizard_step: string | null;
         };
         Insert: {
+          aspect_ratio?: string;
+          background_music?: string | null;
+          caption_style?: string | null;
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;
+          render_error_context?: Json | null;
           selected_template?: string | null;
           status?: string;
           topic: string;
           trend_validation_data?: Json | null;
           updated_at?: string;
           user_id: string;
+          video_quality?: string;
           video_url?: string | null;
+          voiceover_url?: string | null;
           wizard_step?: string | null;
         };
         Update: {
+          aspect_ratio?: string;
+          background_music?: string | null;
+          caption_style?: string | null;
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;
+          render_error_context?: Json | null;
           selected_template?: string | null;
           status?: string;
           topic?: string;
           trend_validation_data?: Json | null;
           updated_at?: string;
           user_id?: string;
+          video_quality?: string;
           video_url?: string | null;
+          voiceover_url?: string | null;
           wizard_step?: string | null;
         };
         Relationships: [];
