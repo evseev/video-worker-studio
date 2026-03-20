@@ -225,6 +225,8 @@ draft → processing → rendering → completed
   2. `npm run lint` — zero lint errors (ESLint)
   3. `npm run build` — production build succeeds
 - Every new feature epic should include tests for its new code paths.
+- **E2E tests** (Playwright): `npm run test:e2e` runs against the dev server. Tests live in `e2e/`.
+- **CI:** GitHub Actions runs unit tests, lint, and build on every push/PR to `develop` and `main`. See `.github/workflows/test.yml`.
 
 ---
 

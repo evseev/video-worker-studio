@@ -117,8 +117,8 @@
 *   [x] **Story 14.1:** Bootstrap Vitest with `@testing-library/react`, `@testing-library/jest-dom`, jsdom, path aliases, coverage config.
 *   [x] **Story 14.2:** Write tests for `withAuth()` wrapper (auth check, handler invocation, error handling, rate limit integration).
 *   [x] **Story 14.3:** Write tests for rate limiter (under limit, over limit, window reset, key independence).
-*   [ ] **Story 14.4:** Bootstrap Playwright E2E (critical-path test: login → wizard → render → dashboard).
-*   [ ] **Story 14.5:** CI integration (add test commands to pipeline).
+*   [x] **Story 14.4:** Bootstrap Playwright E2E with 4 critical-path tests (login page, auth redirects, protected routes).
+*   [x] **Story 14.5:** CI integration — GitHub Actions workflow running unit tests, lint, and build on push/PR.
 
 ## Epic 15: Rate Limiting & Security Hardening
 **Description:** Protect API routes from abuse, harden security for public-facing app.

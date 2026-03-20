@@ -10,6 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "remotion:preview": "npx remotion studio src/remotion/index.ts",
     "remotion:render": "npx remotion render src/remotion/index.ts VideoWorker out/video.mp4"
   },
@@ -32,6 +34,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@remotion/lambda": "4.0.436",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
