@@ -45,7 +45,7 @@ Video generation natively structured as React code.
 
 ## 7. Storage
 *   **Purpose:** Storing user avatars, downloaded Pinterest images, generated audio clips, and final rendered `.mp4` files.
-*   **Delivery:** Currently mocked as URLs, but will use Supabase Storage.
+*   **Delivery:** Currently mocked as URLs, but will use AWS S3 Storage.
 
 ---
 
@@ -59,7 +59,7 @@ Video generation natively structured as React code.
 | **Database** | PostgreSQL (Supabase) via `@supabase/supabase-js` |
 | **Auth** | Supabase Auth (Middleware protected) |
 | **Background Jobs** | Inngest (Serverless queues + step functions) |
-| **AI LLM** | Google Gemini (Gemini 2.5 Flash) |
+| **AI LLM** | Google Gemini (Gemini 3 Flash) |
 | **Validation** | Zod (v4) |
 | **Video Engine** | Remotion |
 | **Observability** | Sentry (`@sentry/nextjs`) |
