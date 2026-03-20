@@ -9,8 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Video delivery page** (`/projects/[id]`) — watch completed videos in-app with HTML5 player, download MP4, retry failed renders, and see pipeline progress for in-flight projects.
-- **Shared `withAuth()` API middleware** — all 8 wizard routes now share auth + rate limiting through a single wrapper. The `/api/wizard/ideas` route (previously unauthenticated) is now protected.
-- **Rate limiting** — in-memory sliding window limiter: AI routes (10 req/min), render (3 req/min), general (60 req/min per user).
+- **API security** — all wizard routes now require authentication (the ideas route was previously open). Rate limiting protects against abuse: AI calls capped at 10/min, renders at 3/min per user.
 - **Scene editing** — reorder scenes (up/down), delete individual scenes, add blank scenes, and refresh images per scene.
 - **Multiple asset candidates** — fetch 3 image options per scene from Pinterest (parallelized with concurrency limit of 4), click to pick which one to use.
 - **Video configuration** — choose aspect ratio (9:16 portrait or 16:9 landscape) and quality (720p or 1080p) before rendering. Remotion compositions now accept dynamic dimensions.

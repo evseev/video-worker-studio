@@ -3,9 +3,11 @@
 The system is a Next.js (App Router) web app backed by Supabase and Inngest. It provides both a "One-Click Generation" pipeline and an "Interactive Video Wizard".
 
 ## 1. Web Frontend (Next.js)
-*   **Role:** User authentication, project dashboard (create draft, delete project, periodic refresh while jobs are active), one-click creation endpoint (`/api/generate`), and an interactive wizard (`/wizard/[id]`).
+*   **Role:** User authentication, project dashboard, one-click creation (`/api/generate`), interactive wizard (`/wizard/[id]`), and project detail page (`/projects/[id]`).
 *   **Tech:** React (Server Components + Client Components), Tailwind CSS, Zustand (client state).
-*   **State:** Dashboard uses timed `router.refresh()` while any project is `draft`, `processing`, or `rendering`. Project status still flows `draft` → `processing` → `rendering` → `completed` (or terminal failure states).
+*   **State:** Dashboard uses **Supabase Realtime** subscription on `projects` table for instant status updates (replaced 5-second polling in v0.3.0.0). Project status flows `draft` → `processing` → `rendering` → `completed` (or terminal failure states).
+*   **Video Delivery:** `/projects/[id]` provides status-aware views — HTML5 video player for completed projects, progress display for in-flight, error details + retry for failed.
+*   **API Middleware:** All wizard routes share a `withAuth()` wrapper providing auth validation and per-tier rate limiting.
 
 ## 2. API & Backend Services (Next.js Route Handlers + Supabase)
 *   **Database:** Supabase PostgreSQL handles relational data (`Project`, `Scene`).

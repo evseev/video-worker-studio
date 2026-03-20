@@ -60,19 +60,44 @@ src/
       wizard/            # Wizard-specific API routes
     auth/                # Auth callback route (Supabase magic link)
     login/               # Login page
+    projects/[id]/       # Project detail page (video player, download, retry)
     wizard/[id]/         # Interactive multi-step wizard UI
   components/
-    dashboard.tsx        # Main dashboard component (project grid + quick-start)
+    dashboard.tsx        # Dashboard orchestrator (imports sub-components)
+    dashboard/           # Dashboard sub-components
+      project-card.tsx
+      status-badge.tsx
+      empty-state.tsx
+      create-modal.tsx
+      delete-modal.tsx
+    wizard/              # Wizard step components
+      idea-step.tsx
+      script-step.tsx
+      render-step.tsx    # Container with slots for config sub-components
+      scene-card.tsx
+      template-selector.tsx
+      video-config-selector.tsx
+      music-selector.tsx
+      caption-style-selector.tsx
+      voiceover-upload.tsx
+    ui/
+      toast.tsx           # Toast notification system (Zustand store)
   lib/
+    api/
+      with-auth.ts       # Shared auth + rate limiting wrapper for API routes
     ai/
       generate-script.ts # Gemini script generation
-      fetch-assets.ts    # Pinterest asset scraping via pinterest-dl
+      fetch-assets.ts    # Pinterest asset scraping via pinterest-dl (supports multi-asset)
       wizard.ts          # Wizard-specific AI helpers
     inngest/
       client.ts          # Inngest client singleton
       functions.ts       # VideoGenerationWorker — the ONLY Inngest function
     render/
       render-video.ts    # Remotion render dispatcher (Lambda default, local fallback)
+      dimensions.ts      # Video dimension resolver (aspect ratio × quality → width/height)
+    caption-styles.ts    # 4 caption style presets (minimal, bold, strip, split)
+    music-presets.ts     # 5 royalty-free music track presets
+    rate-limit.ts        # In-memory sliding window rate limiter
     supabase/
       client.ts          # Browser client (anon key)
       server.ts          # Server client (uses cookies)
@@ -112,7 +137,7 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `caption_style`, `voiceover_url` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 
 ### Project status lifecycle
@@ -166,8 +191,9 @@ draft → processing → rendering → completed
 | `/api/wizard/validate-trend` | POST | ✅ | Validate trend signals |
 | `/api/wizard/generate-structure` | POST | ✅ | Generate scene structure |
 | `/api/wizard/script` | POST | ✅ | Generate scene scripts |
-| `/api/wizard/fetch-assets` | POST | ✅ | Fetch scene assets from Pinterest |
-| `/api/wizard/render` | POST | ✅ | Dispatch wizard render job |
+| `/api/wizard/fetch-assets` | POST | ✅ | Fetch scene assets from Pinterest (supports multi-asset mode) |
+| `/api/wizard/upload-voiceover` | POST | ✅ | Upload voice-over audio file (MP3/WAV, max 50MB) |
+| `/api/wizard/render` | POST | ✅ | Dispatch wizard render job (with video config, music, captions) |
 
 - Route handlers must return `NextResponse.json()` consistently.
 - All authenticated routes must validate the Supabase session and return `401` if missing.
@@ -191,12 +217,14 @@ draft → processing → rendering → completed
 
 ## 8. Testing Expectations
 
-- No test framework is currently configured. **Before adding tests, open a discussion** about the framework (Vitest + Testing Library is the preferred choice).
-- For now, manual smoke-testing is the baseline:
-  1. `npm run dev` — app boots without errors
+- **Vitest** + `@testing-library/react` + `@testing-library/jest-dom` is the configured test framework (since v0.3.0.0).
+- Tests live in `src/__tests__/`, organized by module path (e.g., `src/__tests__/lib/api/with-auth.test.ts`).
+- Run tests: `npm run test` (single run), `npm run test:watch` (watch mode), `npm run test:coverage` (with coverage).
+- Baseline verification:
+  1. `npm run test` — all tests pass
   2. `npm run lint` — zero lint errors (ESLint)
   3. `npm run build` — production build succeeds
-- When a test framework is added: unit tests go in `src/__tests__/`, co-located tests are acceptable for lib functions.
+- Every new feature epic should include tests for its new code paths.
 
 ---
 
