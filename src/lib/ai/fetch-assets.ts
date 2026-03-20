@@ -6,71 +6,93 @@ import * as path from "path";
 const execFileAsync = promisify(execFile);
 
 const PINTEREST_DL_BIN = process.env.PINTEREST_DL_BIN;
+const MAX_CONCURRENCY = 4;
 
-/**
- * Fetches one Pinterest image per search keyword using pinterest-dl CLI.
- * Returns an array of local file paths (or null if fetch failed).
- */
-export async function fetchAssets(
-  keywords: string[],
-  projectId: string
-): Promise<(string | null)[]> {
+/** Run tasks in batches with a concurrency limit */
+async function batchedPromiseAll<T>(
+  tasks: (() => Promise<T>)[],
+  concurrency: number
+): Promise<T[]> {
+  const results: T[] = [];
+  for (let i = 0; i < tasks.length; i += concurrency) {
+    const batch = tasks.slice(i, i + concurrency);
+    const batchResults = await Promise.all(batch.map((fn) => fn()));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+/** Fetch images from Pinterest for a single keyword */
+async function fetchForKeyword(
+  keyword: string,
+  sceneDir: string,
+  count: number,
+  sceneIndex: number
+): Promise<string[]> {
+  await fs.promises.mkdir(sceneDir, { recursive: true });
+
   if (!PINTEREST_DL_BIN) {
-    console.warn("[fetch-assets] PINTEREST_DL_BIN is not set, asset fetching will fail.");
+    console.warn(`[fetch-assets] Scene ${sceneIndex}: PINTEREST_DL_BIN not set`);
+    return [];
   }
 
+  try {
+    console.log(`[fetch-assets] Scene ${sceneIndex}: searching for "${keyword}" (n=${count})`);
+
+    const { stdout, stderr } = await execFileAsync(
+      PINTEREST_DL_BIN,
+      ["search", keyword, "-n", String(count), "-o", sceneDir, "--client", "api", "--timeout", "15"],
+      { timeout: 30000 }
+    );
+
+    if (stdout) console.log(`[fetch-assets] Scene ${sceneIndex} stdout: ${stdout.slice(0, 200)}`);
+    if (stderr) console.log(`[fetch-assets] Scene ${sceneIndex} stderr: ${stderr.slice(0, 200)}`);
+
+    const files = await fs.promises.readdir(sceneDir);
+    const imageFiles = files
+      .filter((f) => /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
+      .sort()
+      .map((f) => path.join(sceneDir, f));
+
+    console.log(`[fetch-assets] Scene ${sceneIndex}: found ${imageFiles.length} images`);
+    return imageFiles;
+  } catch (err) {
+    console.error(`[fetch-assets] Scene ${sceneIndex}: Error fetching "${keyword}":`, err);
+    return [];
+  }
+}
+
+/**
+ * Fetches Pinterest images per search keyword using pinterest-dl CLI.
+ *
+ * @param keywords - Search keyword per scene (null to skip)
+ * @param projectId - Project ID for directory namespacing
+ * @param count - Number of images to fetch per keyword (default: 1)
+ * @returns Array of results per scene. Each result is an array of local file paths.
+ */
+/**
+ * When count=1 (default), returns (string | null)[] — one path per keyword.
+ * When count>1, returns string[][] — array of paths per keyword.
+ */
+export async function fetchAssets(
+  keywords: (string | null)[],
+  projectId: string,
+  count: number = 1
+): Promise<(string | null)[] | string[][]> {
   const assetPath = process.env.TMP_ASSETS_PATH || "public/tmp_assets";
   const baseDir = path.join(process.cwd(), assetPath, "vws-assets", projectId);
   await fs.promises.mkdir(baseDir, { recursive: true });
 
-  const results: (string | null)[] = [];
+  const tasks = keywords.map((keyword, i) => {
+    return async () => {
+      if (!keyword) return count > 1 ? [] : null;
+      const sceneDir = path.join(baseDir, `scene-${i}`);
+      const images = await fetchForKeyword(keyword, sceneDir, count, i);
 
-  for (let i = 0; i < keywords.length; i++) {
-    const keyword = keywords[i];
-    if (!keyword) {
-      results.push(null);
-      continue;
-    }
+      if (count > 1) return images;
+      return images[0] ?? null;
+    };
+  });
 
-    const sceneDir = path.join(baseDir, `scene-${i}`);
-    await fs.promises.mkdir(sceneDir, { recursive: true });
-
-    try {
-      if (!PINTEREST_DL_BIN) {
-        throw new Error("PINTEREST_DL_BIN is not configured");
-      }
-
-      console.log(`[fetch-assets] Scene ${i}: searching for "${keyword}"`);
-
-      // Use execFile to prevent command injection from LLM-generated keywords
-      const { stdout, stderr } = await execFileAsync(
-        PINTEREST_DL_BIN,
-        ["search", keyword, "-n", "1", "-o", sceneDir, "--client", "api", "--timeout", "15"],
-        { timeout: 30000 }
-      );
-      
-      console.log(`[fetch-assets] Scene ${i} stdout: ${stdout.slice(0, 200)}`);
-      if (stderr) console.log(`[fetch-assets] Scene ${i} stderr: ${stderr.slice(0, 200)}`);
-
-      // Find the downloaded image file
-      const files = await fs.promises.readdir(sceneDir);
-      const imageFile = files.find((f) =>
-        /\.(jpg|jpeg|png|webp|gif)$/i.test(f)
-      );
-
-      if (imageFile) {
-        const filePath = path.join(sceneDir, imageFile);
-        console.log(`[fetch-assets] Scene ${i}: Found asset ${filePath}`);
-        results.push(filePath);
-      } else {
-        console.warn(`[fetch-assets] Scene ${i}: No image found for "${keyword}"`);
-        results.push(null);
-      }
-    } catch (err) {
-      console.error(`[fetch-assets] Scene ${i}: Error fetching "${keyword}":`, err);
-      results.push(null);
-    }
-  }
-
-  return results;
+  return batchedPromiseAll(tasks, MAX_CONCURRENCY) as Promise<(string | null)[] | string[][]>;
 }
