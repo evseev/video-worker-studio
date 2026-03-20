@@ -1,6 +1,6 @@
 # TODOS
 
-## Testing
+## Completed
 
 ### Bootstrap automated tests (Vitest + Playwright)
 
@@ -10,8 +10,7 @@
 
 **Context:** `.gstack/no-test-bootstrap` defers setup; remove it when starting. Prefer `src/__tests__/` once a framework is chosen per `AGENTS.md`.
 
-**Effort:** M  
-**Priority:** P0  
+**Effort:** M
+**Priority:** P0
 **Depends on:** None
-
-## Completed
+**Completed:** v0.3.0.0 (2026-03-20)
