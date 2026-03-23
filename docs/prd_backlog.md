@@ -142,3 +142,47 @@
 *   [x] **Story 17.2:** Add `multipleAssets` flag to fetch-assets API route, returning `assetOptions[]` per scene.
 *   [x] **Story 17.3:** Update `SceneCard` with asset picker showing up to 3 thumbnail options with click-to-select.
 *   [x] **Story 17.4:** Wire up multi-asset fetch and asset selection in `ScriptStep`.
+
+## Epic 18: Complete User Flow & Wizard Refactor
+**Description:** Expand the wizard from 3 steps to 5 steps, wire unused API endpoints, fix template alignment, and add in-app video delivery.
+
+*   [x] **Story 18.1:** Create Zustand wizard store (`src/lib/stores/wizard-store.ts`) and split monolithic `client.tsx` into 5 step components.
+*   [x] **Story 18.2:** Build Idea step with video settings inputs (scene count, duration, aspect ratio, quality).
+*   [x] **Story 18.3:** Build Refine step wiring `/api/wizard/enhance-idea` and `/api/wizard/validate-trend` endpoints.
+*   [x] **Story 18.4:** Build Script step with 5 correct Remotion template cards and `/api/wizard/generate-structure` integration.
+*   [x] **Story 18.5:** Build Preview step with drag-and-drop scene reorder, per-scene image fetch/re-fetch, and scene deletion.
+*   [x] **Story 18.6:** Build Render step with progress polling, in-app HTML5 video player, download button, and error retry.
+*   [x] **Story 18.7:** Enhance dashboard "New Video" modal with video settings; update completed project links to use in-app player.
+
+## Video Worker Studio MVP Tasks (Implemented)
+
+### Planning and Setup
+*   [x] Define project specification
+*   [x] Bootstrap Next.js, app router, tailwind
+*   [x] Set up Remotion
+*   [x] Configure Pinterest download tool for asset fetching
+
+### Core Application
+*   [x] Build authentication UI
+*   [x] Set up Supabase schema (users, projects, assets, etc.)
+    *   [x] Ensure cascade delete is configured for projects
+*   [x] Build projects dashboard
+    *   [x] Add delete project functionality
+*   [x] Build MVP Wizard UI Components
+    *   [x] Create `PUT /api/wizard/draft` endpoint
+    *   [x] Dashboard: Redirect new projects to Wizard and support resuming Drafts
+    *   [x] Create `/app/wizard/[id]/page.tsx` and `<WizardClient />`
+    *   [x] Wizard Step 1: Idea Enhancer & Trend Validation
+    *   [x] Wizard Step 2: Structure Generation & Scene Editor
+    *   [x] Wizard Step 3: Render and Submit
+*   [x] Build Remotion Templates (Slideshow, Compilation, Evolution, Comparison, Fact Card)
+*   [x] Implement video rendering pipeline (Inngest -> Remotion renderer -> Supabase storage)
+
+### Orchestration (Inngest + AI)
+*   [x] Define Inngest functions for asynchronous logic
+*   [x] Implement Google Gemini agent calls for idea generation and structure
+*   [x] Implement local asset fetching worker
+
+### Polish
+*   [x] Styling / UI components
+*   [x] Error handling, loading states
