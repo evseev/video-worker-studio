@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import type { Tables } from "@/lib/supabase/types";
+import { ProjectCard } from "./dashboard/project-card";
+import { EmptyState } from "./dashboard/empty-state";
+import { CreateModal } from "./dashboard/create-modal";
+import { DeleteModal, type DeleteState } from "./dashboard/delete-modal";
 
 type Project = Tables<"projects">;
 
@@ -107,7 +111,7 @@ export function Dashboard({
   user: User;
   projects: Project[];
 }) {
-  const projects = initialProjects;
+  const [projects, setProjects] = useState(initialProjects);
   const [topic, setTopic] = useState("");
   const [sceneCount, setSceneCount] = useState(6);
   const [sceneDuration, setSceneDuration] = useState(5);
@@ -115,32 +119,43 @@ export function Dashboard({
   const [quality, setQuality] = useState<"hd" | "fullhd" | "4k">("fullhd");
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [deleteState, setDeleteState] = useState<
-    | null
-    | { phase: "confirm"; project: Project }
-    | { phase: "success"; warnings: string[] }
-  >(null);
+  const [deleteState, setDeleteState] = useState<DeleteState>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
-
   const supabase = createClient();
 
+  // Supabase Realtime: subscribe to project status changes
   useEffect(() => {
-    const hasActiveProjects = projects.some((project) =>
-      project.status === "draft" ||
-      project.status === "processing" ||
-      project.status === "rendering"
-    );
-
-    if (!hasActiveProjects) return;
-
-    const interval = window.setInterval(() => {
-      router.refresh();
-    }, 5000);
+    const channel = supabase
+      .channel("projects-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "projects",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            const updated = payload.new as Project;
+            setProjects((prev) =>
+              prev.map((p) => (p.id === updated.id ? updated : p))
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deleted = payload.old as { id: string };
+            setProjects((prev) => prev.filter((p) => p.id !== deleted.id));
+          } else if (payload.eventType === "INSERT") {
+            const inserted = payload.new as Project;
+            setProjects((prev) => [inserted, ...prev]);
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
-      window.clearInterval(interval);
+      supabase.removeChannel(channel);
     };
   }, [projects, router]);
 
@@ -166,15 +181,33 @@ export function Dashboard({
       .select()
       .single();
 
-    if (error) {
-      console.error("Failed to create project:", error, JSON.stringify(error));
-      setCreating(false);
-      return;
-    }
+  // Sync with server data when it changes (e.g. after navigation)
+  useEffect(() => {
+    setProjects(initialProjects);
+  }, [initialProjects]);
 
-    // Redirect directly to the wizard UI
-    router.push(`/wizard/${project.id}?step=idea`);
-  }
+  const handleCreate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!topic.trim()) return;
+      setCreating(true);
+
+      const { data: project, error } = await supabase
+        .from("projects")
+        .insert({ topic: topic.trim(), user_id: user.id, status: "draft" })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Failed to create project:", error);
+        setCreating(false);
+        return;
+      }
+
+      router.push(`/wizard/${project.id}?step=idea`);
+    },
+    [topic, supabase, user.id, router]
+  );
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -239,7 +272,6 @@ export function Dashboard({
 
       {/* Main Content */}
       <main className="mx-auto max-w-6xl px-6 py-10">
-        {/* Header Row */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-white mb-1">My Videos</h1>
@@ -259,7 +291,6 @@ export function Dashboard({
           </button>
         </div>
 
-        {/* New Project Modal Overlay */}
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.06] bg-[#12121d] p-8 shadow-2xl">
@@ -356,104 +387,17 @@ export function Dashboard({
         )}
 
         {deleteState && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div
-              className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.06] bg-[#12121d] p-8 shadow-2xl"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={
-                deleteState.phase === "confirm" ? "delete-project-title" : "delete-project-done"
-              }
-            >
-              {deleteState.phase === "confirm" ? (
-                <>
-                  <h2 id="delete-project-title" className="text-xl font-semibold text-white mb-2">
-                    Delete this project?
-                  </h2>
-                  <p className="text-base text-zinc-400 mb-2">
-                    <span className="text-zinc-200 font-medium">{deleteState.project.topic}</span>{" "}
-                    will be removed from your library. Downloaded copies of the video are not affected.
-                  </p>
-                  <p className="text-base text-amber-200/80 mb-6">
-                    This permanently deletes the project, its scenes, local temp files, and stored video files when possible.
-                  </p>
-                  {deleteError && (
-                    <p className="text-base text-red-400 mb-4">{deleteError}</p>
-                  )}
-                  <div className="flex items-center gap-3 justify-end">
-                    <button
-                      type="button"
-                      onClick={closeDeleteModal}
-                      disabled={deleteBusy}
-                      className="rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleConfirmDelete}
-                      disabled={deleteBusy}
-                      className="rounded-xl bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-900/30 transition-all hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {deleteBusy ? "Deleting…" : "Delete project"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h2 id="delete-project-done" className="text-xl font-semibold text-white mb-2">
-                    Project deleted
-                  </h2>
-                  <p className="text-base text-zinc-400 mb-4">
-                    The project has been removed from your account.
-                  </p>
-                  {deleteState.warnings.length > 0 && (
-                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 mb-6">
-                      <p className="text-xs font-medium text-amber-200/90 mb-2">
-                        Some cleanup steps reported issues (the project row was still removed):
-                      </p>
-                      <ul className="text-xs text-amber-100/80 list-disc pl-4 space-y-1">
-                        {deleteState.warnings.map((w, i) => (
-                          <li key={`${i}-${w}`}>{w}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={closeDeleteModal}
-                      className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-indigo-500 cursor-pointer"
-                    >
-                      Done
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <DeleteModal
+            state={deleteState}
+            busy={deleteBusy}
+            error={deleteError}
+            onConfirm={handleConfirmDelete}
+            onClose={closeDeleteModal}
+          />
         )}
 
-        {/* Projects Grid */}
         {projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mb-4">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-zinc-600">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-zinc-300 mb-1">No videos yet</h3>
-            <p className="text-base text-zinc-500 mb-6">
-              Create your first AI-generated video in seconds.
-            </p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-indigo-500 cursor-pointer"
-            >
-              Create your first video
-            </button>
-          </div>
+          <EmptyState onCreateClick={() => setShowForm(true)} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((project) => (

@@ -1,4 +1,4 @@
-# Project: Video Worker Studio MVP (Scope Reduced)
+# Project: Video Worker Studio MVP
 
 ## Epic 1: Scaffold & Infrastructure Setup
 **Description:** Initialize the Next.js, Supabase, and Inngest environments, setting up the basic routing and styling.
@@ -9,7 +9,7 @@
 *   [x] **Story 1.4:** Setup Inngest client and integrate the API route (`/api/inngest`) for background workers.
 
 ## Epic 2: Core Data Modeling
-**Description:** Implementing the Prisma schemas (or Supabase tables) and basic CRUD operations.
+**Description:** Implementing the Supabase tables and basic CRUD operations.
 
 *   [x] **Story 2.1:** Create `Project` table (id, user_id, topic, status, video_url).
 *   [x] **Story 2.2:** Create `Scene` table (id, project_id, sequence_order, script_text, search_keywords, asset_url).
@@ -47,46 +47,98 @@
 *   [x] **Story 6.4:** Modify Gemini structured output formatting to dynamically adapt to the selected video template.
 *   [x] **Story 6.5:** Update Remotion compositing logic to visually render distinct overlays/typography according to the template.
 
-## Epic 7: Complete User Flow & Wizard Refactor
-**Description:** Expand the wizard from 3 steps to 5 steps, wire unused API endpoints, fix template alignment, and add in-app video delivery.
+## Epic 7: Video Delivery & Playback
+**Description:** In-app video viewing, download, and retry for failed renders.
 
-*   [x] **Story 7.1:** Create Zustand wizard store (`src/lib/stores/wizard-store.ts`) and split monolithic `client.tsx` into 5 step components.
-*   [x] **Story 7.2:** Build Idea step with video settings inputs (scene count, duration, aspect ratio, quality).
-*   [x] **Story 7.3:** Build Refine step wiring `/api/wizard/enhance-idea` and `/api/wizard/validate-trend` endpoints.
-*   [x] **Story 7.4:** Build Script step with 5 correct Remotion template cards and `/api/wizard/generate-structure` integration.
-*   [x] **Story 7.5:** Build Preview step with drag-and-drop scene reorder, per-scene image fetch/re-fetch, and scene deletion.
-*   [x] **Story 7.6:** Build Render step with progress polling, in-app HTML5 video player, download button, and error retry.
-*   [x] **Story 7.7:** Enhance dashboard "New Video" modal with video settings; update completed project links to use in-app player.
+*   [x] **Story 7.1:** Create `/projects/[id]` server page with status-aware views (player for completed, progress for in-flight, error+retry for failed).
+*   [x] **Story 7.2:** Build `VideoPlayer` component with HTML5 `<video>`, poster frame, play/pause, fullscreen.
+*   [x] **Story 7.3:** Add download button with sanitized filename (`{topic}-{id}.mp4`).
+*   [x] **Story 7.4:** Retry button for failed projects — re-dispatches Inngest event, resets status.
+*   [x] **Story 7.5:** Update dashboard cards to link non-draft projects to `/projects/[id]` instead of raw URLs.
 
-## Video Worker Studio MVP Tasks (Implemented)
+## Epic 8: Wizard Hardening & Error Handling
+**Description:** Reliable wizard flow with auth enforcement, input validation, and user-facing error states.
 
-### Planning and Setup
-*   [x] Define project specification
-*   [x] Bootstrap Next.js, app router, tailwind
-*   [x] Set up Remotion
-*   [x] Configure Pinterest download tool for asset fetching
+*   [x] **Story 8.1:** Extract shared `withAuth()` wrapper to `src/lib/api/with-auth.ts` — validates session, returns 401, passes user to handler.
+*   [x] **Story 8.2:** Refactor all 8 wizard API routes to use `withAuth()` wrapper. Fix missing auth on `/api/wizard/ideas`.
+*   [x] **Story 8.3:** Add Zod validation for Gemini ideas response (`IdeasResponseSchema`).
+*   [x] **Story 8.4:** Fix `updateStatus()` in Inngest worker — throw on RPC failure instead of silent logging (enables Inngest retry).
+*   [x] **Story 8.5:** Add double-submit prevention on render route (server-side status check, returns 409 if already processing).
+*   [x] **Story 8.6:** Fix fragile path manipulation in `fetch-assets` route (replace `.split('/public')` with `path.relative()`).
 
-### Core Application
-*   [x] Build authentication UI
-*   [x] Set up Supabase schema (users, projects, assets, etc.)
-    *   [x] Ensure cascade delete is configured for projects
-*   [x] Build projects dashboard
-    *   [x] Add delete project functionality
-*   [x] Build MVP Wizard UI Components
-    *   [x] Create `PUT /api/wizard/draft` endpoint
-    *   [x] Dashboard: Redirect new projects to Wizard and support resuming Drafts
-    *   [x] Create `/app/wizard/[id]/page.tsx` and `<WizardClient />`
-    *   [x] Wizard Step 1: Idea Enhancer & Trend Validation
-    *   [x] Wizard Step 2: Structure Generation & Scene Editor
-    *   [x] Wizard Step 3: Render and Submit
-*   [x] Build Remotion Templates (Slideshow, Compilation, Evolution, Comparison, Fact Card)
-*   [x] Implement video rendering pipeline (Inngest -> Remotion renderer -> Supabase storage)
+## Epic 9: Component Decomposition & UX Polish
+**Description:** Break monolithic components, add missing UX states, make it feel like a real product.
 
-### Orchestration (Inngest + AI)
-*   [x] Define Inngest functions for asynchronous logic
-*   [x] Implement Google Gemini agent calls for idea generation and structure
-*   [x] Implement local asset fetching worker
+*   [x] **Story 9.1:** Extract dashboard into sub-components (`ProjectCard`, `StatusBadge`, `EmptyState`, `CreateModal`, `DeleteModal`).
+*   [x] **Story 9.2:** Replace 5-second dashboard polling with Supabase Realtime subscription on `projects` table.
+*   [x] **Story 9.3:** Extract wizard into step components (`IdeaStep`, `ScriptStep`, `RenderStep` container, `SceneCard`, `TemplateSelector`).
+*   [x] **Story 9.4:** Design `RenderStep` as container with slots for future sub-components (VideoConfig, Music, Captions, Voiceover).
+*   [x] **Story 9.5:** Add `error.tsx` route error boundaries for `/wizard/[id]` and `/projects/[id]` with Sentry capture + retry.
+*   [x] **Story 9.6:** Build toast notification system (Zustand store + auto-dismiss). Replace `console.error` with user-facing toasts in all wizard components.
 
-### Polish
-*   [x] Styling / UI components
-*   [x] Error handling, loading states
+## Epic 10: Scene Editing Capabilities
+**Description:** Users can reorder, delete, add, and refresh individual scenes in the wizard.
+
+*   [x] **Story 10.1:** Scene reordering with up/down buttons per scene card.
+*   [x] **Story 10.2:** Delete individual scene (disabled if only 1 scene remains).
+*   [x] **Story 10.3:** Add new blank scene at end of list.
+*   [x] **Story 10.4:** Per-scene asset refresh — re-fetch image for one scene with its keyword.
+
+## Epic 11: Caption Style System
+**Description:** Users choose from 4 caption style presets that affect rendered video output.
+
+*   [x] **Story 11.1:** Define 4 caption presets in `src/lib/caption-styles.ts` (Minimal White, Bold Viral, Bottom Strip, Split Labels).
+*   [x] **Story 11.2:** Build `CaptionStyleSelector` component with mini visual previews.
+*   [x] **Story 11.3:** Add `caption_style` column to projects table (new migration + CHECK constraint).
+*   [x] **Story 11.4:** Thread `captionStyle` through render pipeline (wizard → API → DB → Inngest → Remotion inputProps).
+*   [x] **Story 11.5:** Implement style-aware caption rendering in Remotion `Scene.tsx` (font, color, background, position).
+
+## Epic 12: Video Configuration (Aspect Ratio & Quality)
+**Description:** Users select aspect ratio and quality before rendering.
+
+*   [x] **Story 12.1:** Build `VideoConfigSelector` component (9:16/16:9, 720p/1080p).
+*   [x] **Story 12.2:** Add `aspect_ratio` and `video_quality` columns to projects (migration + CHECK constraints).
+*   [x] **Story 12.3:** Create `resolveVideoDimensions()` utility in `src/lib/render/dimensions.ts`.
+*   [x] **Story 12.4:** Thread settings through pipeline and update Remotion to accept dynamic width/height.
+*   [x] **Story 12.5:** Update Lambda and local render calls with correct dimensions.
+
+## Epic 13: Background Music
+**Description:** Users can optionally add background music from a preset library.
+
+*   [x] **Story 13.1:** Define 5 royalty-free music presets in `src/lib/music-presets.ts`.
+*   [x] **Story 13.2:** Build `MusicSelector` component with "No music" option and 5-second audio preview.
+*   [x] **Story 13.3:** Add `background_music` column to projects (migration).
+*   [x] **Story 13.4:** Thread music URL through pipeline to Remotion inputProps.
+*   [x] **Story 13.5:** Add `<Audio>` component to Remotion `VideoComposition.tsx` with fade-in/fade-out.
+
+## Epic 14: Automated Testing Infrastructure
+**Description:** Establish test framework and write critical-path tests.
+
+*   [x] **Story 14.1:** Bootstrap Vitest with `@testing-library/react`, `@testing-library/jest-dom`, jsdom, path aliases, coverage config.
+*   [x] **Story 14.2:** Write tests for `withAuth()` wrapper (auth check, handler invocation, error handling, rate limit integration).
+*   [x] **Story 14.3:** Write tests for rate limiter (under limit, over limit, window reset, key independence).
+*   [ ] **Story 14.4:** Bootstrap Playwright E2E (critical-path test: login → wizard → render → dashboard).
+*   [ ] **Story 14.5:** CI integration (add test commands to pipeline).
+
+## Epic 15: Rate Limiting & Security Hardening
+**Description:** Protect API routes from abuse, harden security for public-facing app.
+
+*   [x] **Story 15.1:** Implement in-memory sliding window rate limiter (`src/lib/rate-limit.ts`). AI: 10 req/min, Render: 3 req/min, General: 60 req/min per user.
+*   [x] **Story 15.2:** Integrate rate limiting into `withAuth()` wrapper with configurable tiers.
+*   [x] **Story 15.3:** Apply rate limit tiers to all wizard routes (AI routes → `"ai"`, render → `"render"`, others → `"general"`).
+
+## Epic 16: Voice-Over Upload
+**Description:** Users can upload an MP3/WAV voice-over file that gets mixed into the final video.
+
+*   [x] **Story 16.1:** Build `VoiceoverUpload` component with drag-and-drop, 50MB max, client-side type validation.
+*   [x] **Story 16.2:** Create `/api/wizard/upload-voiceover` route with server-side MIME validation and project ownership check.
+*   [x] **Story 16.3:** Add `voiceover_url` column to projects (migration).
+*   [x] **Story 16.4:** Thread voiceover URL through pipeline to Remotion. Render as `<Audio>` at 0.9 volume.
+
+## Epic 17: Multiple Asset Candidates Per Scene
+**Description:** Fetch 3 image options per scene, let user pick which to use.
+
+*   [x] **Story 17.1:** Update `fetchAssets` to support multi-image fetch (`-n 3`) with parallelized batching (concurrency limit 4).
+*   [x] **Story 17.2:** Add `multipleAssets` flag to fetch-assets API route, returning `assetOptions[]` per scene.
+*   [x] **Story 17.3:** Update `SceneCard` with asset picker showing up to 3 thumbnail options with click-to-select.
+*   [x] **Story 17.4:** Wire up multi-asset fetch and asset selection in `ScriptStep`.

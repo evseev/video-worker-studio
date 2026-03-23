@@ -1,71 +1,67 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import path from "path";
+import { withAuth } from "@/lib/api/with-auth";
 import { fetchAssets } from "@/lib/ai/fetch-assets";
 
-export async function POST(request: Request) {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+export const POST = withAuth(async (request, { user, supabase }) => {
+  const { projectId, scenes, multipleAssets } = await request.json();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!projectId || !scenes || !Array.isArray(scenes)) {
+    return NextResponse.json(
+      { error: "projectId and scenes array are required" },
+      { status: 400 }
+    );
+  }
 
-    const { projectId, scenes } = await request.json();
+  const keywords = scenes.map((s: { searchKeyword: string }) => s.searchKeyword);
+  const publicDir = path.join(process.cwd(), "public");
 
-    if (!projectId || !scenes || !Array.isArray(scenes)) {
-      return NextResponse.json(
-        { error: "projectId and scenes array are required" },
-        { status: 400 }
-      );
-    }
+  function toPublicPath(filePath: string): string {
+    return `/${path.relative(publicDir, filePath)}`;
+  }
 
-    const keywords = scenes.map(s => s.searchKeyword);
-    const localPaths = await fetchAssets(keywords, projectId);
+  // Multi-asset mode: fetch 3 options per scene
+  if (multipleAssets) {
+    const allPaths = await fetchAssets(keywords, projectId, 3);
 
-    const assetRecords = [];
-    
-    // Create asset records in the DB
-    for (let i = 0; i < localPaths.length; i++) {
-        const filePath = localPaths[i];
-        if (filePath) {
-            // Need to store a relative URL or correct path for the frontend
-            // path is like /Users/evs/www/video-worker-studio/public/tmp_assets/...
-            // The frontend expects /tmp_assets/... 
-            const publicPath = filePath.split('/public')[1] || filePath;
-            
-            assetRecords.push({
-              file_path: publicPath,
-              type: "image",
-              metadata: { sceneIndex: i, keyword: keywords[i] }
-            });
-        } else {
-            assetRecords.push({
-              file_path: null,
-              type: "none",
-              metadata: { sceneIndex: i, keyword: keywords[i] }
-            });
-        }
-    }
+    const assetRecords = (allPaths as string[][]).map((paths, i) => ({
+      options: paths.map((p) => toPublicPath(p)),
+      keyword: keywords[i],
+      sceneIndex: i,
+    }));
 
-    // Update wizard step
     await supabase
       .from("projects")
       .update({ wizard_step: "assets" })
       .eq("id", projectId)
       .eq("user_id", user.id);
 
-    return NextResponse.json({ 
-        assets: assetRecords,
-        localPaths
-    });
-  } catch (error) {
-    console.error("Failed to fetch assets:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch assets" },
-      { status: 500 }
-    );
+    return NextResponse.json({ assetOptions: assetRecords });
   }
-}
+
+  // Single-asset mode (backwards compatible)
+  const localPaths = await fetchAssets(keywords, projectId);
+
+  const assetRecords = (localPaths as (string | null)[]).map((filePath, i) => {
+    if (filePath) {
+      return {
+        file_path: toPublicPath(filePath),
+        type: "image" as const,
+        metadata: { sceneIndex: i, keyword: keywords[i] },
+      };
+    }
+    return {
+      file_path: null,
+      type: "none" as const,
+      metadata: { sceneIndex: i, keyword: keywords[i] },
+    };
+  });
+
+  await supabase
+    .from("projects")
+    .update({ wizard_step: "assets" })
+    .eq("id", projectId)
+    .eq("user_id", user.id);
+
+  return NextResponse.json({ assets: assetRecords });
+});
