@@ -15,7 +15,7 @@ Tracks the global state of a video generation request.
 | `topic` | `text` | Not Null | The user's input prompt |
 | `status` | `text` | Not Null, Default `'draft'`| Enum: `'draft'`, `'processing'`, `'rendering'`, `'completed'`, `'failed_ai'`, `'failed_render'` |
 | `video_url` | `text` | Nullable | Public URL of the final rendered MP4 |
-| `selected_template` | `text` | Nullable | The ID of the video template chosen (e.g., `'slideshow'`, `'split'`) |
+| `selected_template` | `text` | Nullable | The ID of the video template chosen (e.g., `'Slideshow'`, `'Fact Card'`, `'Compilation'`, `'Comparison'`, `'Evolution'`) |
 | `wizard_step` | `text` | Nullable | Current wizard step state |
 | `draft_scenes` | `jsonb` | Nullable | Draft scene payload while editing in wizard |
 | `trend_validation_data` | `jsonb` | Nullable | Stored trend-validation response metadata |
