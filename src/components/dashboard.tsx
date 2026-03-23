@@ -38,10 +38,11 @@ function ProjectCard({
   onRequestDelete: (project: Project) => void;
 }) {
   const isDraft = project.status === "draft";
+  const isCompleted = project.status === "completed";
   const href = isDraft
     ? `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
-    : project.status === "completed" && project.video_url
-      ? project.video_url
+    : isCompleted
+      ? `/wizard/${project.id}?step=render`
       : "#";
 
   return (
@@ -108,6 +109,10 @@ export function Dashboard({
 }) {
   const projects = initialProjects;
   const [topic, setTopic] = useState("");
+  const [sceneCount, setSceneCount] = useState(6);
+  const [sceneDuration, setSceneDuration] = useState(5);
+  const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9">("9:16");
+  const [quality, setQuality] = useState<"hd" | "fullhd" | "4k">("fullhd");
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [deleteState, setDeleteState] = useState<
@@ -144,10 +149,20 @@ export function Dashboard({
     if (!topic.trim()) return;
     setCreating(true);
 
-    // Insert project
+    // Insert project with video settings
+    const draftScenes = {
+      scenes: [],
+      settings: { sceneCount, sceneDuration, aspectRatio, quality },
+    };
     const { data: project, error } = await supabase
       .from("projects")
-      .insert({ topic: topic.trim(), user_id: user.id, status: "draft" })
+      .insert({
+        topic: topic.trim(),
+        user_id: user.id,
+        status: "draft",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        draft_scenes: draftScenes as any,
+      })
       .select()
       .single();
 
@@ -261,6 +276,64 @@ export function Dashboard({
                   rows={3}
                   className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white placeholder-zinc-500 transition-all focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 resize-none mb-4"
                 />
+
+                {/* Video Settings */}
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Scenes</label>
+                    <input
+                      type="number"
+                      min={2}
+                      max={100}
+                      value={sceneCount}
+                      onChange={(e) => setSceneCount(Math.max(2, Math.min(100, parseInt(e.target.value) || 6)))}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-violet-500/50 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Duration/scene (sec)</label>
+                    <input
+                      type="number"
+                      min={2}
+                      max={60}
+                      value={sceneDuration}
+                      onChange={(e) => setSceneDuration(Math.max(2, Math.min(60, parseInt(e.target.value) || 5)))}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-violet-500/50 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1.5">Aspect Ratio</label>
+                    <div className="flex gap-1.5">
+                      {(["9:16", "16:9"] as const).map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setAspectRatio(r)}
+                          className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                            aspectRatio === r
+                              ? "bg-violet-500/20 border border-violet-500 text-white"
+                              : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:border-white/20"
+                          }`}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Quality</label>
+                    <select
+                      value={quality}
+                      onChange={(e) => setQuality(e.target.value as "hd" | "fullhd" | "4k")}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-violet-500/50 focus:outline-none"
+                    >
+                      <option value="hd">HD (720p)</option>
+                      <option value="fullhd">Full HD (1080p)</option>
+                      <option value="4k">4K (2160p)</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-3 justify-end">
                   <button
                     type="button"
