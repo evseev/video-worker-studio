@@ -8,7 +8,7 @@ We need a robust framework capable of providing strong UX/UI on the client side,
 *   **Framework:** Next.js 16+ (App Router)
 *   **Language:** TypeScript
 *   **Styling:** Tailwind CSS v4.
-*   **State Management:** React state + Zustand (if complex state is needed). UI uses standard React Hooks.
+*   **State Management:** Zustand for wizard state management (`src/lib/stores/wizard-store.ts`); React Hooks for component-local state.
 
 ## 2. Backend API & Core Orchestration: Next.js Route Handlers
 We utilize Next.js API routes (`src/app/api`) to handle backend functionality and serve as the orchestrator for webhooks and job queues.

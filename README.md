@@ -14,9 +14,9 @@ Triggered via `/api/generate` and powered entirely by a 5-step Inngest backgroun
 
 **2. Video Generation Wizard:**
 ```text
-Idea (topic + AI hook ideas) → Script (generate scenes + fetch images) → Render (template + start render)
+Idea (topic + settings) → Refine (AI enhance + trend score) → Script (template + scenes) → Preview (assets + reorder) → Render (progress + player)
 ```
-A three-step interactive flow at `/wizard/[id]`, with draft progress saved via `/api/wizard/draft`. Rendering from the wizard uses `/api/wizard/render`; other wizard steps call `/api/wizard/*` (ideas, script, fetch-assets, etc.).
+A five-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, fetch-assets, render).
 
 The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
@@ -144,7 +144,10 @@ src/
 │   │   └── wizard/         # Wizard endpoints (draft, ideas, enhance-idea, structure, script, assets, render)
 │   ├── auth/               # Supabase auth callback handler
 │   ├── login/              # Login page
-│   ├── wizard/             # Interactive video generation UI workflows
+│   ├── wizard/[id]/        # Interactive video generation wizard
+│   │   ├── client.tsx      # Wizard orchestrator (Zustand store init + step routing)
+│   │   ├── page.tsx        # Server component (auth + project fetch)
+│   │   └── steps/          # 5 step components (IdeaStep, RefineStep, ScriptStep, PreviewStep, RenderStep)
 │   ├── page.tsx            # Dashboard (server component, auth-gated)
 │   └── layout.tsx          # Root layout
 ├── components/
@@ -152,7 +155,10 @@ src/
 ├── lib/
 │   ├── ai/
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
+│   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
+│   ├── stores/
+│   │   └── wizard-store.ts      # Zustand store for wizard state management
 │   ├── projects/
 │   │   └── delete-project-assets.ts  # Storage + temp cleanup when deleting a project
 │   ├── inngest/

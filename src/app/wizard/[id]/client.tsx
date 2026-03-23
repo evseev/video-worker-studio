@@ -1,63 +1,63 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useStore } from "zustand";
 import type { Tables } from "@/lib/supabase/types";
-import { IdeaStep } from "@/components/wizard/idea-step";
-import { ScriptStep } from "@/components/wizard/script-step";
-import { RenderStep } from "@/components/wizard/render-step";
-import type { SceneData } from "@/components/wizard/scene-card";
+import { createWizardStore, type WizardStep, type WizardStoreApi } from "@/lib/stores/wizard-store";
+import { IdeaStep } from "./steps/IdeaStep";
+import { RefineStep } from "./steps/RefineStep";
+import { ScriptStep } from "./steps/ScriptStep";
+import { PreviewStep } from "./steps/PreviewStep";
+import { RenderStep } from "./steps/RenderStep";
 
 type Project = Tables<"projects">;
 
-function parseJsonField<T>(value: unknown, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    return parsed as T;
-  } catch {
-    return fallback;
-  }
-}
+const STEPS: { key: WizardStep; label: string }[] = [
+  { key: "idea", label: "Idea" },
+  { key: "refine", label: "Refine" },
+  { key: "script", label: "Script" },
+  { key: "preview", label: "Preview" },
+  { key: "render", label: "Render" },
+];
 
 export function WizardClient({ project }: { project: Project }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlStep = searchParams.get("step") || project.wizard_step || "idea";
-  const [currentStep, setCurrentStep] = useState(urlStep);
-  const [saving, setSaving] = useState(false);
-  const [topic, setTopic] = useState(project.topic || "");
-  const [scenes, setScenes] = useState<SceneData[]>(
-    parseJsonField(project.draft_scenes, [])
-  );
+  const storeRef = useRef<WizardStoreApi | null>(null);
 
-  const ideas = parseJsonField<{ title: string; description: string; trendScore: number }[]>(
-    project.trend_validation_data, []
-  );
+  if (!storeRef.current) {
+    storeRef.current = createWizardStore(project);
+    // Sync URL step param into store on init
+    const urlStep = searchParams.get("step") as WizardStep | null;
+    if (urlStep && STEPS.some((s) => s.key === urlStep)) {
+      storeRef.current.setState({ currentStep: urlStep });
+    }
+  }
 
+  const store = storeRef.current;
+  const { currentStep, topic, saving, projectStatus } = useStore(store);
+
+  // Sync project prop changes (from server refresh) into store
   useEffect(() => {
+    store.getState().syncFromProject(project);
+  }, [project, store]);
+
+  // Update URL when step changes
+  useEffect(() => {
+    const urlStep = searchParams.get("step");
     if (urlStep !== currentStep) {
       router.replace(`/wizard/${project.id}?step=${currentStep}`, { scroll: false });
     }
-  }, [currentStep, project.id, router, urlStep]);
+  }, [currentStep, project.id, router, searchParams]);
 
-  const saveProgress = useCallback(
-    async (updates: Record<string, unknown>) => {
-      setSaving(true);
-      try {
-        await fetch("/api/wizard/draft", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId: project.id, ...updates }),
-        });
-      } catch (e) {
-        console.error("Failed to save progress", e);
-      } finally {
-        setSaving(false);
-      }
-    },
-    [project.id]
-  );
+  // Poll for status updates during rendering
+  useEffect(() => {
+    if (projectStatus === "processing" || projectStatus === "rendering") {
+      const interval = setInterval(() => router.refresh(), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [projectStatus, router]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
@@ -81,14 +81,18 @@ export function WizardClient({ project }: { project: Project }) {
           <div className="flex items-center gap-2">
             {saving && <span className="text-xs text-zinc-500">Saving...</span>}
             <div className="flex items-center bg-white/[0.04] rounded-lg p-1">
-              {["idea", "script", "render"].map((step) => (
+              {STEPS.map((step, idx) => (
                 <span
-                  key={step}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors capitalize ${
-                    currentStep === step ? "bg-white/[0.1] text-white" : "text-zinc-500"
+                  key={step.key}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    currentStep === step.key
+                      ? "bg-white/[0.1] text-white"
+                      : STEPS.findIndex((s) => s.key === currentStep) > idx
+                        ? "text-zinc-400"
+                        : "text-zinc-600"
                   }`}
                 >
-                  {step}
+                  {step.label}
                 </span>
               ))}
             </div>
@@ -99,37 +103,11 @@ export function WizardClient({ project }: { project: Project }) {
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-6xl px-6 py-8">
-          {currentStep === "idea" && (
-            <IdeaStep
-              topic={topic}
-              initialIdeas={ideas}
-              onTopicChange={setTopic}
-              onContinue={async (finalTopic) => {
-                await saveProgress({ topic: finalTopic, wizard_step: "script" });
-                setCurrentStep("script");
-              }}
-            />
-          )}
-
-          {currentStep === "script" && (
-            <ScriptStep
-              topic={topic}
-              projectId={project.id}
-              scenes={scenes}
-              onScenesChange={setScenes}
-              saveProgress={saveProgress}
-              onContinue={async () => {
-                await saveProgress({ wizard_step: "render", draft_scenes: scenes });
-                setCurrentStep("render");
-              }}
-            />
-          )}
-
-          {currentStep === "render" && (
-            <RenderStep projectId={project.id} scenes={scenes}>
-              {/* Future sub-components: CaptionStyleSelector, VideoConfigSelector, MusicSelector, VoiceoverUpload */}
-            </RenderStep>
-          )}
+          {currentStep === "idea" && <IdeaStep store={store} />}
+          {currentStep === "refine" && <RefineStep store={store} />}
+          {currentStep === "script" && <ScriptStep store={store} />}
+          {currentStep === "preview" && <PreviewStep store={store} />}
+          {currentStep === "render" && <RenderStep store={store} />}
         </div>
       </main>
     </div>

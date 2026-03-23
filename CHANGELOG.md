@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1.0] - 2026-03-23
+
+### Added
+- You can now **refine your video idea with AI** — the new Refine step enhances your concept into 3 viral alternatives and scores each one's trend potential (0–100) before you commit.
+- **Template selection with visual previews** — pick from 5 Remotion templates (Slideshow, Fact Card, Compilation, Comparison, Evolution) with SVG layout mockups showing exactly what each style looks like.
+- **Scene preview and editing** — drag-and-drop to reorder scenes, delete scenes you don't need, re-fetch images per scene, and edit script text and search keywords inline.
+- **In-app video player** — completed videos now play directly in the wizard with a Download MP4 button, instead of redirecting to a raw URL.
+- **Video settings at project creation** — set scene count, scene duration, aspect ratio (9:16 / 16:9), and quality (HD / Full HD / 4K) right from the dashboard's "New Video" modal.
+- **Render progress and error handling** — the Render step shows a live progress spinner while your video is being processed, and displays inline error messages with a retry button if something goes wrong.
+
+### Changed
+- The wizard is now a **5-step flow** (Idea → Refine → Script → Preview → Render) instead of the previous 3 steps, with state managed by a Zustand store for reliable persistence across page refreshes.
+- Template names now match the actual Remotion rendering templates — replaced `minimalist`, `bold`, `neon`, `corporate` with the real template IDs used by the video engine.
+- Completed projects on the dashboard now link to the wizard's Render step (with video player) instead of opening the raw video URL.
+
+### For contributors
+- Wizard refactored from a single 376-line `client.tsx` into a Zustand store (`src/lib/stores/wizard-store.ts`) and 5 step components under `src/app/wizard/[id]/steps/`.
+- Three previously unused API endpoints (`enhance-idea`, `validate-trend`, `generate-structure`) are now wired into the frontend.
+
 ## [0.3.0.0] - 2026-03-20
 
 ### Added

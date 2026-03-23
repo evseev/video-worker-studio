@@ -24,9 +24,5 @@ export default async function WizardPage(props: { params: Promise<{ id: string }
     notFound();
   }
 
-  if (project.status === "completed") {
-    redirect(`/projects/${project.id}`);
-  }
-
   return <WizardClient project={project} />;
 }
