@@ -7,8 +7,9 @@ const TRANSITION_FRAMES = 15;
 
 const DEFAULT_SCENES = [
   {
+    template: "slideshow",
     scriptText: "Welcome to Video Worker Studio",
-    assetUrl: null,
+    assets: [{ url: null }],
   },
 ];
 

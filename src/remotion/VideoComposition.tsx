@@ -1,17 +1,25 @@
 import { AbsoluteFill, Audio, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
-import { Scene } from "./Scene";
+import { SlideshowScene } from "./templates/SlideshowScene";
+import { ComparisonScene } from "./templates/ComparisonScene";
+import { FactCardScene } from "./templates/FactCardScene";
 
 export type VideoCompositionProps = {
   scenes: Array<{
+    template: string;
     scriptText: string;
-    assetUrl: string | null;
+    assets: Array<{ url?: string | null }>;
+    // Comparison-specific
+    leftLabel?: string;
+    rightLabel?: string;
+    // Fact-card-specific
+    title?: string;
+    subtitle?: string;
+    facts?: { label: string; value: string }[];
   }>;
   sceneDurationFrames: number;
   transitionFrames: number;
-  template?: string;
-  captionStyle?: string;
   musicUrl?: string | null;
   voiceoverUrl?: string | null;
 };
@@ -35,8 +43,6 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
   scenes,
   sceneDurationFrames,
   transitionFrames,
-  template,
-  captionStyle,
   musicUrl,
   voiceoverUrl,
 }) => {
@@ -52,14 +58,38 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
               key={`scene-${index}`}
               durationInFrames={sceneDurationFrames}
             >
-              <Scene
-                scriptText={scene.scriptText}
-                assetUrl={scene.assetUrl}
-                index={index}
-                totalScenes={scenes.length}
-                template={template}
-                captionStyle={captionStyle}
-              />
+              {(() => {
+                switch (scene.template) {
+                  case "comparison":
+                    return (
+                      <ComparisonScene
+                        scriptText={scene.scriptText}
+                        leftAssetUrl={scene.assets[0]?.url ?? null}
+                        rightAssetUrl={scene.assets[1]?.url ?? null}
+                        leftLabel={scene.leftLabel ?? ""}
+                        rightLabel={scene.rightLabel ?? ""}
+                      />
+                    );
+                  case "fact-card":
+                    return (
+                      <FactCardScene
+                        scriptText={scene.scriptText}
+                        mainAssetUrl={scene.assets[0]?.url ?? null}
+                        secondaryAssetUrl={scene.assets[1]?.url ?? null}
+                        title={scene.title ?? ""}
+                        subtitle={scene.subtitle ?? ""}
+                        facts={scene.facts ?? []}
+                      />
+                    );
+                  default:
+                    return (
+                      <SlideshowScene
+                        scriptText={scene.scriptText}
+                        assetUrl={scene.assets[0]?.url ?? null}
+                      />
+                    );
+                }
+              })()}
             </TransitionSeries.Sequence>,
           ];
 
