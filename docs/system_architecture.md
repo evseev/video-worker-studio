@@ -19,15 +19,15 @@ The system is a Next.js (App Router) web app backed by Supabase and Inngest. It 
 ## 3. Worker Engine (Inngest)
 Coordinates the heavy lifting outside the HTTP request lifecycle and prevents edge/serverless timeouts.
 *   **`VideoGenerationWorker`**: A linear step-function worker:
-    1.  Calls Gemini 2.5 Flash to generate the script and asset search terms.
-    2.  Loops through the output and uses `pinterest-dl` to find image assets for each scene.
+    1.  Calls Gemini 2.5 Flash to generate the script and asset search terms (using centralized prompt templates from `src/lib/ai/prompts.ts` with dynamic scene count, duration, and aspect ratio).
+    2.  Loops through the output and uses `pinterest-dl` to find image assets for each scene (with orientation hints matching the target aspect ratio).
     3.  Commits the fully populated scenes to Supabase and advances project status.
     4.  *(Depending on flow)* Triggers the render or waits for user approval.
 
 ## 4. Video Rendering (Remotion + AWS Lambda/Local)
 *   **Role:** Converts the structured JSON (`Project` + `Scenes`) into an MP4 using React-based templates (`selected_template`).
 *   **Tech:** Remotion via `@remotion/lambda` or local bundler.
-*   **Flow:** The system formats project data into input props, triggers the render process, and upon completion updates the `Project.video_url`.
+*   **Flow:** The system formats project data into input props (including dynamic aspect ratio, quality, and scene duration from user settings), triggers the render process, and upon completion updates the `Project.video_url`.
 
 ## Dependency Graph
 

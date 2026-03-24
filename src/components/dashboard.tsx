@@ -7,102 +7,9 @@ import type { User } from "@supabase/supabase-js";
 import type { Tables } from "@/lib/supabase/types";
 import { ProjectCard } from "./dashboard/project-card";
 import { EmptyState } from "./dashboard/empty-state";
-import { CreateModal } from "./dashboard/create-modal";
 import { DeleteModal, type DeleteState } from "./dashboard/delete-modal";
 
 type Project = Tables<"projects">;
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  processing: "Generating…",
-  rendering: "Rendering…",
-  completed: "Completed",
-  failed_ai: "AI Error",
-  failed_render: "Render Error",
-};
-
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium status-${status}`}
-    >
-      {(status === "processing" || status === "rendering") && (
-        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse-glow" />
-      )}
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
-}
-
-function ProjectCard({
-  project,
-  onRequestDelete,
-}: {
-  project: Project;
-  onRequestDelete: (project: Project) => void;
-}) {
-  const isDraft = project.status === "draft";
-  const isCompleted = project.status === "completed";
-  const href = isDraft
-    ? `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
-    : isCompleted
-      ? `/wizard/${project.id}?step=render`
-      : "#";
-
-  return (
-    <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-violet-500/5 group">
-      <button
-        type="button"
-        aria-label={`Delete project: ${project.topic}`}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onRequestDelete(project);
-        }}
-        className="absolute right-3 top-3 z-10 rounded-lg border border-white/10 bg-[#0a0a0f]/90 p-2 text-zinc-500 opacity-80 transition-all hover:border-red-500/30 hover:bg-red-950/40 hover:text-red-400 hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-500/30 cursor-pointer"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M3 6h18" />
-          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-          <line x1="10" x2="10" y1="11" y2="17" />
-          <line x1="14" x2="14" y1="11" y2="17" />
-        </svg>
-      </button>
-      <a
-        href={href}
-        className="block p-5"
-      >
-        {/* Thumbnail placeholder */}
-        <div className="aspect-video rounded-xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-white/[0.04] flex items-center justify-center mb-4 overflow-hidden">
-          {project.status === "completed" ? (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400 group-hover:scale-110 transition-transform">
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
-            </svg>
-          ) : (
-            <div className="text-zinc-600">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-              </svg>
-            </div>
-          )}
-        </div>
-
-        <h3 className="text-sm font-medium text-zinc-200 truncate mb-2">
-          {project.topic}
-        </h3>
-        <div className="flex items-center justify-between">
-          <StatusBadge status={project.status} />
-          <span className="text-xs text-zinc-500">
-            {new Date(project.created_at).toLocaleDateString()}
-          </span>
-        </div>
-      </a>
-    </div>
-  );
-}
 
 export function Dashboard({
   user,
@@ -124,6 +31,11 @@ export function Dashboard({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+
+  // Sync with server data when it changes (e.g. after navigation)
+  useEffect(() => {
+    setProjects(initialProjects);
+  }, [initialProjects]);
 
   // Supabase Realtime: subscribe to project status changes
   useEffect(() => {
@@ -157,34 +69,8 @@ export function Dashboard({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [projects, router]);
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!topic.trim()) return;
-    setCreating(true);
-
-    // Insert project with video settings
-    const draftScenes = {
-      scenes: [],
-      settings: { sceneCount, sceneDuration, aspectRatio, quality },
-    };
-    const { data: project, error } = await supabase
-      .from("projects")
-      .insert({
-        topic: topic.trim(),
-        user_id: user.id,
-        status: "draft",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        draft_scenes: draftScenes as any,
-      })
-      .select()
-      .single();
-
-  // Sync with server data when it changes (e.g. after navigation)
-  useEffect(() => {
-    setProjects(initialProjects);
-  }, [initialProjects]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id]);
 
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
@@ -192,9 +78,19 @@ export function Dashboard({
       if (!topic.trim()) return;
       setCreating(true);
 
+      const draftScenes = {
+        scenes: [],
+        settings: { sceneCount, sceneDuration, aspectRatio, quality },
+      };
       const { data: project, error } = await supabase
         .from("projects")
-        .insert({ topic: topic.trim(), user_id: user.id, status: "draft" })
+        .insert({
+          topic: topic.trim(),
+          user_id: user.id,
+          status: "draft",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          draft_scenes: draftScenes as any,
+        })
         .select()
         .single();
 
@@ -206,7 +102,7 @@ export function Dashboard({
 
       router.push(`/wizard/${project.id}?step=idea`);
     },
-    [topic, supabase, user.id, router]
+    [topic, sceneCount, sceneDuration, aspectRatio, quality, supabase, user.id, router]
   );
 
   async function handleSignOut() {
@@ -291,6 +187,7 @@ export function Dashboard({
           </button>
         </div>
 
+        {/* New Project Modal */}
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.06] bg-[#12121d] p-8 shadow-2xl">

@@ -1,25 +1,11 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
 import { z } from "zod";
+import { generateScriptPrompt } from "./prompts";
 
 export interface SceneScript {
   scriptText: string;
   searchKeyword: string;
 }
-
-const SYSTEM_PROMPT = `You are an expert short-form video scriptwriter (TikTok/Reels/Shorts).
-Given a user TOPIC, generate a high-retention video script.
-The script must be broken into a sequence of scenes.
-
-For each scene, provide:
-1. "scriptText": The actual words that will be spoken (used for captions/TTS). Keep each scene to 1-2 short sentences.
-2. "searchKeyword": A single, highly descriptive keyword phrase (e.g., "moody cinematic coffee shop desk") that will be passed to a Pinterest image scraper to find the background asset. Make it visual and specific.
-
-RULES:
-- Video should be 30-60 seconds (roughly 5-8 scenes).
-- Hook the viewer in the first scene with a bold claim or question.
-- End with a strong call to action or surprising twist.
-- searchKeyword must be descriptive enough to find a beautiful, cinematic image.
-- Output MUST match the required JSON schema exactly.`;
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -49,7 +35,10 @@ const responseSchema: Schema = {
 /**
  * Calls Gemini to generate a video script broken into scenes.
  */
-export async function generateScript(topic: string): Promise<SceneScript[]> {
+export async function generateScript(
+  topic: string,
+  opts?: { sceneCount?: number; sceneDuration?: number }
+): Promise<SceneScript[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set");
@@ -62,11 +51,11 @@ export async function generateScript(topic: string): Promise<SceneScript[]> {
       responseMimeType: "application/json",
       responseSchema,
     },
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: generateScriptPrompt(opts),
   });
 
   const result = await model.generateContent(
-    `Create a short-form video script about: ${topic}`
+    `Create a video script about: ${topic}`
   );
 
   const text = result.response.text();

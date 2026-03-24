@@ -154,6 +154,19 @@
 *   [x] **Story 18.6:** Build Render step with progress polling, in-app HTML5 video player, download button, and error retry.
 *   [x] **Story 18.7:** Enhance dashboard "New Video" modal with video settings; update completed project links to use in-app player.
 
+## Epic 19: Aspect Ratio & Settings Propagation + Prompt Centralization
+**Description:** Ensure user-configured aspect ratio, video quality, scene count, and scene duration are respected throughout the entire pipeline — not just at render time. Centralize all LLM prompts into a single config file with dynamic parameters.
+
+*   [x] **Story 19.1:** Fix critical bug: RenderStep now sends `aspectRatio` and `videoQuality` to render API (was always defaulting to 9:16).
+*   [x] **Story 19.2:** Fix `resolveVideoDimensions()` to handle `hd`/`fullhd`/`4k` quality names and add 4K resolution support.
+*   [x] **Story 19.3:** Make template preview SVGs in ScriptStep adapt to selected aspect ratio (portrait vs landscape layouts).
+*   [x] **Story 19.4:** Make scene preview thumbnails in PreviewStep adapt to aspect ratio (portrait: `w-20 h-28`, landscape: `w-28 h-20`).
+*   [x] **Story 19.5:** Pass aspect ratio to AI script generation so search keywords target orientation-appropriate images.
+*   [x] **Story 19.6:** Append orientation hints (`landscape`/`portrait`) to Pinterest search keywords in fetch-assets route.
+*   [x] **Story 19.7:** Create centralized prompts config (`src/lib/ai/prompts.ts`) with builder functions accepting `sceneCount`, `sceneDuration`, `aspectRatio`.
+*   [x] **Story 19.8:** Replace hardcoded "5-8 scenes" / "30-60 seconds" / "short-form" in all LLM prompts with dynamic values from user settings.
+*   [x] **Story 19.9:** Pass `sceneDuration` through render pipeline (RenderStep → render API → Inngest → renderVideo) instead of hardcoded 5s constant.
+
 ## Video Worker Studio MVP Tasks (Implemented)
 
 ### Planning and Setup

@@ -11,9 +11,12 @@ export function ProjectCard({
   onRequestDelete: (project: Project) => void;
 }) {
   const isDraft = project.status === "draft";
+  const isCompleted = project.status === "completed";
   const href = isDraft
     ? `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
-    : `/projects/${project.id}`;
+    : isCompleted
+      ? `/wizard/${project.id}?step=render`
+      : `/projects/${project.id}`;
 
   return (
     <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-violet-500/5 group">
