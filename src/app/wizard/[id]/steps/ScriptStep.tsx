@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { WizardState } from "@/lib/stores/wizard-store";
 import type { StoreApi } from "zustand";
 import { useStore } from "zustand";
+import { useToast } from "@/components/ui/toast";
 
 type Props = { store: StoreApi<WizardState> };
 
@@ -86,11 +87,40 @@ function TemplatePreview({ icon, isLandscape }: { icon: string; isLandscape: boo
 }
 
 export function ScriptStep({ store }: Props) {
-  const { projectId, topic, scenes, setScenes, selectedTemplate, setSelectedTemplate, refinedIdea, settings, saveProgress, setStep } = useStore(store);
+  const { projectId, topic, scenes, setScenes, selectedTemplate, setSelectedTemplate, refinedIdea, settings, targetKeywords, videoDescription, videoTags, setVideoDescription, setVideoTags, saveProgress, setStep } = useStore(store);
   const [generatingScript, setGeneratingScript] = useState(false);
+  const [generatingSeo, setGeneratingSeo] = useState(false);
+  const [seoExpanded, setSeoExpanded] = useState(true);
 
+  const addToast = useToast();
   const ideaText = refinedIdea?.selectedIdea || topic;
   const isLandscape = settings.aspectRatio === "16:9";
+
+  async function fetchSeoMetadata(generatedScenes: { scriptText: string }[]) {
+    setGeneratingSeo(true);
+    try {
+      const res = await fetch("/api/wizard/generate-seo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          idea: ideaText,
+          scenes: generatedScenes.map((s) => ({ scriptText: s.scriptText })),
+          targetKeywords,
+          sceneCount: settings.sceneCount,
+          sceneDuration: settings.sceneDuration,
+        }),
+      });
+      if (!res.ok) throw new Error("SEO generation failed");
+      const data = await res.json();
+      if (data.description) setVideoDescription(data.description);
+      if (data.tags) setVideoTags(data.tags);
+    } catch {
+      addToast("Failed to generate YouTube metadata. You can retry with the button below.", "error");
+    } finally {
+      setGeneratingSeo(false);
+    }
+  }
 
   async function generateScript() {
     if (!ideaText.trim()) return;
@@ -104,6 +134,7 @@ export function ScriptStep({ store }: Props) {
       const data = await res.json();
       if (data.scenes) {
         setScenes(data.scenes);
+        fetchSeoMetadata(data.scenes);
       }
     } catch (e) {
       console.error(e);
@@ -187,6 +218,102 @@ export function ScriptStep({ store }: Props) {
         </div>
       )}
 
+      {/* YouTube SEO Metadata */}
+      {scenes.length > 0 && (
+        <div className="mb-8">
+          <button
+            type="button"
+            onClick={() => setSeoExpanded(!seoExpanded)}
+            className="flex items-center gap-2 w-full text-left cursor-pointer group"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`text-zinc-500 transition-transform ${seoExpanded ? "rotate-90" : ""}`}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">
+              YouTube Metadata
+            </h3>
+            {generatingSeo && (
+              <div className="w-3 h-3 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+            )}
+          </button>
+
+          {seoExpanded && (
+            <div className="mt-4 space-y-4">
+              {/* Description */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                  Video Description
+                </label>
+                <textarea
+                  value={videoDescription}
+                  onChange={(e) => setVideoDescription(e.target.value)}
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 min-h-[120px] resize-y"
+                  placeholder={generatingSeo ? "Generating description..." : "YouTube video description"}
+                  disabled={generatingSeo}
+                />
+              </div>
+
+              {/* Tags */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                  Video Tags
+                </label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {videoTags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-500/10 text-violet-300 text-xs rounded-full"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => setVideoTags(videoTags.filter((_, i) => i !== idx))}
+                        className="text-violet-400/50 hover:text-violet-300 cursor-pointer"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder={generatingSeo ? "Generating tags..." : "Add a tag and press Enter"}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.currentTarget.value.trim()) {
+                      e.preventDefault();
+                      setVideoTags([...videoTags, e.currentTarget.value.trim()]);
+                      e.currentTarget.value = "";
+                    }
+                  }}
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                  disabled={generatingSeo}
+                />
+              </div>
+
+              {/* Regenerate button */}
+              <button
+                type="button"
+                onClick={() => fetchSeoMetadata(scenes)}
+                disabled={generatingSeo}
+                className="px-4 py-2 text-sm text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {generatingSeo ? "Regenerating..." : "Regenerate Metadata"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Navigation */}
       <div className="flex justify-between pt-6 border-t border-white/[0.06]">
         <button
@@ -203,7 +330,9 @@ export function ScriptStep({ store }: Props) {
             await saveProgress({
               wizard_step: "preview",
               template: selectedTemplate,
-              draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea },
+              video_description: state.videoDescription,
+              video_tags: state.videoTags.join(", "),
+              draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea, targetKeywords: state.targetKeywords, videoDescription: state.videoDescription, videoTags: state.videoTags },
             });
             setStep("preview");
           }}

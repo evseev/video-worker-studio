@@ -32,6 +32,9 @@ type DraftData = {
   scenes?: Scene[];
   settings?: VideoSettings;
   refinedIdea?: RefinedIdea;
+  targetKeywords?: string;
+  videoDescription?: string;
+  videoTags?: string[];
 };
 
 export type WizardState = {
@@ -42,6 +45,9 @@ export type WizardState = {
   selectedTemplate: string;
   settings: VideoSettings;
   refinedIdea: RefinedIdea | null;
+  targetKeywords: string;
+  videoDescription: string;
+  videoTags: string[];
   projectStatus: string;
   videoUrl: string | null;
   renderErrorContext: unknown;
@@ -57,6 +63,9 @@ export type WizardState = {
   setSelectedTemplate: (template: string) => void;
   setSettings: (settings: Partial<VideoSettings>) => void;
   selectAsset: (sceneIdx: number, assetIdx: number) => void;
+  setTargetKeywords: (keywords: string) => void;
+  setVideoDescription: (desc: string) => void;
+  setVideoTags: (tags: string[]) => void;
   setRefinedIdea: (idea: RefinedIdea | null) => void;
   syncFromProject: (project: Project) => void;
   saveProgress: (updates: Record<string, unknown>) => Promise<void>;
@@ -94,6 +103,9 @@ export function createWizardStore(project: Project) {
     selectedTemplate: project.selected_template || "Slideshow",
     settings: draft.settings || DEFAULT_SETTINGS,
     refinedIdea: draft.refinedIdea || null,
+    targetKeywords: draft.targetKeywords || "",
+    videoDescription: draft.videoDescription || project.video_description || "",
+    videoTags: draft.videoTags || (project.video_tags ? project.video_tags.split(", ") : []),
     projectStatus: project.status,
     videoUrl: project.video_url || null,
     renderErrorContext: (project as Record<string, unknown>).render_error_context ?? null,
@@ -137,6 +149,12 @@ export function createWizardStore(project: Project) {
           return { ...s, assetUrl: s.assetOptions[assetIdx], selectedAssetIndex: assetIdx };
         }),
       })),
+
+    setTargetKeywords: (keywords) => set({ targetKeywords: keywords }),
+
+    setVideoDescription: (desc) => set({ videoDescription: desc }),
+
+    setVideoTags: (tags) => set({ videoTags: tags }),
 
     setRefinedIdea: (idea) => set({ refinedIdea: idea }),
 
