@@ -23,10 +23,10 @@ The MVP workflow has two major pathways: an automated "One-Click" pipeline and a
 ### Worker Engine: `VideoGenerationWorker`
 Regardless of the pathway, the heavy lifting occurs inside the Inngest worker:
 
-- **Step 1: AI Script Generation.** Calls Gemini 2.5 Flash via `@google/generative-ai` using a system prompt to output a structured JSON array of scenes. Each scene includes `{ scriptText, searchKeyword }`.
-- **Step 2: Asset Fetching.** Iterates over scenes and invokes `pinterest-dl` via CLI to fetch one Pinterest image per scene keyword.
+- **Step 1: AI Script Generation.** Calls Gemini 2.5 Flash via `@google/generative-ai` using centralized prompt templates (`src/lib/ai/prompts.ts`) that dynamically adapt to the user's configured scene count, scene duration, and aspect ratio. Outputs a structured JSON array of scenes. Each scene includes `{ scriptText, searchKeyword }`.
+- **Step 2: Asset Fetching.** Iterates over scenes and invokes `pinterest-dl` via CLI to fetch one Pinterest image per scene keyword (with orientation hints — `landscape` or `portrait` — appended to keywords based on the target aspect ratio).
 - **Step 3: Database Commit.** Writes all new `Scene` records to Supabase with the attached `asset_url` and `script_text`. Updates the `Project` status to `rendering`.
-- **Step 4: Trigger Render.** Dispatches the `@remotion/lambda` or local bundler render function with the Project ID and `selected_template`.
+- **Step 4: Trigger Render.** Dispatches the `@remotion/lambda` or local bundler render function with the Project ID, `selected_template`, aspect ratio, video quality, and scene duration.
 
 ### Remotion Rendering Engine
 - Fetches the Project and Scenes from Supabase.

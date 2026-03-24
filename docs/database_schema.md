@@ -21,7 +21,7 @@ Tracks the global state of a video generation request.
 | `trend_validation_data` | `jsonb` | Nullable | Stored trend-validation response metadata |
 | `render_error_context` | `jsonb` | Nullable | Structured render failure context |
 | `aspect_ratio` | `text` | Not Null, Default `'9:16'`, CHECK `IN ('9:16','16:9')` | Video aspect ratio (portrait or landscape) |
-| `video_quality` | `text` | Not Null, Default `'1080p'`, CHECK `IN ('720p','1080p')` | Render quality |
+| `video_quality` | `text` | Not Null, Default `'fullhd'`, CHECK `IN ('hd','fullhd','4k')` | Render quality (hd=720p, fullhd=1080p, 4k=2160p) |
 | `background_music` | `text` | Nullable | Selected music preset ID (e.g., `'upbeat'`, `'chill'`) or null for no music |
 | `caption_style` | `text` | Nullable, CHECK `IN ('minimal','bold','strip','split')` | Caption style preset |
 | `voiceover_url` | `text` | Nullable | URL to user-uploaded voice-over audio (MP3/WAV) in Supabase Storage |
