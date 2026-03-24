@@ -63,9 +63,9 @@ describe("PreviewStep", () => {
 
     fetchSpy.mockResolvedValue({
       json: () => Promise.resolve({
-        assetOptions: [
-          { slotOptions: [["/a1.jpg", "/a2.jpg", "/a3.jpg"]], sceneIndex: 0 },
-          { slotOptions: [["/b1.jpg", "/b2.jpg", "/b3.jpg"]], sceneIndex: 1 },
+        scenes: [
+          { searchKeywords: ["sunset"], assets: [{ options: ["/a1.jpg", "/a2.jpg", "/a3.jpg"] }] },
+          { searchKeywords: ["ocean"], assets: [{ options: ["/b1.jpg", "/b2.jpg", "/b3.jpg"] }] },
         ],
       }),
     });
