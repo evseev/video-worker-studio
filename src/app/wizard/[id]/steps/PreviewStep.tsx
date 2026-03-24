@@ -33,12 +33,13 @@ export function PreviewStep({ store }: Props) {
         }),
       });
       const data = await res.json();
-      if (data.assetOptions) {
+      if (data.scenes) {
+        const updatedScenes: typeof currentScenes = data.scenes;
         const newScenes = currentScenes.map((scene, idx) => {
-          const slotOptions: string[][] = data.assetOptions[idx]?.slotOptions ?? [];
-          if (slotOptions.length === 0) return scene;
+          const returnedScene = updatedScenes[idx];
+          if (!returnedScene) return scene;
           const assets = scene.assets.map((slot, slotIdx) => {
-            const options = slotOptions[slotIdx];
+            const options = returnedScene.assets?.[slotIdx]?.options;
             if (!options || options.length === 0) return slot;
             return { ...slot, options, url: options[0], selectedIndex: 0 };
           });
@@ -73,7 +74,7 @@ export function PreviewStep({ store }: Props) {
         }),
       });
       const data = await res.json();
-      const options = data.assetOptions?.[0]?.options ?? [];
+      const options: string[] = data.scenes?.[0]?.assets?.[slotIdx]?.options ?? [];
       if (options.length > 0) {
         const currentScene = store.getState().scenes[sceneIdx];
         const assets = [...currentScene.assets];
