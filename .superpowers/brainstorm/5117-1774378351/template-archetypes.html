@@ -1,0 +1,112 @@
+<h2>Template Archetypes — Scene Layout</h2>
+<p class="subtitle">Each template defines a fundamentally different scene layout. Click the one you'd like to discuss first, or let me know if the layouts match your vision.</p>
+
+<div class="cards" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+
+  <!-- Template A: Single Image Slideshow -->
+  <div class="card" data-choice="slideshow" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #1a1a2e;">
+      <div style="position:relative; width:100%; aspect-ratio:9/16; background:linear-gradient(135deg,#667eea,#764ba2); border-radius:8px; overflow:hidden; font-family:system-ui;">
+        <!-- Single full image -->
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:48px;">🖼</div>
+        <!-- Ken Burns hint -->
+        <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">zoom/pan</div>
+        <!-- Dark gradient overlay at bottom -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:40%;background:linear-gradient(transparent,rgba(0,0,0,0.8));"></div>
+        <!-- Caption at bottom -->
+        <div style="position:absolute;bottom:12px;left:12px;right:12px;text-align:center;">
+          <div style="color:#fff;font-size:13px;font-weight:600;line-height:1.3;">Caption text overlay with animated fade-in</div>
+        </div>
+        <!-- Scene counter -->
+        <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.5);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">1/8</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Single Image Slideshow</h3>
+      <p><strong>1 image per scene</strong><br>
+      Full-bleed image with zoom/pan (Ken Burns), caption overlay at bottom, fade transitions.<br><br>
+      <span style="color:#888;font-size:12px;">Use cases: Top 10 lists, historical facts, storytelling, motivational, educational shorts</span></p>
+    </div>
+  </div>
+
+  <!-- Template B: Side-by-Side Comparison -->
+  <div class="card" data-choice="comparison" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #1a1a2e;">
+      <div style="position:relative; width:100%; aspect-ratio:9/16; background:#111; border-radius:8px; overflow:hidden; font-family:system-ui;">
+        <!-- Two images side by side -->
+        <div style="display:flex; gap:4px; padding:20px 8px 0 8px; height:55%;">
+          <div style="flex:1;background:linear-gradient(135deg,#f093fb,#f5576c);border-radius:6px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:32px;">🖼</div>
+          <div style="flex:1;background:linear-gradient(135deg,#4facfe,#00f2fe);border-radius:6px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:32px;">🖼</div>
+        </div>
+        <!-- Labels -->
+        <div style="display:flex; gap:4px; padding:4px 8px;">
+          <div style="flex:1;text-align:center;color:#f5576c;font-size:10px;font-weight:700;">BEFORE</div>
+          <div style="flex:1;text-align:center;color:#4facfe;font-size:10px;font-weight:700;">AFTER</div>
+        </div>
+        <!-- VS badge -->
+        <div style="position:absolute;top:calc(27.5% + 10px);left:50%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;border:2px solid #333;">VS</div>
+        <!-- Caption area -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:12px;background:rgba(0,0,0,0.7);">
+          <div style="color:#fff;font-size:12px;text-align:center;font-weight:600;">Comparison caption text</div>
+        </div>
+        <!-- Scene counter -->
+        <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.5);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">1/6</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Side-by-Side Comparison</h3>
+      <p><strong>2 images per scene</strong> (left + right)<br>
+      Split layout with labels (Before/After, Then/Now), optional VS separator, caption below.<br><br>
+      <span style="color:#888;font-size:12px;">Use cases: Then vs Now, Before/After, celebrity comparisons, product evolution</span></p>
+    </div>
+  </div>
+
+  <!-- Template C: Two-Image Identity/Fact Card -->
+  <div class="card" data-choice="factcard" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #1a1a2e;">
+      <div style="position:relative; width:100%; aspect-ratio:9/16; background:#111; border-radius:8px; overflow:hidden; font-family:system-ui;">
+        <!-- Main image (large, top) -->
+        <div style="margin:12px 12px 0;height:35%;background:linear-gradient(135deg,#a18cd1,#fbc2eb);border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:36px;">🖼</div>
+        <!-- Card body -->
+        <div style="margin:8px 12px;background:#1e1e2e;border-radius:8px;padding:10px;">
+          <!-- Secondary image + text row -->
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <div style="width:50px;height:50px;flex-shrink:0;background:linear-gradient(135deg,#ffecd2,#fcb69f);border-radius:6px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:20px;">🖼</div>
+            <div>
+              <div style="color:#fff;font-size:11px;font-weight:700;">Person Name</div>
+              <div style="color:#888;font-size:9px;margin-top:2px;">Subtitle / Role</div>
+            </div>
+          </div>
+          <!-- Fact text block -->
+          <div style="margin-top:8px;padding:8px;background:rgba(255,255,255,0.05);border-radius:6px;">
+            <div style="color:#ccc;font-size:10px;line-height:1.4;">Key fact or description text block that provides context about the subject</div>
+          </div>
+          <!-- Labels -->
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <div style="background:#764ba2;color:#fff;font-size:8px;padding:2px 6px;border-radius:10px;">Net Worth: $50M</div>
+            <div style="background:#667eea;color:#fff;font-size:8px;padding:2px 6px;border-radius:10px;">Age: 34</div>
+          </div>
+        </div>
+        <!-- Scene counter -->
+        <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.5);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">1/5</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Two-Image Identity/Fact Card</h3>
+      <p><strong>2 images + text block per scene</strong><br>
+      Main image (hero), secondary image (thumbnail), text block with facts, optional labels/badges.<br><br>
+      <span style="color:#888;font-size:12px;">Use cases: Celebrity + spouse, actor + role, person + net worth, famous couples</span></p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:24px; padding:16px; background:rgba(255,255,255,0.05); border-radius:8px; border-left:3px solid #667eea;">
+  <h3 style="margin:0 0 8px 0; font-size:14px;">Key Difference From Current System</h3>
+  <p style="margin:0; font-size:13px; color:#aaa;">
+    Currently all scenes have <strong>1 image slot</strong> and templates only change caption styling.
+    These archetypes require <strong>different asset slot counts</strong> per scene (1 vs 2) and
+    <strong>different Remotion layouts</strong> — this is a structural change that flows through the entire pipeline:
+    AI generation → asset fetching → preview → rendering.
+  </p>
+</div>
