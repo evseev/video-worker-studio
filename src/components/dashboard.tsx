@@ -72,6 +72,7 @@ export function Dashboard({
     const { data: project, error } = await supabase
       .from("projects")
       .insert({
+        topic: "",
         user_id: user.id,
         status: "draft",
         wizard_step: "template",
