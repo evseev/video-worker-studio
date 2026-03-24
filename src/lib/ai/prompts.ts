@@ -4,13 +4,13 @@ type VideoFormatOpts = { totalDuration: number };
 type ScriptOpts = { sceneCount: number; sceneDuration: number; aspectRatio?: string };
 type IdeasOpts = { topic: string; totalDuration: number };
 
-function videoFormatLabel(totalDuration: number): string {
+export function videoFormatLabel(totalDuration: number): string {
   if (totalDuration <= 60) return "short-form";
   if (totalDuration <= 300) return "medium-length";
   return "long-form";
 }
 
-function durationDescription(totalDuration: number): string {
+export function durationDescription(totalDuration: number): string {
   if (totalDuration < 60) return `~${totalDuration} seconds`;
   const mins = Math.round(totalDuration / 60);
   return `~${mins} minute${mins > 1 ? "s" : ""}`;
