@@ -1,6 +1,6 @@
 # Video Worker Studio
 
-An AI-powered short-form video generation pipeline. Give it a topic, get back a fully rendered MP4. The system uses Gemini 2.5 Flash for scriptwriting, Pinterest for sourcing visual assets, and Remotion for programmatic video rendering — all orchestrated by Inngest as a durable background workflow.
+An AI-powered video generation platform. Give it a topic, get back a fully rendered MP4. The system uses Gemini 2.5 Flash for scriptwriting, Pinterest for sourcing visual assets, and Remotion for programmatic video rendering — all orchestrated by Inngest as a durable background workflow. Supports both short-form and long-form videos with configurable scene count, scene duration, aspect ratio (9:16 / 16:9), and quality (HD / Full HD / 4K).
 
 ## How It Works
 
@@ -22,7 +22,7 @@ The core rendering pipeline (whether triggered immediately or after the wizard) 
 
 | Step | What happens | Tech |
 |---|---|---|
-| 1. **Generate Script** | AI writes a scene-by-scene script with visual keywords | Gemini 2.5 Flash |
+| 1. **Generate Script** | AI writes a scene-by-scene script with visual keywords (adapts to scene count, duration, and aspect ratio) | Gemini 2.5 Flash |
 | 2. **Fetch Assets** | Downloads a background image per scene from Pinterest | `pinterest-dl` CLI |
 | 3. **Save Scenes** | Commits scenes to the database via RPC (bypasses RLS) | Supabase PostgreSQL |
 | 4. **Render Video** | Compiles scenes into an MP4 with transitions | Remotion Lambda (default) or local (`RENDER_BACKEND=local`) |
@@ -154,6 +154,7 @@ src/
 │   └── dashboard.tsx       # Main dashboard UI
 ├── lib/
 │   ├── ai/
+│   │   ├── prompts.ts           # Centralized LLM prompt templates (dynamic scene count, duration, aspect ratio)
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
 │   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
@@ -165,7 +166,8 @@ src/
 │   │   ├── client.ts            # Inngest client instance
 │   │   └── functions.ts         # VideoGenerationWorker (5-step pipeline)
 │   ├── render/
-│   │   └── render-video.ts      # Remotion Lambda renderer (local fallback optional)
+│   │   ├── render-video.ts      # Remotion Lambda renderer (local fallback optional)
+│   │   └── dimensions.ts        # Video dimension resolver (aspect ratio × quality → width/height)
 │   └── supabase/                # Supabase client helpers (server, browser, middleware)
 ├── remotion/
 │   ├── index.ts                 # Remotion entry point
@@ -175,14 +177,14 @@ src/
 └── middleware.ts                # Supabase auth session refresh
 docs/
 ├── adr/001-gemini-3-flash-upgrade.md  # Architecture decision records
-├── agent_schemas.md           # LLM output schemas
+├── project_spec.md              # Product specification
 ├── system_architecture.md       # Architecture overview
 ├── database_schema.md           # PostgreSQL schema
 ├── tech_stack.md                # Tech stack rationale
 ├── workflow_design.md           # Pipeline design
 ├── ux_specification.md          # UX spec
-├── prd_backlog.md               # Product backlog
-├── video_worker_studio_spec.md  # Product specification
+├── prd_backlog.md               # Product backlog (19 epics)
+├── mvp_development_plan.md      # Original development roadmap
 └── designs/remotion-lambda-migration.md # Render architecture design
 ```
 
@@ -221,16 +223,28 @@ docs/
 
 ## Documentation
 
-Detailed design docs are in the [`docs/`](docs/) directory. Internal engineering follow-ups live in [`TODOS.md`](TODOS.md). Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
+| File | Description |
+|---|---|
+| [README.md](README.md) | This file — project overview, setup, and architecture |
+| [AGENTS.md](AGENTS.md) | Agent operating manual — stack, constraints, folder ownership |
+| [CHANGELOG.md](CHANGELOG.md) | Release history and user-facing change notes |
+| [TODOS.md](TODOS.md) | Engineering follow-ups and deferred work |
+| [VERSION](VERSION) | Current version number (semver) |
 
-- [System Architecture](docs/system_architecture.md)
-- [Database Schema](docs/database_schema.md)
-- [Tech Stack](docs/tech_stack.md)
-- [Workflow Design](docs/workflow_design.md)
-- [UX Specification](docs/ux_specification.md)
-- [Product Backlog](docs/prd_backlog.md)
-- [Agent Schemas](docs/agent_schemas.md)
-- [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md)
+Detailed design docs are in the [`docs/`](docs/) directory:
+
+- [Project Specification](docs/project_spec.md) — product vision, user flow, and requirements
+- [System Architecture](docs/system_architecture.md) — component overview and dependency graph
+- [Database Schema](docs/database_schema.md) — PostgreSQL tables, RLS, and RPC functions
+- [Tech Stack](docs/tech_stack.md) — technology choices and rationale
+- [Workflow Design](docs/workflow_design.md) — pipeline design and failure modes
+- [UX Specification](docs/ux_specification.md) — screen-by-screen layout and interactions
+- [Product Backlog](docs/prd_backlog.md) — epics and stories (19 epics, all MVP stories complete)
+- [MVP Development Plan](docs/mvp_development_plan.md) — original development roadmap
+- [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md) — render architecture design
+- [Gemini 3 Flash Upgrade ADR](docs/adr/001-gemini-3-flash-upgrade.md) — architecture decision record
+
+Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
 
 ## License
 

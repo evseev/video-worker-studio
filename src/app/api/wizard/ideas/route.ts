@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
+import { generateIdeasPrompt } from "@/lib/ai/prompts";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -17,10 +18,12 @@ const IdeasResponseSchema = z.object({
 
 export const POST = withAuth(
   async (req) => {
-    const { topic } = await req.json();
+    const { topic, sceneCount, sceneDuration } = await req.json();
     if (!topic) {
       return NextResponse.json({ error: "Missing topic" }, { status: 400 });
     }
+
+    const totalDuration = (sceneCount ?? 6) * (sceneDuration ?? 5);
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
@@ -29,21 +32,7 @@ export const POST = withAuth(
       },
     });
 
-    const prompt = `You are a viral social media video expert.
-
-The user wants to make a short-form video about: "${topic}".
-Please suggest 3 viral angles/hooks for this topic.
-
-Format your response as a JSON object with this shape:
-{
-  "ideas": [
-    {
-      "title": "A short catchy title for the angle",
-      "description": "A 1-2 sentence description of what the video is about.",
-      "trendScore": 95
-    }
-  ]
-}`;
+    const prompt = generateIdeasPrompt({ topic, totalDuration });
 
     const { response } = await model.generateContent(prompt);
     const jsonStr = response.text();

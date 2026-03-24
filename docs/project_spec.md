@@ -200,7 +200,6 @@ Optional later additions:
 - video language,
 - target audience,
 - YouTube category,
-- aspect ratio,
 - desired tone.
 
 ### Step 2. AI improves idea for virality

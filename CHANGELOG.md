@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2.0] - 2026-03-24
+
+### Fixed
+- Videos now actually render at your chosen aspect ratio and quality — previously all videos defaulted to 9:16 portrait regardless of your selection.
+- Quality setting `hd` / `fullhd` / `4k` now maps to the correct pixel dimensions (was only matching a legacy `720p` label).
+
+### Added
+- **4K video rendering** — select 4K quality for 2160p output in both portrait and landscape.
+- **Aspect-ratio-aware previews** — template preview cards and scene image thumbnails in the wizard now match your chosen aspect ratio (landscape or portrait) instead of always showing portrait.
+- **Smarter AI prompts** — the AI now knows your exact scene count and duration when writing scripts, instead of always assuming "5–8 scenes, 30–60 seconds." Longer videos get appropriately sized scripts.
+- **Orientation-aware asset search** — Pinterest image searches now include orientation hints (`landscape` or `portrait`) so fetched images better match your video format.
+
+### Changed
+- All LLM prompt strings moved to a centralized config (`src/lib/ai/prompts.ts`) with builder functions — no more scattered hardcoded prompt text across the codebase.
+- Scene duration in the render pipeline is now driven by your settings instead of a hardcoded 5-second constant.
+
 ## [0.3.1.0] - 2026-03-23
 
 ### Added

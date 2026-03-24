@@ -4,7 +4,7 @@ import { withAuth } from "@/lib/api/with-auth";
 import { fetchAssets } from "@/lib/ai/fetch-assets";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, scenes, multipleAssets } = await request.json();
+  const { projectId, scenes, multipleAssets, aspectRatio } = await request.json();
 
   if (!projectId || !scenes || !Array.isArray(scenes)) {
     return NextResponse.json(
@@ -13,7 +13,11 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     );
   }
 
-  const keywords = scenes.map((s: { searchKeyword: string }) => s.searchKeyword);
+  const orientationHint = aspectRatio === "16:9" ? "landscape" : "portrait";
+  const keywords = scenes.map((s: { searchKeyword: string }) => {
+    const kw = s.searchKeyword;
+    return orientationHint && kw ? `${kw} ${orientationHint}` : kw;
+  });
   const publicDir = path.join(process.cwd(), "public");
 
   function toPublicPath(filePath: string): string {

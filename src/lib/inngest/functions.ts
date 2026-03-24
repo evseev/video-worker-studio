@@ -20,6 +20,7 @@ interface VideoGenerateEventData {
   template?: string;
   aspectRatio?: string;
   videoQuality?: string;
+  sceneDuration?: number;
   backgroundMusic?: string | null;
   captionStyle?: string;
   voiceoverUrl?: string | null;
@@ -93,7 +94,7 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl } = event.data as VideoGenerateEventData;
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, captionStyle, voiceoverUrl } = event.data as VideoGenerateEventData;
 
 
 
@@ -104,7 +105,7 @@ export const generateVideo = inngest.createFunction(
       console.log(`[generate-script] Project: ${projectId}, Topic: ${topic}`);
       try {
         if (!topic) throw new Error("Topic is required if scenes are not provided");
-        const result = await generateScript(topic);
+        const result = await generateScript(topic, { sceneDuration });
         console.log(`[generate-script] Generated ${result.length} scenes`);
         return result;
       } catch (err) {
@@ -170,7 +171,7 @@ export const generateVideo = inngest.createFunction(
           scriptText: s.scriptText,
           assetUrl: s.assetUrl ?? null,
         }));
-        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl });
+        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, captionStyle, voiceoverUrl });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         await updateRenderError(db, projectId, {

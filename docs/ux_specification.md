@@ -36,11 +36,11 @@ This document details the layout, state requirements, and primary user interacti
 *   **Interactions:** Continue saves refined idea data and advances to Script.
 
 ### Step: Script
-*   **Components:** Template selection grid (5 Remotion templates: Slideshow, Fact Card, Compilation, Comparison, Evolution) with SVG layout previews; **Generate Script with AI** button (`/api/wizard/generate-structure`) generates template-aware scenes; editable scene list with search keywords and script text per scene.
+*   **Components:** Template selection grid (5 Remotion templates: Slideshow, Fact Card, Compilation, Comparison, Evolution) with SVG layout previews that adapt to the selected aspect ratio (portrait 9:16 or landscape 16:9); **Generate Script with AI** button (`/api/wizard/generate-structure`) generates template-aware scenes with orientation-appropriate search keywords; editable scene list with search keywords and script text per scene.
 *   **Interactions:** Continue saves `draft_scenes` and `selected_template` and advances to Preview.
 
 ### Step: Preview
-*   **Components:** Scene list with drag-and-drop reorder, per-scene image thumbnails, editable script text and search keywords, per-scene **Re-fetch** button, scene delete, **Fetch All Images** bulk action (`/api/wizard/fetch-assets`), collapsible global settings panel (read-only: template, aspect ratio, quality, duration).
+*   **Components:** Scene list with drag-and-drop reorder, per-scene image thumbnails (sized to match aspect ratio: portrait `w-20 h-28` or landscape `w-28 h-20`), editable script text and search keywords, per-scene **Re-fetch** button, scene delete, **Fetch All Images** bulk action (`/api/wizard/fetch-assets` with orientation hints), collapsible global settings panel (read-only: template, aspect ratio, quality, duration).
 *   **Interactions:** Continue advances to Render.
 
 ### Step: Render

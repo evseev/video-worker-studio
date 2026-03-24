@@ -57,11 +57,20 @@ src/
       generate/          # POST /api/generate — dispatches Inngest event
       inngest/           # POST /api/inngest — Inngest webhook sink (must stay public)
       projects/          # CRUD for projects table
-      wizard/            # Wizard-specific API routes
+      wizard/            # Wizard-specific API routes (draft, ideas, enhance-idea, validate-trend,
+                         #   generate-structure, script, fetch-assets, upload-voiceover, render)
     auth/                # Auth callback route (Supabase magic link)
     login/               # Login page
     projects/[id]/       # Project detail page (video player, download, retry)
     wizard/[id]/         # Interactive multi-step wizard UI
+      client.tsx         # Wizard orchestrator (Zustand store init + step routing)
+      page.tsx           # Server component (auth + project fetch)
+      steps/             # 5 step components
+        IdeaStep.tsx     # Topic + video settings + AI hook suggestions
+        RefineStep.tsx   # AI enhance + trend validation
+        ScriptStep.tsx   # Template selection + AI script generation
+        PreviewStep.tsx  # Asset preview + drag-and-drop reorder
+        RenderStep.tsx   # Render summary + progress + video player
   components/
     dashboard.tsx        # Dashboard orchestrator (imports sub-components)
     dashboard/           # Dashboard sub-components
@@ -70,7 +79,7 @@ src/
       empty-state.tsx
       create-modal.tsx
       delete-modal.tsx
-    wizard/              # Wizard step components
+    wizard/              # Legacy wizard components (being migrated to steps/)
       idea-step.tsx
       script-step.tsx
       render-step.tsx    # Container with slots for config sub-components
@@ -86,15 +95,20 @@ src/
     api/
       with-auth.ts       # Shared auth + rate limiting wrapper for API routes
     ai/
+      prompts.ts         # Centralized LLM prompt templates (all AI prompts live here)
       generate-script.ts # Gemini script generation
       fetch-assets.ts    # Pinterest asset scraping via pinterest-dl (supports multi-asset)
-      wizard.ts          # Wizard-specific AI helpers
+      wizard.ts          # Wizard-specific AI helpers (enhanceIdea, validateTrend, generateStructure)
     inngest/
       client.ts          # Inngest client singleton
       functions.ts       # VideoGenerationWorker — the ONLY Inngest function
     render/
       render-video.ts    # Remotion render dispatcher (Lambda default, local fallback)
       dimensions.ts      # Video dimension resolver (aspect ratio × quality → width/height)
+    stores/
+      wizard-store.ts    # Zustand store for wizard state (scenes, settings, refinedIdea)
+    projects/
+      delete-project-assets.ts # Storage + temp cleanup when deleting a project
     caption-styles.ts    # 4 caption style presets (minimal, bold, strip, split)
     music-presets.ts     # 5 royalty-free music track presets
     rate-limit.ts        # In-memory sliding window rate limiter
@@ -261,7 +275,29 @@ draft → processing → rendering → completed
 
 ---
 
-## 12. gstack Skills
+## 12. Documentation Files
+
+| File | Description |
+|---|---|
+| `README.md` | Project overview, setup instructions, architecture diagram |
+| `AGENTS.md` | This file — agent operating manual, stack, constraints, folder ownership |
+| `CHANGELOG.md` | User-facing release notes (Keep a Changelog format) |
+| `TODOS.md` | Engineering follow-ups and deferred work |
+| `VERSION` | Current version number (semver: `X.Y.Z.W`) |
+| `docs/project_spec.md` | Product specification — vision, user flow, requirements |
+| `docs/system_architecture.md` | Component overview and dependency graph |
+| `docs/database_schema.md` | PostgreSQL tables, RLS policies, RPC functions |
+| `docs/tech_stack.md` | Technology choices and rationale |
+| `docs/workflow_design.md` | Pipeline design, failure modes, retries |
+| `docs/ux_specification.md` | Screen-by-screen layout and interactions |
+| `docs/prd_backlog.md` | Product backlog (19 epics, all MVP stories complete) |
+| `docs/mvp_development_plan.md` | Original development roadmap |
+| `docs/designs/remotion-lambda-migration.md` | Render architecture design |
+| `docs/adr/001-gemini-3-flash-upgrade.md` | Architecture decision record |
+
+---
+
+## 13. gstack Skills
 
 Use `.agents/skills/gstack/browse` for all web browsing.
 
@@ -285,7 +321,7 @@ Use `.agents/skills/gstack/browse` for all web browsing.
 
 ---
 
-## 13. AWS Skills
+## 14. AWS Skills
 
 Use these AWS-focused skills for cloud infrastructure, operations, and cost management tasks.
 

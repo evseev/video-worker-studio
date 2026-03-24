@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api/with-auth";
 import { generateStructure } from "@/lib/ai/wizard";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, idea, template } = await request.json();
+  const { projectId, idea, template, aspectRatio, sceneCount, sceneDuration } = await request.json();
 
   if (!idea || !template) {
     return NextResponse.json(
@@ -12,7 +12,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     );
   }
 
-  const scenes = await generateStructure(idea, template);
+  const scenes = await generateStructure(idea, template, { aspectRatio, sceneCount, sceneDuration });
 
   if (projectId) {
     await supabase

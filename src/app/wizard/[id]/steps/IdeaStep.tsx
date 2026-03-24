@@ -19,7 +19,7 @@ export function IdeaStep({ store }: Props) {
       const res = await fetch("/api/wizard/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
       });
       const data = await res.json();
       if (Array.isArray(data)) setIdeas(data);
