@@ -39,9 +39,13 @@ export function WizardClient({ project }: { project: Project }) {
   const { currentStep, topic, saving, projectStatus } = useStore(store);
 
   // Sync project prop changes (from server refresh) into store
+  // Use status + video_url as deps to ensure effect fires when data changes
+  // (not just when the object reference changes)
+  const projectStatus_server = project.status;
+  const videoUrl_server = project.video_url;
   useEffect(() => {
     store.getState().syncFromProject(project);
-  }, [project, store]);
+  }, [projectStatus_server, videoUrl_server, project, store]);
 
   // Update URL when step changes
   useEffect(() => {
