@@ -131,6 +131,7 @@ export function TemplateStep({ store }: { store: WizardStoreApi }) {
             >
               <option value="hd">720p</option>
               <option value="fullhd">1080p</option>
+              <option value="4k">4K</option>
             </select>
           </div>
         </div>

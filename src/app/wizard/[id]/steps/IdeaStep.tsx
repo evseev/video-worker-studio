@@ -16,10 +16,11 @@ export function IdeaStep({ store }: Props) {
     if (!topic.trim()) return;
     setGeneratingIdeas(true);
     try {
+      const enrichedTopic = `${topic} (Template: ${selectedTemplate})`;
       const res = await fetch("/api/wizard/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
+        body: JSON.stringify({ topic: enrichedTopic, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
       });
       const data = await res.json();
       if (Array.isArray(data)) setIdeas(data);
@@ -100,14 +101,11 @@ export function IdeaStep({ store }: Props) {
           disabled={!topic.trim()}
           className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           onClick={async () => {
-            const enrichedTopic = `${topic} (Template: ${selectedTemplate})`;
             await saveProgress({
               topic,
               wizard_step: "refine",
               draft_scenes: { scenes: store.getState().scenes, settings, refinedIdea: store.getState().refinedIdea },
             });
-            // Store the enriched topic context for enhance-idea API calls
-            void enrichedTopic;
             setStep("refine");
           }}
         >
