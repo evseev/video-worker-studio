@@ -151,7 +151,7 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `caption_style`, `voiceover_url` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `caption_style`, `voiceover_url`, `video_description`, `video_tags` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 
 ### Project status lifecycle
@@ -207,6 +207,7 @@ draft → processing → rendering → completed
 | `/api/wizard/script` | POST | ✅ | Generate scene scripts |
 | `/api/wizard/fetch-assets` | POST | ✅ | Fetch scene assets from Pinterest (supports multi-asset mode) |
 | `/api/wizard/upload-voiceover` | POST | ✅ | Upload voice-over audio file (MP3/WAV, max 50MB) |
+| `/api/wizard/generate-seo` | POST | ✅ | Generate YouTube SEO metadata (description + tags) |
 | `/api/wizard/render` | POST | ✅ | Dispatch wizard render job (with video config, music, captions) |
 
 - Route handlers must return `NextResponse.json()` consistently.

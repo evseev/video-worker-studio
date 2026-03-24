@@ -215,4 +215,65 @@ describe("wizard-store", () => {
       expect(store.getState().scenes).toEqual([]);
     });
   });
+
+  describe("SEO metadata fields", () => {
+    it("initializes targetKeywords, videoDescription, videoTags from draft", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [],
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+          targetKeywords: "fitness tips",
+          videoDescription: "A great video about fitness",
+          videoTags: ["fitness", "health", "tips"],
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+      const state = store.getState();
+
+      expect(state.targetKeywords).toBe("fitness tips");
+      expect(state.videoDescription).toBe("A great video about fitness");
+      expect(state.videoTags).toEqual(["fitness", "health", "tips"]);
+    });
+
+    it("falls back to project columns when draft is empty", () => {
+      const project = makeProject({
+        draft_scenes: null,
+        video_description: "From DB column",
+        video_tags: "tag1, tag2, tag3",
+      });
+      const store = createWizardStore(project);
+      const state = store.getState();
+
+      expect(state.videoDescription).toBe("From DB column");
+      expect(state.videoTags).toEqual(["tag1", "tag2", "tag3"]);
+    });
+
+    it("defaults to empty when no draft or project data", () => {
+      const project = makeProject({ draft_scenes: null });
+      const store = createWizardStore(project);
+      const state = store.getState();
+
+      expect(state.targetKeywords).toBe("");
+      expect(state.videoDescription).toBe("");
+      expect(state.videoTags).toEqual([]);
+    });
+
+    it("setTargetKeywords updates state", () => {
+      const store = createWizardStore(makeProject());
+      store.getState().setTargetKeywords("new keywords");
+      expect(store.getState().targetKeywords).toBe("new keywords");
+    });
+
+    it("setVideoDescription updates state", () => {
+      const store = createWizardStore(makeProject());
+      store.getState().setVideoDescription("New description");
+      expect(store.getState().videoDescription).toBe("New description");
+    });
+
+    it("setVideoTags updates state", () => {
+      const store = createWizardStore(makeProject());
+      store.getState().setVideoTags(["a", "b", "c"]);
+      expect(store.getState().videoTags).toEqual(["a", "b", "c"]);
+    });
+  });
 });

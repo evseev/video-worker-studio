@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4.0] - 2026-03-24
+
+### Added
+- **YouTube SEO metadata generation** — after generating your scene script, the AI automatically creates an SEO-optimized YouTube video description (200-300 words with hashtags) and 20-30 discoverable tags. Both are editable in a collapsible "YouTube Metadata" section below your scenes.
+- **Target keywords input** — optional field in the Refine step where you can enter keywords you want to rank for on YouTube. These get woven into your generated description and tags.
+- **Metadata export on project page** — completed projects now show a "YouTube Metadata" section with copy-to-clipboard buttons for title, description, and tags, plus a "Download .txt" button that exports everything in one file.
+- **New API endpoint** `POST /api/wizard/generate-seo` for generating YouTube description and tags via Gemini AI.
+- **6 new tests** covering SEO metadata state management (store initialization, fallback to DB columns, setter actions) and prompt generation (format labels, keyword inclusion, edge cases).
+
 ## [0.3.3.0] - 2026-03-24
 
 ### Fixed
