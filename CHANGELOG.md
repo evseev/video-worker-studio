@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4.0] - 2026-03-24
+
+### Added
+- **YouTube SEO metadata generation** — after generating your scene script, the AI automatically creates an SEO-optimized YouTube video description (200-300 words with hashtags) and 20-30 discoverable tags. Both are editable in a collapsible "YouTube Metadata" section below your scenes.
+- **Target keywords input** — optional field in the Refine step where you can enter keywords you want to rank for on YouTube. These get woven into your generated description and tags.
+- **Metadata export on project page** — completed projects now show a "YouTube Metadata" section with copy-to-clipboard buttons for title, description, and tags, plus a "Download .txt" button that exports everything in one file.
+### For contributors
+- New `POST /api/wizard/generate-seo` endpoint and `generateSeoMetadata()` AI helper.
+- Database migration adds `video_description` and `video_tags` columns to `projects`.
+- 6 new tests covering SEO store fields and prompt generation.
+
+## [0.3.3.0] - 2026-03-24
+
+### Fixed
+- **Multiple asset candidates restored** — the image picker that lets you choose from 3 image options per scene was lost during the 5-step wizard refactor. It's back: fetch images and you'll see 3 thumbnail options per scene to pick from.
+- Asset selection now persists immediately — picking a different thumbnail saves your choice to the server, so it survives page refreshes and tab closures.
+
+### Added
+- **32 regression tests** covering the wizard store, SceneCard asset picker, fetch-assets API route, PreviewStep fetch behavior, and the fetch-assets function — prevents the multi-asset feature from silently disappearing again.
+
 ## [0.3.2.0] - 2026-03-24
 
 ### Fixed

@@ -25,6 +25,8 @@ Tracks the global state of a video generation request.
 | `background_music` | `text` | Nullable | Selected music preset ID (e.g., `'upbeat'`, `'chill'`) or null for no music |
 | `caption_style` | `text` | Nullable, CHECK `IN ('minimal','bold','strip','split')` | Caption style preset |
 | `voiceover_url` | `text` | Nullable | URL to user-uploaded voice-over audio (MP3/WAV) in Supabase Storage |
+| `video_description` | `text` | Nullable | AI-generated SEO-optimized YouTube video description |
+| `video_tags` | `text` | Nullable | Comma-separated YouTube tags for discoverability |
 | `created_at` | `timestamptz` | Default `now()` | Timestamp |
 | `updated_at` | `timestamptz` | Default `now()` | Timestamp |
 

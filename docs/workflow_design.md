@@ -15,7 +15,7 @@ The MVP workflow has two major pathways: an automated "One-Click" pipeline and a
    - User creates a `draft` project from the dashboard (with video settings: scene count, duration, aspect ratio, quality) and lands on `/wizard/[id]` (steps: **Idea** → **Refine** → **Script** → **Preview** → **Render**). State is managed via a Zustand store.
    - **Idea:** topic + video settings + optional AI “hook” suggestions via `/api/wizard/ideas`; progress saved with `/api/wizard/draft`.
    - **Refine:** `/api/wizard/enhance-idea` transforms the raw idea into 3 viral concepts; `/api/wizard/validate-trend` scores viral potential (0-100) with reasoning and hook suggestions.
-   - **Script:** user selects a Remotion template (Slideshow, Fact Card, Compilation, Comparison, Evolution); `/api/wizard/generate-structure` generates template-aware scenes with editable script text and search keywords.
+   - **Script:** user selects a Remotion template (Slideshow, Fact Card, Compilation, Comparison, Evolution); `/api/wizard/generate-structure` generates template-aware scenes with editable script text and search keywords; `/api/wizard/generate-seo` auto-generates YouTube SEO metadata (description + tags) using scene content and optional target keywords.
    - **Preview:** `/api/wizard/fetch-assets` attaches Pinterest images per scene; user can drag-and-drop reorder, delete, and re-fetch individual scene assets.
    - **Render:** user reviews render summary and calls `/api/wizard/render`, which dispatches the background render job. Completed videos are shown in an in-app player with download.
    - **Contrast:** One-click generation without the wizard is Pathway A (`POST /api/generate` on a `processing` project and `video/generate`).

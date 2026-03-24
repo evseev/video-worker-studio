@@ -29,7 +29,9 @@ export type Database = {
           trend_validation_data: Json | null;
           updated_at: string;
           user_id: string;
+          video_description: string | null;
           video_quality: string;
+          video_tags: string | null;
           video_url: string | null;
           voiceover_url: string | null;
           wizard_step: string | null;
@@ -48,7 +50,9 @@ export type Database = {
           trend_validation_data?: Json | null;
           updated_at?: string;
           user_id: string;
+          video_description?: string | null;
           video_quality?: string;
+          video_tags?: string | null;
           video_url?: string | null;
           voiceover_url?: string | null;
           wizard_step?: string | null;
@@ -67,7 +71,9 @@ export type Database = {
           trend_validation_data?: Json | null;
           updated_at?: string;
           user_id?: string;
+          video_description?: string | null;
           video_quality?: string;
+          video_tags?: string | null;
           video_url?: string | null;
           voiceover_url?: string | null;
           wizard_step?: string | null;

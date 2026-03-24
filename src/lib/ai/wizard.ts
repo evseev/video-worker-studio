@@ -5,6 +5,8 @@ import {
   validateTrendPrompt,
   generateStructurePrompt,
   generateStructureUserMessage,
+  generateSeoMetadataPrompt,
+  generateSeoMetadataUserMessage,
 } from "./prompts";
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -162,4 +164,58 @@ export async function generateStructure(
 
   const parsed = ResponseSchema.parse(JSON.parse(text));
   return parsed.scenes;
+}
+
+// --- Generate SEO Metadata ---
+
+export interface SeoMetadata {
+  description: string;
+  tags: string[];
+}
+
+const seoMetadataSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    description: {
+      type: SchemaType.STRING,
+      description: "SEO-optimized YouTube video description (150-300 words).",
+    },
+    tags: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: "20-30 YouTube tags for discoverability.",
+    },
+  },
+  required: ["description", "tags"],
+};
+
+export async function generateSeoMetadata(
+  idea: string,
+  scenes: { scriptText: string }[],
+  opts?: { targetKeywords?: string; sceneCount?: number; sceneDuration?: number }
+): Promise<SeoMetadata> {
+  const sceneCount = opts?.sceneCount ?? 6;
+  const sceneDuration = opts?.sceneDuration ?? 5;
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: seoMetadataSchema,
+    },
+    systemInstruction: generateSeoMetadataPrompt({ sceneCount, sceneDuration }),
+  });
+
+  const result = await model.generateContent(
+    generateSeoMetadataUserMessage(idea, scenes, opts?.targetKeywords)
+  );
+  const text = result.response.text();
+
+  const ResponseSchema = z.object({
+    description: z.string().min(1),
+    tags: z.array(z.string()).min(1),
+  });
+
+  const parsed = ResponseSchema.parse(JSON.parse(text));
+  return parsed;
 }
