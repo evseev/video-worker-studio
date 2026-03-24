@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3.0] - 2026-03-24
+
+### Fixed
+- **Multiple asset candidates restored** — the image picker that lets you choose from 3 image options per scene was lost during the 5-step wizard refactor. It's back: fetch images and you'll see 3 thumbnail options per scene to pick from.
+- Asset selection now persists immediately — picking a different thumbnail saves your choice to the server, so it survives page refreshes and tab closures.
+
+### Added
+- **32 regression tests** covering the wizard store, SceneCard asset picker, fetch-assets API route, PreviewStep fetch behavior, and the fetch-assets function — prevents the multi-asset feature from silently disappearing again.
+
 ## [0.3.2.0] - 2026-03-24
 
 ### Fixed
