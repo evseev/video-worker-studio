@@ -19,13 +19,7 @@ export function Dashboard({
   projects: Project[];
 }) {
   const [projects, setProjects] = useState(initialProjects);
-  const [topic, setTopic] = useState("");
-  const [sceneCount, setSceneCount] = useState(6);
-  const [sceneDuration, setSceneDuration] = useState(5);
-  const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9">("9:16");
-  const [quality, setQuality] = useState<"hd" | "fullhd" | "4k">("fullhd");
   const [creating, setCreating] = useState(false);
-  const [showForm, setShowForm] = useState(false);
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -72,38 +66,27 @@ export function Dashboard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
 
-  const handleCreate = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!topic.trim()) return;
-      setCreating(true);
+  const handleCreate = useCallback(async () => {
+    setCreating(true);
 
-      const draftScenes = {
-        scenes: [],
-        settings: { sceneCount, sceneDuration, aspectRatio, quality },
-      };
-      const { data: project, error } = await supabase
-        .from("projects")
-        .insert({
-          topic: topic.trim(),
-          user_id: user.id,
-          status: "draft",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          draft_scenes: draftScenes as any,
-        })
-        .select()
-        .single();
+    const { data: project, error } = await supabase
+      .from("projects")
+      .insert({
+        user_id: user.id,
+        status: "draft",
+        wizard_step: "template",
+      })
+      .select()
+      .single();
 
-      if (error) {
-        console.error("Failed to create project:", error);
-        setCreating(false);
-        return;
-      }
+    if (error) {
+      console.error("Failed to create project:", error);
+      setCreating(false);
+      return;
+    }
 
-      router.push(`/wizard/${project.id}?step=idea`);
-    },
-    [topic, sceneCount, sceneDuration, aspectRatio, quality, supabase, user.id, router]
-  );
+    router.push(`/wizard/${project.id}?step=template`);
+  }, [supabase, user.id, router]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -176,112 +159,18 @@ export function Dashboard({
             </p>
           </div>
           <button
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-indigo-500 hover:shadow-violet-500/40 cursor-pointer"
+            onClick={handleCreate}
+            disabled={creating}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-indigo-500 hover:shadow-violet-500/40 disabled:opacity-50 cursor-pointer"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            New Video
+            {creating ? "Creating…" : "New Video"}
           </button>
         </div>
 
-        {/* New Project Modal */}
-        {showForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-lg mx-4 rounded-2xl border border-white/[0.06] bg-[#12121d] p-8 shadow-2xl">
-              <h2 className="text-xl font-semibold text-white mb-2">Create a new video</h2>
-              <p className="text-base text-zinc-400 mb-6">
-                Describe what your video should be about. Our AI will handle the script, visuals, and rendering.
-              </p>
-              <form onSubmit={handleCreate}>
-                <textarea
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g. 5 tips for better sleep that most people ignore"
-                  required
-                  rows={3}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white placeholder-zinc-500 transition-all focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 resize-none mb-4"
-                />
-
-                {/* Video Settings */}
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div>
-                    <label className="block text-xs text-zinc-500 mb-1">Scenes</label>
-                    <input
-                      type="number"
-                      min={2}
-                      max={100}
-                      value={sceneCount}
-                      onChange={(e) => setSceneCount(Math.max(2, Math.min(100, parseInt(e.target.value) || 6)))}
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-violet-500/50 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-zinc-500 mb-1">Duration/scene (sec)</label>
-                    <input
-                      type="number"
-                      min={2}
-                      max={60}
-                      value={sceneDuration}
-                      onChange={(e) => setSceneDuration(Math.max(2, Math.min(60, parseInt(e.target.value) || 5)))}
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-violet-500/50 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-zinc-500 mb-1.5">Aspect Ratio</label>
-                    <div className="flex gap-1.5">
-                      {(["9:16", "16:9"] as const).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setAspectRatio(r)}
-                          className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                            aspectRatio === r
-                              ? "bg-violet-500/20 border border-violet-500 text-white"
-                              : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:border-white/20"
-                          }`}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-zinc-500 mb-1">Quality</label>
-                    <select
-                      value={quality}
-                      onChange={(e) => setQuality(e.target.value as "hd" | "fullhd" | "4k")}
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-violet-500/50 focus:outline-none"
-                    >
-                      <option value="hd">HD (720p)</option>
-                      <option value="fullhd">Full HD (1080p)</option>
-                      <option value="4k">4K (2160p)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    className="rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={creating || !topic.trim()}
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {creating ? "Creating…" : "Generate Video"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
         {deleteState && (
           <DeleteModal

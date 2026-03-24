@@ -422,7 +422,7 @@ export function ProjectDetailClient({
                   type="button"
                   onClick={() =>
                     router.push(
-                      `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+                      `/wizard/${project.id}?step=${project.wizard_step || "template"}`
                     )
                   }
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] cursor-pointer"
@@ -448,7 +448,7 @@ export function ProjectDetailClient({
                   type="button"
                   onClick={() =>
                     router.push(
-                      `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+                      `/wizard/${project.id}?step=${project.wizard_step || "template"}`
                     )
                   }
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] cursor-pointer"
@@ -468,7 +468,7 @@ export function ProjectDetailClient({
                 type="button"
                 onClick={() =>
                   router.push(
-                    `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+                    `/wizard/${project.id}?step=${project.wizard_step || "template"}`
                   )
                 }
                 className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500 cursor-pointer"

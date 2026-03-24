@@ -13,7 +13,7 @@ export function ProjectCard({
   const isDraft = project.status === "draft";
   const isCompleted = project.status === "completed";
   const href = isDraft
-    ? `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+    ? `/wizard/${project.id}?step=${project.wizard_step || "template"}`
     : isCompleted
       ? `/wizard/${project.id}?step=render`
       : `/projects/${project.id}`;
