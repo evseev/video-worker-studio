@@ -173,8 +173,8 @@ export function createWizardStore(project: Project) {
           body: JSON.stringify({ projectId: get().projectId, ...updates }),
         });
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          console.error("Save failed:", res.status, body);
+          const text = await res.text().catch(() => "");
+          console.error("Save failed:", res.status, text);
         }
       } catch (e) {
         console.error("Failed to save progress", e);
