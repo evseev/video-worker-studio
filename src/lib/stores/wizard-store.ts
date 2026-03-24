@@ -9,6 +9,8 @@ export type Scene = {
   scriptText: string;
   searchKeyword: string;
   assetUrl?: string;
+  assetOptions?: string[];
+  selectedAssetIndex?: number;
 };
 
 export type VideoSettings = {
@@ -54,6 +56,7 @@ export type WizardState = {
   reorderScenes: (fromIdx: number, toIdx: number) => void;
   setSelectedTemplate: (template: string) => void;
   setSettings: (settings: Partial<VideoSettings>) => void;
+  selectAsset: (sceneIdx: number, assetIdx: number) => void;
   setRefinedIdea: (idea: RefinedIdea | null) => void;
   syncFromProject: (project: Project) => void;
   saveProgress: (updates: Record<string, unknown>) => Promise<void>;
@@ -125,6 +128,14 @@ export function createWizardStore(project: Project) {
     setSettings: (updates) =>
       set((state) => ({
         settings: { ...state.settings, ...updates },
+      })),
+
+    selectAsset: (sceneIdx, assetIdx) =>
+      set((state) => ({
+        scenes: state.scenes.map((s, i) => {
+          if (i !== sceneIdx || !s.assetOptions?.[assetIdx]) return s;
+          return { ...s, assetUrl: s.assetOptions[assetIdx], selectedAssetIndex: assetIdx };
+        }),
       })),
 
     setRefinedIdea: (idea) => set({ refinedIdea: idea }),
