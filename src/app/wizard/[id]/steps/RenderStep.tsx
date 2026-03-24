@@ -42,7 +42,11 @@ export function RenderStep({ store }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration, backgroundMusic, voiceoverUrl }),
       });
-      if (!res.ok) throw new Error("Failed to start render");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("Render API error:", res.status, body);
+        throw new Error(body.error || "Failed to start render");
+      }
       // Start polling by refreshing the server component
       router.refresh();
     } catch (error) {
