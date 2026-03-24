@@ -184,7 +184,7 @@ export function Dashboard({
         )}
 
         {projects.length === 0 ? (
-          <EmptyState onCreateClick={() => setShowForm(true)} />
+          <EmptyState onCreateClick={handleCreate} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((project) => (
