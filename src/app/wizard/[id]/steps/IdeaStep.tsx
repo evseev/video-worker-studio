@@ -8,7 +8,7 @@ import { useStore } from "zustand";
 type Props = { store: StoreApi<WizardState> };
 
 export function IdeaStep({ store }: Props) {
-  const { topic, setTopic, settings, saveProgress, setStep } = useStore(store);
+  const { topic, setTopic, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
   const [ideas, setIdeas] = useState<{ title: string; description: string; trendScore: number }[]>([]);
 
@@ -32,12 +32,21 @@ export function IdeaStep({ store }: Props) {
 
   return (
     <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h2 className="text-2xl font-semibold text-white mb-2">Start with your idea</h2>
-      <p className="text-zinc-400 mb-8 text-base">Describe your video topic and configure basic settings.</p>
+      <h2 className="text-2xl font-semibold text-white mb-2">Develop your idea</h2>
+      <p className="text-zinc-400 mb-6 text-base">Generate viral angles and hook ideas for your video.</p>
+
+      {/* Summary from Step 1 */}
+      <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 mb-6 text-sm">
+        <span className="text-zinc-500">Template:</span>
+        <span className="text-zinc-200 font-medium capitalize">{selectedTemplate.replace("-", " ")}</span>
+        <span className="text-zinc-600 mx-1">·</span>
+        <span className="text-zinc-500">Topic:</span>
+        <span className="text-zinc-200 font-medium truncate">{topic || <span className="text-zinc-600 italic">not set</span>}</span>
+      </div>
 
       {/* Topic Input */}
       <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-6">
-        <label className="block text-base font-medium text-zinc-300 mb-2">Your Topic</label>
+        <label className="block text-base font-medium text-zinc-300 mb-2">Refine Your Topic</label>
         <div className="flex gap-3">
           <input
             type="text"
@@ -53,65 +62,6 @@ export function IdeaStep({ store }: Props) {
           >
             {generatingIdeas ? "Thinking..." : "Generate Hooks"}
           </button>
-        </div>
-      </div>
-
-      {/* Video Settings */}
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-6">
-        <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-wider">Video Settings</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">Number of Scenes</label>
-            <input
-              type="number"
-              min={2}
-              max={100}
-              value={settings.sceneCount}
-              onChange={(e) => store.getState().setSettings({ sceneCount: Math.max(2, Math.min(100, parseInt(e.target.value) || 6)) })}
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">Duration per Scene (sec)</label>
-            <input
-              type="number"
-              min={2}
-              max={60}
-              value={settings.sceneDuration}
-              onChange={(e) => store.getState().setSettings({ sceneDuration: Math.max(2, Math.min(60, parseInt(e.target.value) || 5)) })}
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Aspect Ratio</label>
-            <div className="flex gap-2">
-              {(["9:16", "16:9"] as const).map((ratio) => (
-                <button
-                  key={ratio}
-                  onClick={() => store.getState().setSettings({ aspectRatio: ratio })}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                    settings.aspectRatio === ratio
-                      ? "bg-violet-500/20 border border-violet-500 text-white"
-                      : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:border-white/20"
-                  }`}
-                >
-                  {ratio}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Quality</label>
-            <select
-              value={settings.quality}
-              onChange={(e) => store.getState().setSettings({ quality: e.target.value as "hd" | "fullhd" | "4k" })}
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
-            >
-              <option value="hd">HD (720p)</option>
-              <option value="fullhd">Full HD (1080p)</option>
-              <option value="4k">4K (2160p)</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -139,16 +89,25 @@ export function IdeaStep({ store }: Props) {
       )}
 
       {/* Continue */}
-      <div className="flex justify-end pt-6 border-t border-white/[0.06]">
+      <div className="flex justify-between pt-6 border-t border-white/[0.06]">
+        <button
+          onClick={() => setStep("template")}
+          className="px-4 py-2.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        >
+          Back
+        </button>
         <button
           disabled={!topic.trim()}
           className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           onClick={async () => {
+            const enrichedTopic = `${topic} (Template: ${selectedTemplate})`;
             await saveProgress({
               topic,
               wizard_step: "refine",
               draft_scenes: { scenes: store.getState().scenes, settings, refinedIdea: store.getState().refinedIdea },
             });
+            // Store the enriched topic context for enhance-idea API calls
+            void enrichedTopic;
             setStep("refine");
           }}
         >

@@ -8,93 +8,14 @@ import { useToast } from "@/components/ui/toast";
 
 type Props = { store: StoreApi<WizardState> };
 
-const TEMPLATES = [
-  { id: "Slideshow", label: "Slideshow", desc: "Single image with caption overlay", icon: "slideshow" },
-  { id: "Fact Card", label: "Fact Card", desc: "White card overlay on image", icon: "factcard" },
-  { id: "Compilation", label: "Compilation", desc: "Centered uppercase text", icon: "compilation" },
-  { id: "Comparison", label: "Comparison", desc: "Side-by-side comparison style", icon: "comparison" },
-  { id: "Evolution", label: "Evolution", desc: "Timeline progression style", icon: "evolution" },
-];
-
-function TemplatePreview({ icon, isLandscape }: { icon: string; isLandscape: boolean }) {
-  // Mini SVG layout previews for each template — adapts to aspect ratio
-  const vw = isLandscape ? 80 : 48;
-  const vh = isLandscape ? 48 : 80;
-  return (
-    <div className={`w-full ${isLandscape ? "aspect-[16/9]" : "aspect-[9/16]"} bg-black/30 rounded-lg mb-3 flex items-center justify-center overflow-hidden`}>
-      {icon === "slideshow" && (
-        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
-          <rect x="4" y="4" width={vw - 8} height={vh * 0.625} rx="2" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.4)" strokeWidth="1" />
-          <rect x="8" y={vh * 0.725} width={vw - 16} height="4" rx="1" fill="rgba(255,255,255,0.3)" />
-          <rect x="12" y={vh * 0.725 + 7} width={vw - 24} height="3" rx="1" fill="rgba(255,255,255,0.15)" />
-        </svg>
-      )}
-      {icon === "factcard" && (
-        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
-          <rect x="4" y="4" width={vw - 8} height={vh - 8} rx="2" fill="rgba(139,92,246,0.15)" />
-          <rect x="8" y={vh * 0.375} width={vw - 16} height={vh * 0.375} rx="6" fill="rgba(255,255,255,0.9)" />
-          <rect x="14" y={vh * 0.475} width={vw - 28} height="3" rx="1" fill="rgba(0,0,0,0.3)" />
-          <rect x="16" y={vh * 0.55} width={vw - 32} height="2" rx="1" fill="rgba(0,0,0,0.15)" />
-          <rect x="16" y={vh * 0.6125} width={vw - 32} height="2" rx="1" fill="rgba(0,0,0,0.15)" />
-        </svg>
-      )}
-      {icon === "compilation" && (
-        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
-          <rect x="4" y="4" width={vw - 8} height={vh - 8} rx="2" fill="rgba(139,92,246,0.15)" />
-          <rect x="8" y={vh * 0.4} width={vw - 16} height="5" rx="1" fill="rgba(255,255,255,0.4)" />
-          <rect x="12" y={vh * 0.5} width={vw - 24} height="3" rx="1" fill="rgba(255,255,255,0.2)" />
-          <text x={vw / 2} y={vh * 0.35} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8" fontWeight="bold">#1</text>
-        </svg>
-      )}
-      {icon === "comparison" && (
-        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
-          <rect x="4" y="4" width={vw / 2 - 5} height={vh * 0.625} rx="2" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-          <rect x={vw / 2 + 2} y="4" width={vw / 2 - 5} height={vh * 0.625} rx="2" fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
-          <line x1={vw / 2} y1="4" x2={vw / 2} y2={vh * 0.625 + 4} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-          <rect x="8" y={vh * 0.75} width={vw - 16} height="4" rx="1" fill="rgba(255,255,255,0.3)" />
-        </svg>
-      )}
-      {icon === "evolution" && (
-        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
-          <rect x="4" y="4" width={vw - 8} height={vh - 8} rx="2" fill="rgba(139,92,246,0.15)" />
-          {isLandscape ? (
-            <>
-              <circle cx={vw * 0.2} cy={vh * 0.4} r="3" fill="rgba(139,92,246,0.4)" />
-              <line x1={vw * 0.2 + 3} y1={vh * 0.4} x2={vw * 0.45 - 3} y2={vh * 0.4} stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-              <circle cx={vw * 0.45} cy={vh * 0.4} r="3" fill="rgba(139,92,246,0.4)" />
-              <line x1={vw * 0.45 + 3} y1={vh * 0.4} x2={vw * 0.7 - 3} y2={vh * 0.4} stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-              <circle cx={vw * 0.7} cy={vh * 0.4} r="3" fill="rgba(139,92,246,0.4)" />
-              <rect x={vw * 0.2 - 6} y={vh * 0.55} width="12" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-              <rect x={vw * 0.45 - 6} y={vh * 0.55} width="12" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-              <rect x={vw * 0.7 - 6} y={vh * 0.55} width="12" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-            </>
-          ) : (
-            <>
-              <circle cx="12" cy="20" r="3" fill="rgba(139,92,246,0.4)" />
-              <line x1="12" y1="23" x2="12" y2="40" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-              <circle cx="12" cy="43" r="3" fill="rgba(139,92,246,0.4)" />
-              <line x1="12" y1="46" x2="12" y2="60" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-              <circle cx="12" cy="63" r="3" fill="rgba(139,92,246,0.4)" />
-              <rect x="20" y="18" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-              <rect x="20" y="41" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-              <rect x="20" y="61" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-            </>
-          )}
-        </svg>
-      )}
-    </div>
-  );
-}
-
 export function ScriptStep({ store }: Props) {
-  const { projectId, topic, scenes, setScenes, selectedTemplate, setSelectedTemplate, refinedIdea, settings, targetKeywords, videoDescription, videoTags, setVideoDescription, setVideoTags, saveProgress, setStep } = useStore(store);
+  const { projectId, topic, scenes, setScenes, selectedTemplate, refinedIdea, settings, targetKeywords, videoDescription, videoTags, setVideoDescription, setVideoTags, saveProgress, setStep } = useStore(store);
   const [generatingScript, setGeneratingScript] = useState(false);
   const [generatingSeo, setGeneratingSeo] = useState(false);
   const [seoExpanded, setSeoExpanded] = useState(true);
 
   const addToast = useToast();
   const ideaText = refinedIdea?.selectedIdea || topic;
-  const isLandscape = settings.aspectRatio === "16:9";
 
   async function fetchSeoMetadata(generatedScenes: { scriptText: string }[]) {
     setGeneratingSeo(true);
@@ -145,30 +66,8 @@ export function ScriptStep({ store }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h2 className="text-2xl font-semibold text-white mb-2">Choose template & generate script</h2>
-      <p className="text-zinc-400 mb-8 text-base">Select a visual style, then let AI write your scene-by-scene script.</p>
-
-      {/* Template Selection */}
-      <div className="mb-8">
-        <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-wider">Video Template</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {TEMPLATES.map((tmpl) => (
-            <button
-              key={tmpl.id}
-              onClick={() => setSelectedTemplate(tmpl.id)}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                selectedTemplate === tmpl.id
-                  ? "bg-violet-500/10 border-violet-500 text-white"
-                  : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:border-white/20"
-              }`}
-            >
-              <TemplatePreview icon={tmpl.icon} isLandscape={isLandscape} />
-              <div className="font-medium text-sm mb-0.5">{tmpl.label}</div>
-              <div className="text-xs opacity-60 leading-tight">{tmpl.desc}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <h2 className="text-2xl font-semibold text-white mb-2">Generate your script</h2>
+      <p className="text-zinc-400 mb-8 text-base">Let AI write your scene-by-scene script based on your idea and template.</p>
 
       {/* Generate Script */}
       <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-6">
@@ -177,6 +76,7 @@ export function ScriptStep({ store }: Props) {
             <span className="text-sm text-zinc-400">Generating for: </span>
             <span className="text-sm text-zinc-200 font-medium">{ideaText.slice(0, 80)}{ideaText.length > 80 ? "..." : ""}</span>
           </div>
+          <div className="text-xs text-zinc-500 capitalize">{selectedTemplate.replace("-", " ")} template</div>
         </div>
         <button
           onClick={generateScript}
@@ -197,9 +97,11 @@ export function ScriptStep({ store }: Props) {
                 <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Scene {idx + 1}</span>
                 <input
                   type="text"
-                  value={scene.searchKeyword}
+                  value={scene.searchKeywords?.[0] ?? ""}
                   onChange={(e) => {
-                    store.getState().updateScene(idx, { searchKeyword: e.target.value });
+                    const updatedKeywords = [...(scene.searchKeywords ?? [])];
+                    updatedKeywords[0] = e.target.value;
+                    store.getState().updateScene(idx, { searchKeywords: updatedKeywords });
                   }}
                   className="px-2 py-1 bg-white/[0.06] border border-white/10 rounded text-xs text-zinc-300 w-1/2 focus:outline-none focus:border-violet-500/50"
                   placeholder="Search keyword"
