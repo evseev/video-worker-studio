@@ -16,7 +16,7 @@ Triggered via `/api/generate` and powered entirely by a 5-step Inngest backgroun
 ```text
 Idea (topic + settings) → Refine (AI enhance + trend score) → Script (template + scenes) → Preview (assets + reorder) → Render (progress + player)
 ```
-A five-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, fetch-assets, render).
+A five-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, generate-seo, fetch-assets, render).
 
 The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
@@ -156,7 +156,7 @@ src/
 │   ├── ai/
 │   │   ├── prompts.ts           # Centralized LLM prompt templates (dynamic scene count, duration, aspect ratio)
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
-│   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure)
+│   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure, generateSeoMetadata)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
 │   ├── stores/
 │   │   └── wizard-store.ts      # Zustand store for wizard state management
