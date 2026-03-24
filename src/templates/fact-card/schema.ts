@@ -16,6 +16,8 @@ export const factCardGeminiSchema: Schema = {
           searchKeywords: {
             type: SchemaType.ARRAY,
             items: { type: SchemaType.STRING },
+            minItems: 2,
+            maxItems: 2,
             description: "Exactly 2 Pinterest search keyword phrases: [mainImageKeyword, secondaryImageKeyword].",
           },
           title: {

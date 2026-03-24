@@ -16,6 +16,8 @@ export const comparisonGeminiSchema: Schema = {
           searchKeywords: {
             type: SchemaType.ARRAY,
             items: { type: SchemaType.STRING },
+            minItems: 2,
+            maxItems: 2,
             description: "Exactly 2 Pinterest search keyword phrases: [leftImageKeyword, rightImageKeyword].",
           },
           leftLabel: {
