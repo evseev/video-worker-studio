@@ -15,53 +15,70 @@ const TEMPLATES = [
   { id: "Evolution", label: "Evolution", desc: "Timeline progression style", icon: "evolution" },
 ];
 
-function TemplatePreview({ icon }: { icon: string }) {
-  // Mini SVG layout previews for each template
+function TemplatePreview({ icon, isLandscape }: { icon: string; isLandscape: boolean }) {
+  // Mini SVG layout previews for each template — adapts to aspect ratio
+  const vw = isLandscape ? 80 : 48;
+  const vh = isLandscape ? 48 : 80;
   return (
-    <div className="w-full aspect-[9/16] bg-black/30 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+    <div className={`w-full ${isLandscape ? "aspect-[16/9]" : "aspect-[9/16]"} bg-black/30 rounded-lg mb-3 flex items-center justify-center overflow-hidden`}>
       {icon === "slideshow" && (
-        <svg width="48" height="80" viewBox="0 0 48 80" fill="none">
-          <rect x="4" y="4" width="40" height="50" rx="2" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.4)" strokeWidth="1" />
-          <rect x="8" y="58" width="32" height="4" rx="1" fill="rgba(255,255,255,0.3)" />
-          <rect x="12" y="65" width="24" height="3" rx="1" fill="rgba(255,255,255,0.15)" />
+        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
+          <rect x="4" y="4" width={vw - 8} height={vh * 0.625} rx="2" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.4)" strokeWidth="1" />
+          <rect x="8" y={vh * 0.725} width={vw - 16} height="4" rx="1" fill="rgba(255,255,255,0.3)" />
+          <rect x="12" y={vh * 0.725 + 7} width={vw - 24} height="3" rx="1" fill="rgba(255,255,255,0.15)" />
         </svg>
       )}
       {icon === "factcard" && (
-        <svg width="48" height="80" viewBox="0 0 48 80" fill="none">
-          <rect x="4" y="4" width="40" height="72" rx="2" fill="rgba(139,92,246,0.15)" />
-          <rect x="8" y="30" width="32" height="30" rx="6" fill="rgba(255,255,255,0.9)" />
-          <rect x="14" y="38" width="20" height="3" rx="1" fill="rgba(0,0,0,0.3)" />
-          <rect x="16" y="44" width="16" height="2" rx="1" fill="rgba(0,0,0,0.15)" />
-          <rect x="16" y="49" width="16" height="2" rx="1" fill="rgba(0,0,0,0.15)" />
+        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
+          <rect x="4" y="4" width={vw - 8} height={vh - 8} rx="2" fill="rgba(139,92,246,0.15)" />
+          <rect x="8" y={vh * 0.375} width={vw - 16} height={vh * 0.375} rx="6" fill="rgba(255,255,255,0.9)" />
+          <rect x="14" y={vh * 0.475} width={vw - 28} height="3" rx="1" fill="rgba(0,0,0,0.3)" />
+          <rect x="16" y={vh * 0.55} width={vw - 32} height="2" rx="1" fill="rgba(0,0,0,0.15)" />
+          <rect x="16" y={vh * 0.6125} width={vw - 32} height="2" rx="1" fill="rgba(0,0,0,0.15)" />
         </svg>
       )}
       {icon === "compilation" && (
-        <svg width="48" height="80" viewBox="0 0 48 80" fill="none">
-          <rect x="4" y="4" width="40" height="72" rx="2" fill="rgba(139,92,246,0.15)" />
-          <rect x="8" y="32" width="32" height="5" rx="1" fill="rgba(255,255,255,0.4)" />
-          <rect x="12" y="40" width="24" height="3" rx="1" fill="rgba(255,255,255,0.2)" />
-          <text x="24" y="28" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8" fontWeight="bold">#1</text>
+        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
+          <rect x="4" y="4" width={vw - 8} height={vh - 8} rx="2" fill="rgba(139,92,246,0.15)" />
+          <rect x="8" y={vh * 0.4} width={vw - 16} height="5" rx="1" fill="rgba(255,255,255,0.4)" />
+          <rect x="12" y={vh * 0.5} width={vw - 24} height="3" rx="1" fill="rgba(255,255,255,0.2)" />
+          <text x={vw / 2} y={vh * 0.35} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8" fontWeight="bold">#1</text>
         </svg>
       )}
       {icon === "comparison" && (
-        <svg width="48" height="80" viewBox="0 0 48 80" fill="none">
-          <rect x="4" y="4" width="18" height="50" rx="2" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-          <rect x="26" y="4" width="18" height="50" rx="2" fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
-          <line x1="24" y1="4" x2="24" y2="54" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-          <rect x="8" y="60" width="32" height="4" rx="1" fill="rgba(255,255,255,0.3)" />
+        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
+          <rect x="4" y="4" width={vw / 2 - 5} height={vh * 0.625} rx="2" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
+          <rect x={vw / 2 + 2} y="4" width={vw / 2 - 5} height={vh * 0.625} rx="2" fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
+          <line x1={vw / 2} y1="4" x2={vw / 2} y2={vh * 0.625 + 4} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+          <rect x="8" y={vh * 0.75} width={vw - 16} height="4" rx="1" fill="rgba(255,255,255,0.3)" />
         </svg>
       )}
       {icon === "evolution" && (
-        <svg width="48" height="80" viewBox="0 0 48 80" fill="none">
-          <rect x="4" y="4" width="40" height="72" rx="2" fill="rgba(139,92,246,0.15)" />
-          <circle cx="12" cy="20" r="3" fill="rgba(139,92,246,0.4)" />
-          <line x1="12" y1="23" x2="12" y2="40" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-          <circle cx="12" cy="43" r="3" fill="rgba(139,92,246,0.4)" />
-          <line x1="12" y1="46" x2="12" y2="60" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-          <circle cx="12" cy="63" r="3" fill="rgba(139,92,246,0.4)" />
-          <rect x="20" y="18" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-          <rect x="20" y="41" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
-          <rect x="20" y="61" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
+        <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`} fill="none">
+          <rect x="4" y="4" width={vw - 8} height={vh - 8} rx="2" fill="rgba(139,92,246,0.15)" />
+          {isLandscape ? (
+            <>
+              <circle cx={vw * 0.2} cy={vh * 0.4} r="3" fill="rgba(139,92,246,0.4)" />
+              <line x1={vw * 0.2 + 3} y1={vh * 0.4} x2={vw * 0.45 - 3} y2={vh * 0.4} stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
+              <circle cx={vw * 0.45} cy={vh * 0.4} r="3" fill="rgba(139,92,246,0.4)" />
+              <line x1={vw * 0.45 + 3} y1={vh * 0.4} x2={vw * 0.7 - 3} y2={vh * 0.4} stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
+              <circle cx={vw * 0.7} cy={vh * 0.4} r="3" fill="rgba(139,92,246,0.4)" />
+              <rect x={vw * 0.2 - 6} y={vh * 0.55} width="12" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
+              <rect x={vw * 0.45 - 6} y={vh * 0.55} width="12" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
+              <rect x={vw * 0.7 - 6} y={vh * 0.55} width="12" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
+            </>
+          ) : (
+            <>
+              <circle cx="12" cy="20" r="3" fill="rgba(139,92,246,0.4)" />
+              <line x1="12" y1="23" x2="12" y2="40" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
+              <circle cx="12" cy="43" r="3" fill="rgba(139,92,246,0.4)" />
+              <line x1="12" y1="46" x2="12" y2="60" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
+              <circle cx="12" cy="63" r="3" fill="rgba(139,92,246,0.4)" />
+              <rect x="20" y="18" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
+              <rect x="20" y="41" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
+              <rect x="20" y="61" width="20" height="3" rx="1" fill="rgba(255,255,255,0.3)" />
+            </>
+          )}
         </svg>
       )}
     </div>
@@ -69,10 +86,11 @@ function TemplatePreview({ icon }: { icon: string }) {
 }
 
 export function ScriptStep({ store }: Props) {
-  const { projectId, topic, scenes, setScenes, selectedTemplate, setSelectedTemplate, refinedIdea, saveProgress, setStep } = useStore(store);
+  const { projectId, topic, scenes, setScenes, selectedTemplate, setSelectedTemplate, refinedIdea, settings, saveProgress, setStep } = useStore(store);
   const [generatingScript, setGeneratingScript] = useState(false);
 
   const ideaText = refinedIdea?.selectedIdea || topic;
+  const isLandscape = settings.aspectRatio === "16:9";
 
   async function generateScript() {
     if (!ideaText.trim()) return;
@@ -81,7 +99,7 @@ export function ScriptStep({ store }: Props) {
       const res = await fetch("/api/wizard/generate-structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, idea: ideaText, template: selectedTemplate }),
+        body: JSON.stringify({ projectId, idea: ideaText, template: selectedTemplate, aspectRatio: settings.aspectRatio, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
       });
       const data = await res.json();
       if (data.scenes) {
@@ -113,7 +131,7 @@ export function ScriptStep({ store }: Props) {
                   : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:border-white/20"
               }`}
             >
-              <TemplatePreview icon={tmpl.icon} />
+              <TemplatePreview icon={tmpl.icon} isLandscape={isLandscape} />
               <div className="font-medium text-sm mb-0.5">{tmpl.label}</div>
               <div className="text-xs opacity-60 leading-tight">{tmpl.desc}</div>
             </button>

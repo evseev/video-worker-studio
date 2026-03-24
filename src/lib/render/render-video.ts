@@ -17,12 +17,13 @@ type RenderInput = {
   template?: string;
   aspectRatio?: string;
   videoQuality?: string;
+  sceneDuration?: number;
   backgroundMusic?: string | null;
   captionStyle?: string;
   voiceoverUrl?: string | null;
 };
 
-const SCENE_DURATION_SECONDS = 5;
+const DEFAULT_SCENE_DURATION_SECONDS = 5;
 const FPS = 30;
 const TRANSITION_FRAMES = 15;
 const COMPOSITION_ID = "VideoWorker";
@@ -129,8 +130,9 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
   const { region, functionName, serveUrl } = getLambdaConfig();
   const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
   const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
+  const sceneDurationSeconds = input.sceneDuration ?? DEFAULT_SCENE_DURATION_SECONDS;
 
-  const sceneDurationFrames = SCENE_DURATION_SECONDS * FPS;
+  const sceneDurationFrames = sceneDurationSeconds * FPS;
   const totalFrames =
     scenes.length * sceneDurationFrames -
     Math.max(0, scenes.length - 1) * TRANSITION_FRAMES;
@@ -195,6 +197,7 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
   const { projectId, scenes, aspectRatio, videoQuality, backgroundMusic } = input;
   const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
   const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
+  const sceneDurationSeconds = input.sceneDuration ?? DEFAULT_SCENE_DURATION_SECONDS;
   const normalizedScenes = scenes.map((scene) => ({
     ...scene,
     // Remotion bundle server runs on a different port than Next dev,
@@ -207,6 +210,16 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
   // Bundle the Remotion project
   const bundleLocation = await bundle({
     entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
+    webpackOverride: (config) => ({
+      ...config,
+      resolve: {
+        ...config.resolve,
+        alias: {
+          ...(config.resolve?.alias ?? {}),
+          "@": path.join(process.cwd(), "src"),
+        },
+      },
+    }),
     onProgress: (progress) => {
       if (progress % 25 === 0) {
         console.log(`[render] Bundle progress: ${progress}%`);
@@ -214,7 +227,7 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     },
   });
 
-  const sceneDurationFrames = SCENE_DURATION_SECONDS * FPS;
+  const sceneDurationFrames = sceneDurationSeconds * FPS;
   const totalFrames =
     scenes.length * sceneDurationFrames -
     Math.max(0, scenes.length - 1) * TRANSITION_FRAMES;

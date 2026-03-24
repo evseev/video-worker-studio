@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { WizardState } from "@/lib/stores/wizard-store";
 import type { StoreApi } from "zustand";
@@ -20,6 +20,13 @@ export function RenderStep({ store }: Props) {
   const isCompleted = projectStatus === "completed" && !!videoUrl;
   const isFailed = projectStatus === "failed_render" || projectStatus === "failed_ai";
 
+  // Clear local isRendering flag once the server status takes over
+  useEffect(() => {
+    if (isProcessing || isCompleted || isFailed) {
+      setIsRendering(false);
+    }
+  }, [isProcessing, isCompleted, isFailed]);
+
   const totalDuration = scenes.length * settings.sceneDuration;
 
   async function startRender() {
@@ -29,7 +36,7 @@ export function RenderStep({ store }: Props) {
       const res = await fetch("/api/wizard/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, scenes, template: selectedTemplate }),
+        body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration }),
       });
       if (!res.ok) throw new Error("Failed to start render");
       // Start polling by refreshing the server component

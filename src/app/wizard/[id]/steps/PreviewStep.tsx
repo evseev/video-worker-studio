@@ -21,7 +21,7 @@ export function PreviewStep({ store }: Props) {
       const res = await fetch("/api/wizard/fetch-assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, scenes: currentScenes }),
+        body: JSON.stringify({ projectId, scenes: currentScenes, aspectRatio: store.getState().settings.aspectRatio }),
       });
       const data = await res.json();
       if (data.assets) {
@@ -47,7 +47,7 @@ export function PreviewStep({ store }: Props) {
       const res = await fetch("/api/wizard/fetch-assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, scenes: [scene] }),
+        body: JSON.stringify({ projectId, scenes: [scene], aspectRatio: settings.aspectRatio }),
       });
       const data = await res.json();
       if (data.assets?.[0]?.file_path) {
@@ -158,7 +158,7 @@ export function PreviewStep({ store }: Props) {
             </div>
 
             {/* Image Preview */}
-            <div className="w-20 h-28 shrink-0 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative group/img">
+            <div className={`${settings.aspectRatio === "16:9" ? "w-28 h-20" : "w-20 h-28"} shrink-0 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative group/img`}>
               {scene.assetUrl ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}

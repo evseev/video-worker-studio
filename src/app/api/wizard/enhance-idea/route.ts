@@ -3,13 +3,14 @@ import { withAuth } from "@/lib/api/with-auth";
 import { enhanceIdea } from "@/lib/ai/wizard";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, idea } = await request.json();
+  const { projectId, idea, sceneCount, sceneDuration } = await request.json();
 
   if (!idea) {
     return NextResponse.json({ error: "Idea is required" }, { status: 400 });
   }
 
-  const enhancedIdeas = await enhanceIdea(idea);
+  const totalDuration = (sceneCount ?? 6) * (sceneDuration ?? 5);
+  const enhancedIdeas = await enhanceIdea(idea, totalDuration);
 
   if (projectId) {
     await supabase

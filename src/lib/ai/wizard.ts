@@ -1,5 +1,11 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
 import { z } from "zod";
+import {
+  enhanceIdeaPrompt,
+  validateTrendPrompt,
+  generateStructurePrompt,
+  generateStructureUserMessage,
+} from "./prompts";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -21,24 +27,23 @@ const enhanceIdeaSchema: Schema = {
   required: ["ideas"],
 };
 
-export async function enhanceIdea(rawIdea: string): Promise<string[]> {
+export async function enhanceIdea(rawIdea: string, totalDuration?: number): Promise<string[]> {
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: enhanceIdeaSchema,
     },
-    systemInstruction: `You are an expert TikTok/Creative Director. 
-The user has a rough idea for a short-form video. Transform it into 3 highly engaging, specific, and viral hooks/concepts. Keep each idea under 2 sentences.`,
+    systemInstruction: enhanceIdeaPrompt(totalDuration ? { totalDuration } : undefined),
   });
 
   const result = await model.generateContent(`Raw idea: ${rawIdea}`);
   const text = result.response.text();
-  
+
   const ResponseSchema = z.object({
     ideas: z.array(z.string()).min(1),
   });
-  
+
   const parsed = ResponseSchema.parse(JSON.parse(text));
   return parsed.ideas;
 }
@@ -79,9 +84,7 @@ export async function validateTrend(idea: string): Promise<TrendValidation> {
       responseMimeType: "application/json",
       responseSchema: validateTrendSchema,
     },
-    systemInstruction: `You are a social media trend analyst.
-Score the viral potential of the given video idea on a scale of 0-100.
-Provide a brief reasoning and suggest up to 2 hooks.`,
+    systemInstruction: validateTrendPrompt(),
   });
 
   const result = await model.generateContent(`Idea: ${idea}`);
@@ -128,23 +131,25 @@ const structureSchema: Schema = {
   required: ["scenes"],
 };
 
-export async function generateStructure(idea: string, template: string): Promise<SceneScript[]> {
+export async function generateStructure(
+  idea: string,
+  template: string,
+  opts?: { aspectRatio?: string; sceneCount?: number; sceneDuration?: number }
+): Promise<SceneScript[]> {
+  const sceneCount = opts?.sceneCount ?? 6;
+  const sceneDuration = opts?.sceneDuration ?? 5;
+  const aspectRatio = opts?.aspectRatio;
+
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: structureSchema,
     },
-    systemInstruction: `You are an expert short-form video scriptwriter.
-Given an idea and a visual template/style, generate a 5-8 scene script.
-Each scene needs spoken text (short) and a visual search keyword for Pinterest that matches the template style (e.g. if template is 'dark mode', make sure the keyword includes 'dark').
-RULES:
-- Video should be 30-60 seconds.
-- Hook in scene 1.
-- Output MUST match the required JSON schema.`
+    systemInstruction: generateStructurePrompt({ sceneCount, sceneDuration, aspectRatio }),
   });
 
-  const result = await model.generateContent(`Idea: ${idea}\nTemplate/Style: ${template}`);
+  const result = await model.generateContent(generateStructureUserMessage(idea, template, aspectRatio));
   const text = result.response.text();
 
   const SceneSchema = z.object({
