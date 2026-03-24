@@ -7,10 +7,9 @@ export function buildComparisonPrompt(opts: ScriptOpts): string {
   const format = videoFormatLabel(totalDuration);
   const duration = durationDescription(totalDuration);
   const orientation = opts.aspectRatio === "16:9" ? "landscape (horizontal)" : "portrait (vertical)";
-  const orientationHint =
-    opts.aspectRatio === "16:9"
-      ? "The video is LANDSCAPE (16:9). Search keywords MUST target wide, horizontal images (e.g. include 'landscape', 'wide', 'panoramic', 'horizontal')."
-      : "The video is PORTRAIT (9:16). Search keywords MUST target tall, vertical images (e.g. include 'vertical', 'portrait', 'tall').";
+  // Comparison template places 2 images side by side — each slot is portrait-shaped
+  // regardless of video aspect ratio, so always request vertical/portrait images
+  const orientationHint = "Images are placed SIDE BY SIDE in the video frame, so each image slot is tall and narrow. Search keywords MUST target PORTRAIT/VERTICAL images (e.g. include 'portrait', 'vertical', 'tall'). Do NOT use 'landscape' or 'wide'.";
 
   return `You are an expert visual comparison video scriptwriter specializing in ${format} side-by-side contrast videos.
 Generate exactly ${opts.sceneCount} scenes for a ${format} comparison video (${duration} total, ${opts.sceneCount} scenes × ${opts.sceneDuration}s each).

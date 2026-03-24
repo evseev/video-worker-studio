@@ -30,6 +30,7 @@ export function PreviewStep({ store }: Props) {
           scenes: currentScenes,
           multipleAssets: true,
           aspectRatio: store.getState().settings.aspectRatio,
+          template: store.getState().selectedTemplate,
         }),
       });
       const data = await res.json();
@@ -71,6 +72,7 @@ export function PreviewStep({ store }: Props) {
           scenes: [{ searchKeywords: [keyword] }],
           multipleAssets: true,
           aspectRatio: settings.aspectRatio,
+          template: selectedTemplate,
         }),
       });
       const data = await res.json();

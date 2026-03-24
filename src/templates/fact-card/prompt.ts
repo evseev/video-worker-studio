@@ -7,10 +7,9 @@ export function buildFactCardPrompt(opts: ScriptOpts): string {
   const format = videoFormatLabel(totalDuration);
   const duration = durationDescription(totalDuration);
   const orientation = opts.aspectRatio === "16:9" ? "landscape (horizontal)" : "portrait (vertical)";
-  const orientationHint =
-    opts.aspectRatio === "16:9"
-      ? "The video is LANDSCAPE (16:9). Search keywords MUST target wide, horizontal images (e.g. include 'landscape', 'wide', 'panoramic', 'horizontal')."
-      : "The video is PORTRAIT (9:16). Search keywords MUST target tall, vertical images (e.g. include 'vertical', 'portrait', 'tall').";
+  // Fact card template uses images in card layouts — the main image is a hero banner
+  // and the secondary is a small thumbnail. Both work best as portrait/vertical images.
+  const orientationHint = "Images are displayed in a CARD LAYOUT (hero image + thumbnail). Search keywords MUST target PORTRAIT/VERTICAL images (e.g. include 'portrait', 'vertical', 'headshot', 'close-up'). Do NOT use 'landscape' or 'wide'.";
 
   return `You are an expert identity and profile video scriptwriter specializing in ${format} fact-card videos.
 Generate exactly ${opts.sceneCount} scenes for a ${format} fact-card video (${duration} total, ${opts.sceneCount} scenes × ${opts.sceneDuration}s each).

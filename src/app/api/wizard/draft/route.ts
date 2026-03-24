@@ -25,7 +25,8 @@ export const PUT = withAuth(async (request, { user, supabase }) => {
       .eq("user_id", user.id);
 
     if (error) {
-      throw error;
+      console.error("[draft] Supabase update error:", JSON.stringify(error), "updates:", JSON.stringify(updates));
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }
 

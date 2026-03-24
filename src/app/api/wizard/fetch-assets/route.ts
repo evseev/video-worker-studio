@@ -35,7 +35,7 @@ function normalizeScene(scene: Scene): SceneNew {
 }
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, scenes, multipleAssets, aspectRatio } = await request.json();
+  const { projectId, scenes, multipleAssets, aspectRatio, template } = await request.json();
 
   if (!projectId || !scenes || !Array.isArray(scenes)) {
     return NextResponse.json(
@@ -44,7 +44,14 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     );
   }
 
-  const orientationHint = aspectRatio === "16:9" ? "landscape" : "portrait";
+  // For slideshow: orientation matches video aspect ratio (landscape video → landscape images)
+  // For comparison/fact-card: image slots are portrait-shaped regardless of video aspect ratio
+  //   (side-by-side splits or card layouts make each slot tall/narrow)
+  const slideshowHint = aspectRatio === "16:9" ? "landscape" : "portrait";
+  const multiSlotHint = "portrait";
+  const orientationHint = (template === "comparison" || template === "fact-card")
+    ? multiSlotHint
+    : slideshowHint;
   const publicDir = path.join(process.cwd(), "public");
 
   function toPublicPath(filePath: string): string {

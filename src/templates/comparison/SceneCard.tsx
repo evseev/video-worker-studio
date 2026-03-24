@@ -32,7 +32,7 @@ function AssetThumb({
   return (
     <div className="flex flex-col gap-1 flex-1">
       <span className="text-[10px] text-zinc-500 uppercase tracking-wider text-center">{label}</span>
-      <div className="relative w-full aspect-video bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center group/thumb">
+      <div className="relative w-full aspect-[3/4] bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center group/thumb">
         {displayUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={displayUrl} alt={label} className="w-full h-full object-cover" />
