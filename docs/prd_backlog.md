@@ -199,3 +199,22 @@
 ### Polish
 *   [x] Styling / UI components
 *   [x] Error handling, loading states
+
+## Epic 20: Template System — 3 Structural Archetypes
+**Description:** Replace cosmetic template presets with 3 structural template archetypes (Slideshow, Comparison, Fact Card) that drive the entire video pipeline: AI scene generation, asset fetching, preview layout, and Remotion rendering. Replaces Epics 6.3/6.5 and Epic 11 (caption styles absorbed into templates).
+**Design:** `docs/designs/2026-03-24-template-system-design.md`
+**Plan:** `docs/superpowers/plans/2026-03-24-template-system.md`
+
+*   [ ] **Story 20.1:** Create template types, configs, and registry (`src/templates/` — types.ts, index.ts, slideshow/, comparison/, fact-card/ configs).
+*   [ ] **Story 20.2:** Create template-specific AI prompts and Zod/Gemini schemas per archetype.
+*   [ ] **Story 20.3:** Update wizard store with new Scene union type, 6-step WizardStep, multi-slot asset actions.
+*   [ ] **Story 20.4:** Update AI generation pipeline (`wizard.ts`, `generate-structure` route) to use template-specific prompts and schemas.
+*   [ ] **Story 20.5:** Update asset fetching route for multi-slot (1 or 2 keywords per scene based on template).
+*   [ ] **Story 20.6:** Create 3 Remotion scene components (`SlideshowScene`, `ComparisonScene`, `FactCardScene`) under `src/remotion/templates/`.
+*   [ ] **Story 20.7:** Update `VideoComposition.tsx` and `Root.tsx` for template-based scene dispatch.
+*   [ ] **Story 20.8:** Build TemplateStep (wizard Step 1) with template picker + project settings form (topic, scene count, duration, aspect ratio, quality).
+*   [ ] **Story 20.9:** Update wizard client for 6-step flow; update IdeaStep, ScriptStep, RenderStep for template-aware behavior.
+*   [ ] **Story 20.10:** Create template-specific SceneCard components and update PreviewStep.
+*   [ ] **Story 20.11:** Update render pipeline (render route, Inngest functions, render-video.ts) — remove captionStyle, pass template-typed scenes.
+*   [ ] **Story 20.12:** Remove old files (template-selector.tsx, caption-style-selector.tsx, caption-styles.ts, Scene.tsx).
+*   [ ] **Story 20.13:** Delete test project data, verify end-to-end for all 3 templates.
