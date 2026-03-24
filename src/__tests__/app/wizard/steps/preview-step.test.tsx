@@ -14,11 +14,11 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     status: "draft",
     wizard_step: "preview",
     video_url: null,
-    selected_template: "Slideshow",
+    selected_template: "slideshow",
     draft_scenes: {
       scenes: [
-        { scriptText: "Scene 1 text", searchKeyword: "sunset beach" },
-        { scriptText: "Scene 2 text", searchKeyword: "mountain view" },
+        { template: "slideshow", scriptText: "Scene 1 text", searchKeywords: ["sunset beach"], assets: [{}] },
+        { template: "slideshow", scriptText: "Scene 2 text", searchKeywords: ["mountain view"], assets: [{}] },
       ],
       settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
     } as unknown,
@@ -36,7 +36,8 @@ describe("PreviewStep", () => {
     fetchSpy = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ assetOptions: [] }),
     });
-    global.fetch = fetchSpy;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    global.fetch = fetchSpy as any;
   });
 
   it("sends multipleAssets: true when fetching all assets", async () => {
@@ -57,14 +58,14 @@ describe("PreviewStep", () => {
     });
   });
 
-  it("handles assetOptions response and updates store scenes", async () => {
+  it("handles assetOptions response and updates store scene assets", async () => {
     const store = createWizardStore(makeProject());
 
     fetchSpy.mockResolvedValue({
       json: () => Promise.resolve({
         assetOptions: [
-          { options: ["/a1.jpg", "/a2.jpg", "/a3.jpg"], keyword: "sunset beach portrait", sceneIndex: 0 },
-          { options: ["/b1.jpg", "/b2.jpg", "/b3.jpg"], keyword: "mountain view portrait", sceneIndex: 1 },
+          { slotOptions: [["/a1.jpg", "/a2.jpg", "/a3.jpg"]], sceneIndex: 0 },
+          { slotOptions: [["/b1.jpg", "/b2.jpg", "/b3.jpg"]], sceneIndex: 1 },
         ],
       }),
     });
@@ -76,10 +77,10 @@ describe("PreviewStep", () => {
 
     await waitFor(() => {
       const scenes = store.getState().scenes;
-      expect(scenes[0].assetOptions).toEqual(["/a1.jpg", "/a2.jpg", "/a3.jpg"]);
-      expect(scenes[0].assetUrl).toBe("/a1.jpg");
-      expect(scenes[0].selectedAssetIndex).toBe(0);
-      expect(scenes[1].assetOptions).toEqual(["/b1.jpg", "/b2.jpg", "/b3.jpg"]);
+      expect(scenes[0].assets[0].options).toEqual(["/a1.jpg", "/a2.jpg", "/a3.jpg"]);
+      expect(scenes[0].assets[0].url).toBe("/a1.jpg");
+      expect(scenes[0].assets[0].selectedIndex).toBe(0);
+      expect(scenes[1].assets[0].options).toEqual(["/b1.jpg", "/b2.jpg", "/b3.jpg"]);
     });
   });
 
@@ -88,10 +89,10 @@ describe("PreviewStep", () => {
       draft_scenes: {
         scenes: [
           {
+            template: "slideshow",
             scriptText: "Scene 1",
-            searchKeyword: "sunset",
-            assetOptions: ["/a.jpg", "/b.jpg", "/c.jpg"],
-            selectedAssetIndex: 0,
+            searchKeywords: ["sunset"],
+            assets: [{ options: ["/a.jpg", "/b.jpg", "/c.jpg"], selectedIndex: 0 }],
           },
         ],
         settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
@@ -108,7 +109,12 @@ describe("PreviewStep", () => {
     const store = createWizardStore(makeProject({
       draft_scenes: {
         scenes: [
-          { scriptText: "Scene 1", searchKeyword: "sunset", assetUrl: "/old.jpg" },
+          {
+            template: "slideshow",
+            scriptText: "Scene 1",
+            searchKeywords: ["sunset"],
+            assets: [{ url: "/old.jpg" }],
+          },
         ],
         settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
       } as unknown,

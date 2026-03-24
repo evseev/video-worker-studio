@@ -4,7 +4,10 @@ import { useState, useCallback } from "react";
 import type { WizardState } from "@/lib/stores/wizard-store";
 import type { StoreApi } from "zustand";
 import { useStore } from "zustand";
-import { SceneCard } from "@/components/wizard/scene-card";
+import type { Scene } from "@/templates/types";
+import { SlideshowSceneCard } from "@/templates/slideshow/SceneCard";
+import { ComparisonSceneCard } from "@/templates/comparison/SceneCard";
+import { FactCardSceneCard } from "@/templates/fact-card/SceneCard";
 
 type Props = { store: StoreApi<WizardState> };
 
@@ -32,13 +35,14 @@ export function PreviewStep({ store }: Props) {
       const data = await res.json();
       if (data.assetOptions) {
         const newScenes = currentScenes.map((scene, idx) => {
-          const options = data.assetOptions[idx]?.options ?? [];
-          return {
-            ...scene,
-            assetOptions: options.length > 0 ? options : scene.assetOptions,
-            assetUrl: options[0] || scene.assetUrl,
-            selectedAssetIndex: options.length > 0 ? 0 : scene.selectedAssetIndex,
-          };
+          const slotOptions: string[][] = data.assetOptions[idx]?.slotOptions ?? [];
+          if (slotOptions.length === 0) return scene;
+          const assets = scene.assets.map((slot, slotIdx) => {
+            const options = slotOptions[slotIdx];
+            if (!options || options.length === 0) return slot;
+            return { ...slot, options, url: options[0], selectedIndex: 0 };
+          });
+          return { ...scene, assets };
         });
         store.getState().setScenes(newScenes);
         const state = store.getState();
@@ -53,16 +57,17 @@ export function PreviewStep({ store }: Props) {
     }
   }, [projectId, store]);
 
-  async function fetchSceneAsset(idx: number) {
-    setFetchingScene(idx);
+  async function handleRefreshAsset(sceneIdx: number, slotIdx: number) {
+    setFetchingScene(sceneIdx);
     try {
-      const scene = scenes[idx];
+      const scene = scenes[sceneIdx];
+      const keyword = scene.searchKeywords[slotIdx] ?? scene.searchKeywords[0] ?? "";
       const res = await fetch("/api/wizard/fetch-assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId,
-          scenes: [{ searchKeyword: scene.searchKeyword }],
+          scenes: [{ searchKeywords: [keyword] }],
           multipleAssets: true,
           aspectRatio: settings.aspectRatio,
         }),
@@ -70,11 +75,10 @@ export function PreviewStep({ store }: Props) {
       const data = await res.json();
       const options = data.assetOptions?.[0]?.options ?? [];
       if (options.length > 0) {
-        store.getState().updateScene(idx, {
-          assetOptions: options,
-          assetUrl: options[0],
-          selectedAssetIndex: 0,
-        });
+        const currentScene = store.getState().scenes[sceneIdx];
+        const assets = [...currentScene.assets];
+        assets[slotIdx] = { ...assets[slotIdx], options, url: options[0], selectedIndex: 0 };
+        store.getState().updateScene(sceneIdx, { assets } as Partial<Scene>);
         const state = store.getState();
         await state.saveProgress({
           draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea },
@@ -101,6 +105,34 @@ export function PreviewStep({ store }: Props) {
 
   function handleDragEnd() {
     setDragIdx(null);
+  }
+
+  function removeScene(idx: number) {
+    if (scenes.length > 1) store.getState().removeScene(idx);
+  }
+
+  function reorderScenes(from: number, to: number) {
+    store.getState().reorderScenes(from, to);
+  }
+
+  function handleSelectAsset(sceneIdx: number, slotIdx: number, assetIdx: number) {
+    selectAsset(sceneIdx, slotIdx, assetIdx);
+    const state = store.getState();
+    state.saveProgress({
+      draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea },
+    });
+  }
+
+  function addScene() {
+    const blankScene: Scene = {
+      template: selectedTemplate,
+      scriptText: "",
+      searchKeywords: selectedTemplate === "slideshow" ? [""] : ["", ""],
+      assets: selectedTemplate === "slideshow" ? [{}] : [{}, {}],
+      ...(selectedTemplate === "comparison" ? { leftLabel: "", rightLabel: "" } : {}),
+      ...(selectedTemplate === "fact-card" ? { title: "", subtitle: "", facts: [] } : {}),
+    } as Scene;
+    setScenes([...scenes, blankScene]);
   }
 
   const QUALITY_LABELS: Record<string, string> = { hd: "HD (720p)", fullhd: "Full HD (1080p)", "4k": "4K (2160p)" };
@@ -146,54 +178,66 @@ export function PreviewStep({ store }: Props) {
       {/* Bulk Actions */}
       <div className="flex items-center justify-between mb-6">
         <span className="text-sm text-zinc-400">{scenes.length} scene{scenes.length !== 1 ? "s" : ""}</span>
-        <button
-          onClick={fetchAllAssets}
-          disabled={fetchingAll || scenes.length === 0}
-          className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-        >
-          {fetchingAll ? (
-            <>
-              <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Fetching Images...
-            </>
-          ) : (
-            "Fetch All Images"
-          )}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={addScene}
+            className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg text-sm transition-colors flex items-center gap-2 cursor-pointer"
+          >
+            + Add Scene
+          </button>
+          <button
+            onClick={fetchAllAssets}
+            disabled={fetchingAll || scenes.length === 0}
+            className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+          >
+            {fetchingAll ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Fetching Images...
+              </>
+            ) : (
+              "Fetch All Images"
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Scene List */}
       <div className="space-y-3 mb-8">
-        {scenes.map((scene, idx) => (
-          <div
-            key={idx}
-            draggable
-            onDragStart={() => handleDragStart(idx)}
-            onDragOver={(e) => handleDragOver(e, idx)}
-            onDragEnd={handleDragEnd}
-            className={dragIdx === idx ? "opacity-70 ring-1 ring-violet-500 rounded-xl" : ""}
-          >
-            <SceneCard
-              scene={scene}
-              index={idx}
-              total={scenes.length}
-              onScriptChange={(v) => updateScene(idx, { scriptText: v })}
-              onKeywordChange={(v) => updateScene(idx, { searchKeyword: v })}
-              onDelete={() => { if (scenes.length > 1) store.getState().removeScene(idx); }}
-              onMoveUp={() => store.getState().reorderScenes(idx, idx - 1)}
-              onMoveDown={() => store.getState().reorderScenes(idx, idx + 1)}
-              onRefreshAsset={() => fetchSceneAsset(idx)}
-              onSelectAsset={(assetIdx) => {
-                selectAsset(idx, assetIdx);
-                const state = store.getState();
-                state.saveProgress({
-                  draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea },
-                });
-              }}
-              refreshingAsset={fetchingScene === idx}
-            />
-          </div>
-        ))}
+        {scenes.map((scene, idx) => {
+          const commonProps = {
+            scene,
+            index: idx,
+            totalScenes: scenes.length,
+            aspectRatio: settings.aspectRatio,
+            onUpdate: (updates: Partial<Scene>) => updateScene(idx, updates),
+            onRemove: () => removeScene(idx),
+            onMoveUp: () => reorderScenes(idx, idx - 1),
+            onMoveDown: () => reorderScenes(idx, idx + 1),
+            onRefreshAsset: (slotIdx: number) => handleRefreshAsset(idx, slotIdx),
+            onSelectAsset: (slotIdx: number, assetIdx: number) => handleSelectAsset(idx, slotIdx, assetIdx),
+            refreshingAsset: fetchingScene === idx,
+          };
+
+          return (
+            <div
+              key={idx}
+              draggable
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragEnd={handleDragEnd}
+              className={dragIdx === idx ? "opacity-70 ring-1 ring-violet-500 rounded-xl" : ""}
+            >
+              {scene.template === "comparison" ? (
+                <ComparisonSceneCard {...commonProps} scene={scene} onUpdate={(u) => updateScene(idx, u as Partial<Scene>)} />
+              ) : scene.template === "fact-card" ? (
+                <FactCardSceneCard {...commonProps} scene={scene} onUpdate={(u) => updateScene(idx, u as Partial<Scene>)} />
+              ) : (
+                <SlideshowSceneCard {...commonProps} scene={scene} onUpdate={(u) => updateScene(idx, u as Partial<Scene>)} />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Navigation */}
