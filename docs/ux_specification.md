@@ -12,43 +12,39 @@ This document details the layout, state requirements, and primary user interacti
 *   **Interactions:** User logs in and is redirected to the Dashboard.
 
 ## 2. Dashboard (`/`)
-**Purpose:** View past projects, check statuses, and start new ones.
-*   **Layout:** Sidebar navigation. Main content area contains a grid of project cards and a "One-Click Quick Start" bar.
-*   **Components:** 
-    *   **Quick Start Form:** A text input and template dropdown allowing users to generate a video in one click without entering the wizard.
-    *   **"Advanced Wizard" CTA:** A button that creates a `draft` project and drops the user into the interactive wizard.
-    *   **Project Grid:** Shows cards with thumbnail, title, status (`draft`, `processing`, `rendering`, `completed`), and created date.
-*   **Interactions:** 
-    *   Submit Quick Start -> Project is created, Inngest job dispatched, card appears in "processing" state.
-    *   Click "Advanced Wizard" -> API creates a blank `draft` Project -> Navigates to `/wizard/[id]`.
+**Purpose:** View past projects, check statuses, start new ones, and delete projects.
+*   **Layout:** Top nav (branding, email, sign out). Main area: heading, project count, **New Video** button, and a responsive grid of project cards.
+*   **Components:**
+    *   **New Video:** Opens a modal with a topic textarea and video settings (scene count, scene duration, aspect ratio, quality); submitting creates a `draft` project with settings stored in `draft_scenes` JSONB and navigates to `/wizard/[id]?step=idea`.
+    *   **Project Grid:** Cards show topic, status badge (`draft`, `processing`, `rendering`, `completed`, `failed_ai`, `failed_render`), created date, and a delete (trash) control.
+    *   **Auto-refresh:** While any visible project is `draft`, `processing`, or `rendering`, the dashboard refreshes on an interval so status updates without a manual reload.
+*   **Interactions:**
+    *   Click a **draft** card → `/wizard/[id]` at the saved `wizard_step`.
+    *   Click a **completed** card → `/wizard/[id]?step=render` to view the in-app video player with download option.
+    *   Delete → confirm modal → `DELETE /api/projects/[id]`; optional warnings if storage/temp cleanup partially fails.
 
 ## 3. Interactive Wizard (`/wizard/[id]`)
-**Purpose:** A guided, step-by-step experience to construct a video project.
-*   **Layout:** Centered card with a stepped progress bar at the top (`Template -> Script -> Settings -> Generate`).
+**Purpose:** A 5-step guided flow to refine a topic, enhance the idea, generate a template-aware script, preview/edit scenes, and render the final video.
+*   **Layout:** Full-width layout with sticky header (back to home, topic title, step progress: **Idea** → **Refine** → **Script** → **Preview** → **Render**). URL query `?step=` tracks the active step. State is managed via a Zustand store initialized from the project's `draft_scenes` JSONB.
 
-### Step 1: Template Selection
-*   **Components:** Grid of available Remotion templates (e.g., "Slideshow", "Split Screen", "Quote").
-*   **Interactions:** User selects a template. State updates locally.
+### Step: Idea
+*   **Components:** Topic input; video settings (scene count, duration, aspect ratio, quality); optional **Generate Hooks** (AI-suggested angles) from `/api/wizard/ideas`.
+*   **Interactions:** Continue saves `topic`, settings, and `wizard_step` via `/api/wizard/draft` and moves to Refine.
 
-### Step 2: Scripting & Topic
-*   **Components:** Large text area for the user to describe the video topic.
-*   **Interactions:** User types their prompt. This is what the Gemini 2.5 Flash model will use to build the scenes.
+### Step: Refine
+*   **Components:** Editable concept textarea; **Enhance with AI** button (`/api/wizard/enhance-idea`) returns 3 refined concepts as selectable cards; selecting a concept auto-triggers **Trend Validation** (`/api/wizard/validate-trend`) showing a 0-100 trend score, reasoning, and suggested hooks.
+*   **Interactions:** Continue saves refined idea data and advances to Script.
 
-### Step 3: Settings & Review
-*   **Components:** Summary of choices. Future expansion point for specific LLM instructions, duration sliders, and asset style selectors.
-*   **Interactions:** User confirms settings.
+### Step: Script
+*   **Components:** Template selection grid (5 Remotion templates: Slideshow, Fact Card, Compilation, Comparison, Evolution) with SVG layout previews; **Generate Script with AI** button (`/api/wizard/generate-structure`) generates template-aware scenes; editable scene list with search keywords and script text per scene.
+*   **Interactions:** Continue saves `draft_scenes` and `selected_template` and advances to Preview.
 
-### Step 4: Generating
-*   **Components:** A loading state with playful text ("Summoning AI...", "Painting pixels...").
-*   **Interactions:** 
-    *   Click "Generate" -> Makes `PUT /api/projects/[id]` to save `topic` and `selected_template`.
-    *   Makes `POST /api/generate` to dispatch the Inngest worker.
-    *   The wizard begins polling (or subscribing via Supabase realtime) for the project status to change to `completed`.
-    *   When `completed`, it displays the final video or provides a link to download.
+### Step: Preview
+*   **Components:** Scene list with drag-and-drop reorder, per-scene image thumbnails, editable script text and search keywords, per-scene **Re-fetch** button, scene delete, **Fetch All Images** bulk action (`/api/wizard/fetch-assets`), collapsible global settings panel (read-only: template, aspect ratio, quality, duration).
+*   **Interactions:** Continue advances to Render.
 
-## 4. Final Result & Render Screen (Within Wizard or Dashboard Card)
-*   **Components:**
-    *   Video Player (native HTML5 or Remotion Player) playing the resulting MP4.
-    *   "Download MP4" button.
-*   **Interactions:** 
-    *   Click Download -> Triggers file download.
+### Step: Render
+*   **Pre-render state:** Render summary (scene count, template, aspect ratio, quality, estimated duration); **Generate Video** button calls `/api/wizard/render`.
+*   **Rendering state:** Spinner with status polling via `router.refresh()` every 5 seconds.
+*   **Completed state:** HTML5 `<video>` player with rendered MP4; **Download MP4** button; **Back to Dashboard** button; project metadata summary.
+*   **Failed state:** Inline error message from `render_error_context`; **Retry Render** button; **Back to Preview** button.

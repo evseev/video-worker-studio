@@ -8,7 +8,7 @@ We need a robust framework capable of providing strong UX/UI on the client side,
 *   **Framework:** Next.js 16+ (App Router)
 *   **Language:** TypeScript
 *   **Styling:** Tailwind CSS v4.
-*   **State Management:** React state + Zustand (if complex state is needed). UI uses standard React Hooks.
+*   **State Management:** Zustand for wizard state management (`src/lib/stores/wizard-store.ts`); React Hooks for component-local state.
 
 ## 2. Backend API & Core Orchestration: Next.js Route Handlers
 We utilize Next.js API routes (`src/app/api`) to handle backend functionality and serve as the orchestrator for webhooks and job queues.
@@ -45,11 +45,18 @@ Video generation natively structured as React code.
 
 ## 7. Storage
 *   **Purpose:** Storing user avatars, downloaded Pinterest images, generated audio clips, and final rendered `.mp4` files.
-*   **Delivery:** Currently mocked as URLs, but will use Supabase Storage.
+*   **Delivery:** Supabase Storage (`renders` bucket) for MP4 files and voice-over uploads. AWS S3 via `@remotion/lambda` for Lambda-rendered output.
+
+## 8. Testing
+*   **Framework:** Vitest v4 with jsdom environment.
+*   **Component Testing:** `@testing-library/react` + `@testing-library/jest-dom` for DOM assertions.
+*   **Coverage:** V8 provider via `vitest run --coverage`.
+*   **Structure:** Tests in `src/__tests__/` organized by module path.
+*   **Commands:** `npm run test` (single run), `npm run test:watch` (watch), `npm run test:coverage` (with coverage).
 
 ---
 
-## 8. Summary of the MVP Stack
+## 9. Summary of the MVP Stack
 
 | Area | Technology |
 | :--- | :--- |
@@ -59,7 +66,9 @@ Video generation natively structured as React code.
 | **Database** | PostgreSQL (Supabase) via `@supabase/supabase-js` |
 | **Auth** | Supabase Auth (Middleware protected) |
 | **Background Jobs** | Inngest (Serverless queues + step functions) |
-| **AI LLM** | Google Gemini (Gemini 2.5 Flash) |
-| **Validation** | Zod (v4) |
-| **Video Engine** | Remotion |
+| **AI LLM** | Google Gemini 2.5 Flash (`@google/generative-ai`) |
+| **Validation** | Zod v4 |
+| **Video Engine** | Remotion 4.x (Lambda + local) |
+| **Testing** | Vitest, @testing-library/react, jsdom |
 | **Observability** | Sentry (`@sentry/nextjs`) |
+| **State** | Zustand v5 |

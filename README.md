@@ -14,9 +14,9 @@ Triggered via `/api/generate` and powered entirely by a 5-step Inngest backgroun
 
 **2. Video Generation Wizard:**
 ```text
-Draft Idea → Enhance Setup → Structure Scenes → Final Script → Fetch Assets → Render Video
+Idea (topic + settings) → Refine (AI enhance + trend score) → Script (template + scenes) → Preview (assets + reorder) → Render (progress + player)
 ```
-A multi-step interactive pipeline directly in the app UI, giving granular user control before rendering in the background. Powered by `/api/wizard/*` endpoints.
+A five-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, fetch-assets, render).
 
 The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
@@ -25,7 +25,7 @@ The core rendering pipeline (whether triggered immediately or after the wizard) 
 | 1. **Generate Script** | AI writes a scene-by-scene script with visual keywords | Gemini 2.5 Flash |
 | 2. **Fetch Assets** | Downloads a background image per scene from Pinterest | `pinterest-dl` CLI |
 | 3. **Save Scenes** | Commits scenes to the database via RPC (bypasses RLS) | Supabase PostgreSQL |
-| 4. **Render Video** | Compiles scenes into an MP4 with transitions | Remotion Lambda (default) |
+| 4. **Render Video** | Compiles scenes into an MP4 with transitions | Remotion Lambda (default) or local (`RENDER_BACKEND=local`) |
 | 5. **Persist Result** | Stores the final video URL and updates project status | Supabase PostgreSQL |
 
 ## Tech Stack
@@ -82,12 +82,13 @@ Required environment variables:
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
 | `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |
-| `TMP_ASSETS_PATH` | Directory for downloaded assets (default: `public/tmp_assets`) |
+| `TMP_ASSETS_PATH` | Directory for downloaded assets, **relative to the app root** (default: `public/tmp_assets`). Avoid absolute paths or `..` segments so cleanup stays scoped. |
 | `LOCAL_RENDER_ASSET_BASE_URL` | Base URL for local renders (e.g. `http://localhost:3000`) |
 | `RENDER_BACKEND` | `lambda` (default) or `local` |
 | `REMOTION_AWS_REGION` | AWS region for Remotion Lambda |
 | `REMOTION_LAMBDA_FUNCTION_NAME` | Remotion Lambda function name |
 | `REMOTION_SERVE_URL` | Remotion site URL used for Lambda renders |
+| `REMOTION_OUTPUT_BUCKET` | Optional. When set, Lambda output deletion requires the URL’s bucket to match this value (and key `videos/{projectId}.mp4`). When unset, deletion still runs for recognized S3 URL shapes with that key—set this in production to constrain which bucket can be targeted. |
 | `AWS_ACCESS_KEY_ID` | AWS credentials for Lambda render calls |
 | `AWS_SECRET_ACCESS_KEY` | AWS credentials for Lambda render calls |
 
@@ -118,6 +119,8 @@ npx inngest-cli@latest dev
 
 The app runs at [http://localhost:3000](http://localhost:3000) and the Inngest dashboard at [http://localhost:8288](http://localhost:8288).
 
+**Deleting a project:** From the dashboard, use the trash control on a project card. The app calls `DELETE /api/projects/[id]`, removes the `projects` row (child `scenes` rows cascade), deletes objects in the `renders` bucket when possible, and cleans up local temp assets under `TMP_ASSETS_PATH`.
+
 ## Available Scripts
 
 | Script | Description |
@@ -141,7 +144,10 @@ src/
 │   │   └── wizard/         # Wizard endpoints (draft, ideas, enhance-idea, structure, script, assets, render)
 │   ├── auth/               # Supabase auth callback handler
 │   ├── login/              # Login page
-│   ├── wizard/             # Interactive video generation UI workflows
+│   ├── wizard/[id]/        # Interactive video generation wizard
+│   │   ├── client.tsx      # Wizard orchestrator (Zustand store init + step routing)
+│   │   ├── page.tsx        # Server component (auth + project fetch)
+│   │   └── steps/          # 5 step components (IdeaStep, RefineStep, ScriptStep, PreviewStep, RenderStep)
 │   ├── page.tsx            # Dashboard (server component, auth-gated)
 │   └── layout.tsx          # Root layout
 ├── components/
@@ -149,7 +155,12 @@ src/
 ├── lib/
 │   ├── ai/
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
+│   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
+│   ├── stores/
+│   │   └── wizard-store.ts      # Zustand store for wizard state management
+│   ├── projects/
+│   │   └── delete-project-assets.ts  # Storage + temp cleanup when deleting a project
 │   ├── inngest/
 │   │   ├── client.ts            # Inngest client instance
 │   │   └── functions.ts         # VideoGenerationWorker (5-step pipeline)
@@ -203,14 +214,14 @@ docs/
                        │  1. Gemini Script    │
                        │  2. Pinterest DL     │
                        │  3. Save Scenes      │
-                       │  4. Remotion SSR     │
-                       │  5. Upload MP4       │
+                       │  4. Remotion render  │
+                       │  5. Upload / URL     │
                        └──────────────────────┘
 ```
 
 ## Documentation
 
-Detailed design docs are in the [`docs/`](docs/) directory:
+Detailed design docs are in the [`docs/`](docs/) directory. Internal engineering follow-ups live in [`TODOS.md`](TODOS.md). Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
 
 - [System Architecture](docs/system_architecture.md)
 - [Database Schema](docs/database_schema.md)

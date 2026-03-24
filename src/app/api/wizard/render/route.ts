@@ -1,64 +1,49 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { withAuth } from "@/lib/api/with-auth";
 import { inngest } from "@/lib/inngest/client";
 
-export async function POST(request: Request) {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+export const POST = withAuth(async (request, { user, supabase }) => {
+  const { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl } = await request.json();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!projectId) {
+    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+  }
 
-    // In a real flow, you might pass the chosen template or draft_scenes here,
-    // or rely on the DB to hold them. We will pass the projectId to Inngest.
-    const { projectId, scenes, template } = await request.json();
+  // Check if project is already processing/rendering to prevent double-submit
+  const { data: project } = await supabase
+    .from("projects")
+    .select("status")
+    .eq("id", projectId)
+    .eq("user_id", user.id)
+    .single();
 
-    if (!projectId) {
-      return NextResponse.json(
-        { error: "Missing projectId" },
-        { status: 400 }
-      );
-    }
-
-    // Optionally save the final scenes to DB before rendering, if modified by user
-    if (scenes) {
-       await supabase
-         .from("projects")
-         .update({ 
-           draft_scenes: scenes,
-           wizard_step: "render",
-           selected_template: template || null
-         })
-         .eq("id", projectId)
-         .eq("user_id", user.id);
-    } else if (template) {
-       await supabase
-         .from("projects")
-         .update({ 
-           selected_template: template
-         })
-         .eq("id", projectId)
-         .eq("user_id", user.id);
-    }
-
-    // Send event to Inngest which triggers the VideoGenerationWorker
-    // Note: The worker currently expects "topic", we might not have it in the request payload anymore,
-    // but the worker will read from DB.
-    await inngest.send({
-      name: "video/generate",
-      data: { projectId, scenes, template, userId: user.id },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Failed to trigger render:", error);
+  if (project?.status === "processing" || project?.status === "rendering") {
     return NextResponse.json(
-      { error: "Failed to start render" },
-      { status: 500 }
+      { error: "Project is already being processed" },
+      { status: 409 }
     );
   }
-}
+
+  // Save final settings to DB before rendering
+  const updates: Record<string, unknown> = { wizard_step: "render" };
+  if (scenes) updates.draft_scenes = scenes;
+  if (template) updates.selected_template = template;
+  if (aspectRatio) updates.aspect_ratio = aspectRatio;
+  if (videoQuality) updates.video_quality = videoQuality;
+  if (backgroundMusic !== undefined) updates.background_music = backgroundMusic;
+  if (captionStyle) updates.caption_style = captionStyle;
+  if (voiceoverUrl !== undefined) updates.voiceover_url = voiceoverUrl;
+
+  await supabase
+    .from("projects")
+    .update(updates)
+    .eq("id", projectId)
+    .eq("user_id", user.id);
+
+  await inngest.send({
+    name: "video/generate",
+    data: { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl, userId: user.id },
+  });
+
+  return NextResponse.json({ success: true });
+}, { rateLimit: "render" });

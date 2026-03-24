@@ -5,7 +5,31 @@ import { renderVideo } from "@/lib/render/render-video";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-// Supabase client for background workers — uses RPC functions with SECURITY DEFINER
+interface VideoGenerateScene {
+  scriptText: string;
+  searchKeyword: string;
+  assetUrl?: string;
+  assetOptions?: string[];
+  selectedAssetIndex?: number;
+}
+
+interface VideoGenerateEventData {
+  projectId: string;
+  topic?: string;
+  scenes?: VideoGenerateScene[];
+  template?: string;
+  aspectRatio?: string;
+  videoQuality?: string;
+  backgroundMusic?: string | null;
+  captionStyle?: string;
+  voiceoverUrl?: string | null;
+  userId?: string;
+}
+
+// Supabase client for background workers — uses anon key intentionally.
+// All DB mutations go through RPC functions defined with SECURITY DEFINER,
+// which bypass RLS. The anon key is acceptable here because the RPCs
+// validate the project_id internally and are not exposed to end users.
 function getWorkerClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,14 +37,17 @@ function getWorkerClient() {
   );
 }
 
-/** Helper: update project status via RPC (bypasses RLS) */
+/** Helper: update project status via RPC (bypasses RLS). Throws on failure so Inngest retries the step. */
 async function updateStatus(db: ReturnType<typeof getWorkerClient>, projectId: string, status: string, videoUrl: string | null = null) {
   const { error } = await db.rpc("worker_update_project_status", {
     p_project_id: projectId,
     p_status: status,
     p_video_url: videoUrl,
   });
-  if (error) console.error(`[updateStatus] Failed to set ${status}:`, error);
+  if (error) {
+    console.error(`[updateStatus] Failed to set ${status}:`, error);
+    throw new Error(`Failed to update project status to ${status}: ${error.message}`);
+  }
 }
 
 const RenderErrorContextSchema = z.object({
@@ -41,6 +68,7 @@ async function updateRenderError(
   });
   if (error) {
     console.error("[updateRenderError] Failed to persist render error context:", error);
+    throw new Error(`Failed to persist render error context: ${error.message}`);
   }
 }
 
@@ -65,14 +93,9 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template } = event.data as {
-      projectId: string;
-      topic?: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      scenes?: any[];
-      template?: string;
-      userId?: string;
-    };
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl } = event.data as VideoGenerateEventData;
+
+
 
     const db = getWorkerClient();
 
@@ -94,18 +117,19 @@ export const generateVideo = inngest.createFunction(
     const scenesWithAssets = await step.run("fetch-assets", async () => {
       console.log(`[fetch-assets] Fetching assets for ${scenes.length} scenes`);
       try {
-        // Only fetch if assetUrl is not already present
-        const keywordsToFetch = scenes.map((s) => s.assetUrl ? null : s.searchKeyword);
+        // Cast scenes from step output to our typed interface
+        const typedScenes = scenes as VideoGenerateScene[];
+        const keywordsToFetch = typedScenes.map((s) => s.assetUrl ? null : s.searchKeyword);
         const fetchResults = await fetchAssets(
-          keywordsToFetch as string[],
+          keywordsToFetch as (string | null)[],
           projectId
         );
-        
-        return scenes.map((scene, i) => {
+
+        return typedScenes.map((scene, i) => {
           if (scene.assetUrl) return scene;
           return {
             ...scene,
-            assetUrl: fetchResults[i] || null,
+            assetUrl: (fetchResults as (string | null)[])[i] || null,
           };
         });
       } catch (err) {
@@ -144,9 +168,9 @@ export const generateVideo = inngest.createFunction(
       try {
         const renderScenes = scenesWithAssets.map((s) => ({
           scriptText: s.scriptText,
-          assetUrl: s.assetUrl,
+          assetUrl: s.assetUrl ?? null,
         }));
-        return await renderVideo({ projectId, scenes: renderScenes, template });
+        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle, voiceoverUrl });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         await updateRenderError(db, projectId, {
