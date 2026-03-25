@@ -225,10 +225,10 @@
 **Spec:** `docs/superpowers/specs/2026-03-25-image-crop-positioning-design.md`
 **Plan:** `docs/superpowers/plans/2026-03-25-image-crop-positioning.md`
 
-*   [ ] **Story 21.1:** Add `objectPosition?: string` to `AssetSlot` in `src/templates/types.ts`.
-*   [ ] **Story 21.2:** Reset `objectPosition` on asset swap in wizard store `selectAsset` action + unit tests.
-*   [ ] **Story 21.3:** Reset `objectPosition` on asset refresh in `PreviewStep` (`fetchAllAssets` and `handleRefreshAsset`).
-*   [ ] **Story 21.4:** Build shared `DraggableImage` component (`src/components/DraggableImage.tsx`) — hover overlay, pointer-event drag-to-pan, position clamping, refresh button relocation + unit tests.
-*   [ ] **Story 21.5:** Integrate `DraggableImage` into all 3 SceneCard types (slideshow, comparison, fact-card).
-*   [ ] **Story 21.6:** Thread `objectPosition` through render pipeline — `VideoGenerateScene`, `RenderInput`, `VideoCompositionProps`, and all 3 Remotion scene components.
-*   [ ] **Story 21.7:** E2E verification — full test suite, TypeScript check, manual verification across all templates.
+*   [x] **Story 21.1:** Add `objectPosition?: string` to `AssetSlot` in `src/templates/types.ts`.
+*   [x] **Story 21.2:** Reset `objectPosition` on asset swap in wizard store `selectAsset` action + unit tests.
+*   [x] **Story 21.3:** Reset `objectPosition` on asset refresh in `PreviewStep` (`fetchAllAssets` and `handleRefreshAsset`).
+*   [x] **Story 21.4:** Build shared `DraggableImage` component (`src/components/DraggableImage.tsx`) — hover overlay, pointer-event drag-to-pan, position clamping, refresh button relocation + unit tests.
+*   [x] **Story 21.5:** Integrate `DraggableImage` into all 3 SceneCard types (slideshow, comparison, fact-card).
+*   [x] **Story 21.6:** Thread `objectPosition` through render pipeline — `VideoGenerateScene`, `RenderInput`, `VideoCompositionProps`, and all 3 Remotion scene components.
+*   [x] **Story 21.7:** E2E verification — full test suite, TypeScript check, manual verification across all templates.
