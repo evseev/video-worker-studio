@@ -14,9 +14,7 @@ export function ProjectCard({
   const isCompleted = project.status === "completed";
   const href = isDraft
     ? `/wizard/${project.id}?step=${project.wizard_step || "template"}`
-    : isCompleted
-      ? `/wizard/${project.id}?step=render`
-      : `/projects/${project.id}`;
+    : `/projects/${project.id}`;
 
   return (
     <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-violet-500/5 group">
