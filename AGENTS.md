@@ -73,6 +73,7 @@ src/
         PreviewStep.tsx  # Asset preview + drag-and-drop reorder
         RenderStep.tsx   # Render summary + progress + video player
   components/
+    DraggableImage.tsx   # Shared hover-to-reveal drag-to-pan image component (used by all SceneCards)
     dashboard.tsx        # Dashboard orchestrator (imports sub-components)
     dashboard/           # Dashboard sub-components
       project-card.tsx
