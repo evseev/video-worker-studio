@@ -176,6 +176,49 @@ describe("wizard-store", () => {
 
       expect(scene.assets[0].selectedIndex).toBe(0);
     });
+
+    it("resets objectPosition when selecting a different asset", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [
+            {
+              template: "slideshow",
+              scriptText: "Hello",
+              searchKeywords: ["sunset"],
+              assets: [{ url: "/a.jpg", options: ["/a.jpg", "/b.jpg"], selectedIndex: 0, objectPosition: "30% 70%" }],
+            },
+          ],
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+
+      store.getState().selectAsset(0, 0, 1);
+      const scene = store.getState().scenes[0];
+
+      expect(scene.assets[0].url).toBe("/b.jpg");
+      expect(scene.assets[0].selectedIndex).toBe(1);
+      expect(scene.assets[0].objectPosition).toBeUndefined();
+    });
+
+    it("preserves objectPosition in draft round-trip", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [
+            {
+              template: "slideshow",
+              scriptText: "Hello",
+              searchKeywords: ["sunset"],
+              assets: [{ url: "/a.jpg", objectPosition: "25% 80%" }],
+            },
+          ],
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+      const state = store.getState();
+
+      expect(state.scenes[0].assets[0].objectPosition).toBe("25% 80%");
+    });
   });
 
   describe("parseDraftData", () => {
