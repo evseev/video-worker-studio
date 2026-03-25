@@ -4,6 +4,7 @@ export interface AssetSlot {
   url?: string;
   options?: string[];
   selectedIndex?: number;
+  objectPosition?: string;
 }
 
 export interface BaseScene {
