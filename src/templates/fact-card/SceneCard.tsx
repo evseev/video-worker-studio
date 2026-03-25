@@ -1,3 +1,4 @@
+import { DraggableImage } from "@/components/DraggableImage";
 import type { FactCardScene } from "@/templates/types";
 
 type SceneCardProps = {
@@ -19,12 +20,14 @@ function AssetSlotPicker({
   label,
   onRefresh,
   onSelect,
+  onPositionChange,
 }: {
   slot: FactCardScene["assets"][number] | undefined;
   size: "large" | "small";
   label: string;
   onRefresh: () => void;
   onSelect: (assetIdx: number) => void;
+  onPositionChange: (pos: string) => void;
 }) {
   const displayUrl = slot?.url ?? slot?.options?.[slot?.selectedIndex ?? 0];
   const hasOptions = slot?.options && slot.options.length > 1;
@@ -33,24 +36,15 @@ function AssetSlotPicker({
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{label}</span>
-      <div className={`${sizeClass} bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative group/slot`}>
-        {displayUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={displayUrl} alt={label} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-[10px] text-zinc-600">No image</span>
-        )}
-        <button
-          type="button"
-          onClick={onRefresh}
-          className="absolute inset-0 bg-black/60 opacity-0 group-hover/slot:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-          aria-label={`Refresh ${label}`}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-          </svg>
-        </button>
+      <div className={`${sizeClass} bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative`}>
+        <DraggableImage
+          src={displayUrl ?? ""}
+          alt={label}
+          objectPosition={slot?.objectPosition}
+          onPositionChange={onPositionChange}
+          onRefresh={onRefresh}
+          className="w-full h-full"
+        />
       </div>
       {hasOptions && (
         <div className="flex gap-1">
@@ -152,6 +146,11 @@ export function FactCardSceneCard({
           label="Main Image"
           onRefresh={() => onRefreshAsset(0)}
           onSelect={(assetIdx) => onSelectAsset(0, assetIdx)}
+          onPositionChange={(pos) => {
+            const assets = [...scene.assets];
+            assets[0] = { ...assets[0], objectPosition: pos };
+            onUpdate({ assets } as Partial<FactCardScene>);
+          }}
         />
         <AssetSlotPicker
           slot={scene.assets[1]}
@@ -159,6 +158,11 @@ export function FactCardSceneCard({
           label="Secondary"
           onRefresh={() => onRefreshAsset(1)}
           onSelect={(assetIdx) => onSelectAsset(1, assetIdx)}
+          onPositionChange={(pos) => {
+            const assets = [...scene.assets];
+            assets[1] = { ...assets[1], objectPosition: pos };
+            onUpdate({ assets } as Partial<FactCardScene>);
+          }}
         />
       </div>
 

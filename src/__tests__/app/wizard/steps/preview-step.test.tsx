@@ -122,8 +122,10 @@ describe("PreviewStep", () => {
 
     render(<PreviewStep store={store} />);
 
-    // SceneCard has a refresh button that appears on hover
-    const refreshBtn = screen.getByLabelText("Refresh asset");
+    // DraggableImage shows the refresh button on hover — trigger mouseEnter first
+    const img = screen.getByRole("img");
+    fireEvent.mouseEnter(img.parentElement!);
+    const refreshBtn = await screen.findByLabelText("Refresh image");
     fireEvent.click(refreshBtn);
 
     await waitFor(() => {
