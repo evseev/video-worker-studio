@@ -76,7 +76,7 @@ export function PreviewStep({ store }: Props) {
         }),
       });
       const data = await res.json();
-      const options: string[] = data.scenes?.[0]?.assets?.[slotIdx]?.options ?? [];
+      const options: string[] = data.scenes?.[0]?.assets?.[0]?.options ?? [];
       if (options.length > 0) {
         const currentScene = store.getState().scenes[sceneIdx];
         const assets = [...currentScene.assets];
