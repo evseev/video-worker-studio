@@ -9,7 +9,7 @@ interface VideoGenerateScene {
   template: string;
   scriptText: string;
   searchKeywords: string[];
-  assets: Array<{ url?: string; options?: string[]; selectedIndex?: number }>;
+  assets: Array<{ url?: string; options?: string[]; selectedIndex?: number; objectPosition?: string }>;
   // Template-specific optional fields
   leftLabel?: string;
   rightLabel?: string;
@@ -188,7 +188,7 @@ export const generateVideo = inngest.createFunction(
         const renderScenes = (scenesWithAssets as VideoGenerateScene[]).map((s) => ({
           template: s.template,
           scriptText: s.scriptText,
-          assets: s.assets.map((a) => ({ url: a.url ?? null })),
+          assets: s.assets.map((a) => ({ url: a.url ?? null, objectPosition: a.objectPosition })),
           leftLabel: s.leftLabel,
           rightLabel: s.rightLabel,
           title: s.title,

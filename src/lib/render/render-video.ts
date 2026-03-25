@@ -13,7 +13,7 @@ type RenderInput = {
   scenes: Array<{
     template: string;
     scriptText: string;
-    assets: Array<{ url?: string | null }>;
+    assets: Array<{ url?: string | null; objectPosition?: string }>;
     leftLabel?: string;
     rightLabel?: string;
     title?: string;

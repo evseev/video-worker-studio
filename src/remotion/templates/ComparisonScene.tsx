@@ -9,6 +9,8 @@ type ComparisonSceneProps = {
   scriptText: string;
   leftAssetUrl: string | null;
   rightAssetUrl: string | null;
+  leftObjectPosition?: string;
+  rightObjectPosition?: string;
   leftLabel: string;
   rightLabel: string;
 };
@@ -20,6 +22,8 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   scriptText,
   leftAssetUrl,
   rightAssetUrl,
+  leftObjectPosition,
+  rightObjectPosition,
   leftLabel,
   rightLabel,
 }) => {
@@ -72,7 +76,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
           {leftAssetUrl ? (
             <Img
               src={leftAssetUrl}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: leftObjectPosition ?? "50% 50%" }}
             />
           ) : (
             <div
@@ -125,7 +129,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
           {rightAssetUrl ? (
             <Img
               src={rightAssetUrl}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: rightObjectPosition ?? "50% 50%" }}
             />
           ) : (
             <div
