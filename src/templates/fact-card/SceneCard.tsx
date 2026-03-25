@@ -14,10 +14,17 @@ type SceneCardProps = {
   onSelectAsset: (slotIdx: number, assetIdx: number) => void;
 };
 
+// Hero image: full-width × 35% height. Secondary: 48×48 square.
+function heroAspect(videoAR: string): string {
+  // 9:16 → (1080-24) × 0.35*(1920-34) ≈ 1056×660 ≈ 8/5;  16:9 → 1896×368 ≈ 5/1
+  return videoAR === "16:9" ? "5/1" : "8/5";
+}
+
 function AssetSlotPicker({
   slot,
   size,
   label,
+  aspectRatio,
   onRefresh,
   onSelect,
   onPositionChange,
@@ -25,18 +32,21 @@ function AssetSlotPicker({
   slot: FactCardScene["assets"][number] | undefined;
   size: "large" | "small";
   label: string;
+  aspectRatio: string;
   onRefresh: () => void;
   onSelect: (assetIdx: number) => void;
   onPositionChange: (pos: string) => void;
 }) {
   const displayUrl = slot?.url ?? slot?.options?.[slot?.selectedIndex ?? 0];
   const hasOptions = slot?.options && slot.options.length > 1;
-  const sizeClass = size === "large" ? "w-32 h-36" : "w-20 h-24";
+  // Main hero uses render-matching aspect ratio; secondary is square (48×48 in render)
+  const slotAR = size === "large" ? heroAspect(aspectRatio) : "1/1";
+  const widthClass = size === "large" ? "w-32" : "w-16";
 
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{label}</span>
-      <div className={`${sizeClass} bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative`}>
+      <div className={`${widthClass} bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative`} style={{ aspectRatio: slotAR }}>
         <DraggableImage
           src={displayUrl ?? ""}
           alt={label}
@@ -73,6 +83,7 @@ export function FactCardSceneCard({
   scene,
   index,
   totalScenes,
+  aspectRatio,
   onUpdate,
   onRemove,
   onMoveUp,
@@ -144,6 +155,7 @@ export function FactCardSceneCard({
           slot={scene.assets[0]}
           size="large"
           label="Main Image"
+          aspectRatio={aspectRatio}
           onRefresh={() => onRefreshAsset(0)}
           onSelect={(assetIdx) => onSelectAsset(0, assetIdx)}
           onPositionChange={(pos) => {
@@ -156,6 +168,7 @@ export function FactCardSceneCard({
           slot={scene.assets[1]}
           size="small"
           label="Secondary"
+          aspectRatio={aspectRatio}
           onRefresh={() => onRefreshAsset(1)}
           onSelect={(assetIdx) => onSelectAsset(1, assetIdx)}
           onPositionChange={(pos) => {

@@ -14,10 +14,17 @@ type SceneCardProps = {
   onSelectAsset: (slotIdx: number, assetIdx: number) => void;
 };
 
+// Each comparison slot is half the video width. Compute the preview aspect ratio to match render.
+function slotAspect(videoAR: string): string {
+  // 9:16 video → each slot ~538×1920 ≈ 9/32;  16:9 → ~958×1080 ≈ 8/9
+  return videoAR === "16:9" ? "8/9" : "9/32";
+}
+
 function AssetThumb({
   slot,
   label,
   slotIdx,
+  aspectRatio,
   onRefresh,
   onSelect,
   onPositionChange,
@@ -25,6 +32,7 @@ function AssetThumb({
   slot: ComparisonScene["assets"][number] | undefined;
   label: string;
   slotIdx: number;
+  aspectRatio: string;
   onRefresh: () => void;
   onSelect: (assetIdx: number) => void;
   onPositionChange: (pos: string) => void;
@@ -35,7 +43,7 @@ function AssetThumb({
   return (
     <div className="flex flex-col gap-1 flex-1">
       <span className="text-[10px] text-zinc-500 uppercase tracking-wider text-center">{label}</span>
-      <div className="relative w-full aspect-[3/4] bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center">
+      <div className="relative w-full bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center" style={{ aspectRatio: slotAspect(aspectRatio) }}>
         <DraggableImage
           src={displayUrl ?? ""}
           alt={label}
@@ -72,6 +80,7 @@ export function ComparisonSceneCard({
   scene,
   index,
   totalScenes,
+  aspectRatio,
   onUpdate,
   onRemove,
   onMoveUp,
@@ -129,6 +138,7 @@ export function ComparisonSceneCard({
           slot={scene.assets[0]}
           label="Left"
           slotIdx={0}
+          aspectRatio={aspectRatio}
           onRefresh={() => onRefreshAsset(0)}
           onSelect={(assetIdx) => onSelectAsset(0, assetIdx)}
           onPositionChange={(pos) => {
@@ -141,6 +151,7 @@ export function ComparisonSceneCard({
           slot={scene.assets[1]}
           label="Right"
           slotIdx={1}
+          aspectRatio={aspectRatio}
           onRefresh={() => onRefreshAsset(1)}
           onSelect={(assetIdx) => onSelectAsset(1, assetIdx)}
           onPositionChange={(pos) => {

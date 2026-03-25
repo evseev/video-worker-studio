@@ -18,6 +18,7 @@ export function SlideshowSceneCard({
   scene,
   index,
   totalScenes,
+  aspectRatio,
   onUpdate,
   onRemove,
   onMoveUp,
@@ -28,6 +29,8 @@ export function SlideshowSceneCard({
   const slot = scene.assets[0];
   const displayUrl = slot?.url ?? slot?.options?.[slot?.selectedIndex ?? 0];
   const hasOptions = slot?.options && slot.options.length > 1;
+  // Preview thumbnail matches video aspect ratio (full-frame image)
+  const thumbAR = aspectRatio === "16:9" ? "16/9" : "9/16";
 
   return (
     <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 flex gap-4 group">
@@ -45,7 +48,7 @@ export function SlideshowSceneCard({
           </svg>
         </button>
 
-        <div className="w-20 h-24 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative">
+        <div className="w-20 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative" style={{ aspectRatio: thumbAR }}>
           <DraggableImage
             src={displayUrl ?? ""}
             alt={scene.searchKeywords[0] ?? ""}
