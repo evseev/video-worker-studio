@@ -6,11 +6,16 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 interface VideoGenerateScene {
+  template: string;
   scriptText: string;
-  searchKeyword: string;
-  assetUrl?: string;
-  assetOptions?: string[];
-  selectedAssetIndex?: number;
+  searchKeywords: string[];
+  assets: Array<{ url?: string; options?: string[]; selectedIndex?: number }>;
+  // Template-specific optional fields
+  leftLabel?: string;
+  rightLabel?: string;
+  title?: string;
+  subtitle?: string;
+  facts?: { label: string; value: string }[];
 }
 
 interface VideoGenerateEventData {
@@ -22,7 +27,6 @@ interface VideoGenerateEventData {
   videoQuality?: string;
   sceneDuration?: number;
   backgroundMusic?: string | null;
-  captionStyle?: string;
   voiceoverUrl?: string | null;
   userId?: string;
 }
@@ -94,7 +98,7 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, captionStyle, voiceoverUrl } = event.data as VideoGenerateEventData;
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl } = event.data as VideoGenerateEventData;
 
 
 
@@ -120,19 +124,33 @@ export const generateVideo = inngest.createFunction(
       try {
         // Cast scenes from step output to our typed interface
         const typedScenes = scenes as VideoGenerateScene[];
-        const keywordsToFetch = typedScenes.map((s) => s.assetUrl ? null : s.searchKeyword);
+        const keywordsToFetch = typedScenes.flatMap((s, sceneIdx) =>
+          s.searchKeywords.map((kw, slotIdx) => ({
+            keyword: s.assets[slotIdx]?.url ? null : kw,
+            sceneIdx,
+            slotIdx,
+          }))
+        );
         const fetchResults = await fetchAssets(
-          keywordsToFetch as (string | null)[],
+          keywordsToFetch.map((k) => k.keyword) as (string | null)[],
           projectId
         );
 
-        return typedScenes.map((scene, i) => {
-          if (scene.assetUrl) return scene;
-          return {
-            ...scene,
-            assetUrl: (fetchResults as (string | null)[])[i] || null,
-          };
+        // Map results back to scene.assets[slotIdx].url
+        const updatedScenes = typedScenes.map((scene) => ({
+          ...scene,
+          assets: scene.assets.map((asset) => ({ ...asset })),
+        }));
+        keywordsToFetch.forEach(({ sceneIdx, slotIdx }, flatIdx) => {
+          const url = (fetchResults as (string | null)[])[flatIdx];
+          if (url) {
+            updatedScenes[sceneIdx].assets[slotIdx] = {
+              ...updatedScenes[sceneIdx].assets[slotIdx],
+              url,
+            };
+          }
         });
+        return updatedScenes;
       } catch (err) {
         await updateStatus(db, projectId, "failed_ai");
         throw err;
@@ -143,11 +161,11 @@ export const generateVideo = inngest.createFunction(
     await step.run("save-scenes", async () => {
       console.log(`[save-scenes] Saving ${scenesWithAssets.length} scenes`);
 
-      const scenesPayload = scenesWithAssets.map((scene, i) => ({
+      const scenesPayload = (scenesWithAssets as VideoGenerateScene[]).map((scene, i) => ({
         sequence_order: i,
         script_text: scene.scriptText,
-        search_keywords: scene.searchKeyword,
-        asset_url: scene.assetUrl,
+        search_keywords: scene.searchKeywords.join(", "),
+        asset_url: scene.assets[0]?.url ?? null,
       }));
 
       const { error } = await db.rpc("worker_insert_scenes", {
@@ -167,11 +185,17 @@ export const generateVideo = inngest.createFunction(
     const videoUrl = await step.run("render-video", async () => {
       console.log(`[render-video] Rendering project ${projectId}`);
       try {
-        const renderScenes = scenesWithAssets.map((s) => ({
+        const renderScenes = (scenesWithAssets as VideoGenerateScene[]).map((s) => ({
+          template: s.template,
           scriptText: s.scriptText,
-          assetUrl: s.assetUrl ?? null,
+          assets: s.assets.map((a) => ({ url: a.url ?? null })),
+          leftLabel: s.leftLabel,
+          rightLabel: s.rightLabel,
+          title: s.title,
+          subtitle: s.subtitle,
+          facts: s.facts,
         }));
-        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, captionStyle, voiceoverUrl });
+        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         await updateRenderError(db, projectId, {

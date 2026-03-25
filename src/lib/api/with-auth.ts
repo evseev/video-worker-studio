@@ -41,9 +41,10 @@ export function withAuth(handler: AuthenticatedHandler, options?: WithAuthOption
 
       return await handler(request, { user, supabase });
     } catch (error) {
-      console.error("API route error:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("API route error:", message, error);
       return NextResponse.json(
-        { error: "Internal server error" },
+        { error: message || "Internal server error" },
         { status: 500 }
       );
     }

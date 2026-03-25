@@ -3,7 +3,7 @@ ALTER TABLE projects ADD CONSTRAINT check_aspect_ratio
   CHECK (aspect_ratio IN ('9:16', '16:9'));
 
 ALTER TABLE projects ADD CONSTRAINT check_video_quality
-  CHECK (video_quality IN ('720p', '1080p'));
+  CHECK (video_quality IN ('720p', '1080p', '4k'));
 
 ALTER TABLE projects ADD CONSTRAINT check_caption_style
   CHECK (caption_style IS NULL OR caption_style IN ('minimal', 'bold', 'strip', 'split'));

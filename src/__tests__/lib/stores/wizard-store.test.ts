@@ -12,7 +12,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     status: "draft",
     wizard_step: "preview",
     video_url: null,
-    selected_template: "Slideshow",
+    selected_template: "slideshow",
     draft_scenes: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -21,55 +21,59 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 }
 
 describe("wizard-store", () => {
-  describe("Scene type with assetOptions", () => {
-    it("accepts assetOptions and selectedAssetIndex in draft data", () => {
+  describe("Scene type with assets", () => {
+    it("accepts assets with options and selectedIndex in draft data", () => {
       const project = makeProject({
         draft_scenes: {
           scenes: [
             {
+              template: "slideshow",
               scriptText: "Hello",
-              searchKeyword: "sunset",
-              assetUrl: "/a.jpg",
-              assetOptions: ["/a.jpg", "/b.jpg", "/c.jpg"],
-              selectedAssetIndex: 1,
+              searchKeywords: ["sunset"],
+              assets: [{ url: "/a.jpg", options: ["/a.jpg", "/b.jpg", "/c.jpg"], selectedIndex: 1 }],
             },
           ],
-          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
         } as unknown,
       });
       const store = createWizardStore(project);
       const state = store.getState();
 
-      expect(state.scenes[0].assetOptions).toEqual(["/a.jpg", "/b.jpg", "/c.jpg"]);
-      expect(state.scenes[0].selectedAssetIndex).toBe(1);
+      expect(state.scenes[0].assets[0].options).toEqual(["/a.jpg", "/b.jpg", "/c.jpg"]);
+      expect(state.scenes[0].assets[0].selectedIndex).toBe(1);
     });
 
-    it("handles legacy scenes without assetOptions", () => {
-      const project = makeProject({
-        draft_scenes: {
-          scenes: [
-            { scriptText: "Hello", searchKeyword: "sunset", assetUrl: "/old.jpg" },
-          ],
-          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
-        } as unknown,
-      });
-      const store = createWizardStore(project);
-      const state = store.getState();
-
-      expect(state.scenes[0].assetUrl).toBe("/old.jpg");
-      expect(state.scenes[0].assetOptions).toBeUndefined();
-      expect(state.scenes[0].selectedAssetIndex).toBeUndefined();
-    });
-
-    it("preserves assetOptions through updateScene", () => {
+    it("handles scenes without asset options", () => {
       const project = makeProject({
         draft_scenes: {
           scenes: [
             {
+              template: "slideshow",
               scriptText: "Hello",
-              searchKeyword: "sunset",
-              assetOptions: ["/a.jpg", "/b.jpg", "/c.jpg"],
-              selectedAssetIndex: 0,
+              searchKeywords: ["sunset"],
+              assets: [{ url: "/old.jpg" }],
+            },
+          ],
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+      const state = store.getState();
+
+      expect(state.scenes[0].assets[0].url).toBe("/old.jpg");
+      expect(state.scenes[0].assets[0].options).toBeUndefined();
+      expect(state.scenes[0].assets[0].selectedIndex).toBeUndefined();
+    });
+
+    it("preserves assets through updateScene", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [
+            {
+              template: "slideshow",
+              scriptText: "Hello",
+              searchKeywords: ["sunset"],
+              assets: [{ options: ["/a.jpg", "/b.jpg", "/c.jpg"], selectedIndex: 0 }],
             },
           ],
         } as unknown,
@@ -80,33 +84,32 @@ describe("wizard-store", () => {
       const scene = store.getState().scenes[0];
 
       expect(scene.scriptText).toBe("Updated");
-      expect(scene.assetOptions).toEqual(["/a.jpg", "/b.jpg", "/c.jpg"]);
-      expect(scene.selectedAssetIndex).toBe(0);
+      expect(scene.assets[0].options).toEqual(["/a.jpg", "/b.jpg", "/c.jpg"]);
+      expect(scene.assets[0].selectedIndex).toBe(0);
     });
   });
 
   describe("selectAsset action", () => {
-    it("updates assetUrl and selectedAssetIndex atomically", () => {
+    it("updates asset url and selectedIndex atomically", () => {
       const project = makeProject({
         draft_scenes: {
           scenes: [
             {
+              template: "slideshow",
               scriptText: "Hello",
-              searchKeyword: "sunset",
-              assetUrl: "/a.jpg",
-              assetOptions: ["/a.jpg", "/b.jpg", "/c.jpg"],
-              selectedAssetIndex: 0,
+              searchKeywords: ["sunset"],
+              assets: [{ url: "/a.jpg", options: ["/a.jpg", "/b.jpg", "/c.jpg"], selectedIndex: 0 }],
             },
           ],
         } as unknown,
       });
       const store = createWizardStore(project);
 
-      store.getState().selectAsset(0, 2);
+      store.getState().selectAsset(0, 0, 2);
       const scene = store.getState().scenes[0];
 
-      expect(scene.assetUrl).toBe("/c.jpg");
-      expect(scene.selectedAssetIndex).toBe(2);
+      expect(scene.assets[0].url).toBe("/c.jpg");
+      expect(scene.assets[0].selectedIndex).toBe(2);
     });
 
     it("no-ops when assetIndex is out of bounds", () => {
@@ -114,39 +117,43 @@ describe("wizard-store", () => {
         draft_scenes: {
           scenes: [
             {
+              template: "slideshow",
               scriptText: "Hello",
-              searchKeyword: "sunset",
-              assetUrl: "/a.jpg",
-              assetOptions: ["/a.jpg"],
-              selectedAssetIndex: 0,
+              searchKeywords: ["sunset"],
+              assets: [{ url: "/a.jpg", options: ["/a.jpg"], selectedIndex: 0 }],
             },
           ],
         } as unknown,
       });
       const store = createWizardStore(project);
 
-      store.getState().selectAsset(0, 5);
+      store.getState().selectAsset(0, 0, 5);
       const scene = store.getState().scenes[0];
 
-      expect(scene.assetUrl).toBe("/a.jpg");
-      expect(scene.selectedAssetIndex).toBe(0);
+      expect(scene.assets[0].url).toBe("/a.jpg");
+      expect(scene.assets[0].selectedIndex).toBe(0);
     });
 
-    it("no-ops when scene has no assetOptions", () => {
+    it("no-ops when slot has no options", () => {
       const project = makeProject({
         draft_scenes: {
           scenes: [
-            { scriptText: "Hello", searchKeyword: "sunset", assetUrl: "/old.jpg" },
+            {
+              template: "slideshow",
+              scriptText: "Hello",
+              searchKeywords: ["sunset"],
+              assets: [{ url: "/old.jpg" }],
+            },
           ],
         } as unknown,
       });
       const store = createWizardStore(project);
 
-      store.getState().selectAsset(0, 0);
+      store.getState().selectAsset(0, 0, 0);
       const scene = store.getState().scenes[0];
 
-      expect(scene.assetUrl).toBe("/old.jpg");
-      expect(scene.selectedAssetIndex).toBeUndefined();
+      expect(scene.assets[0].url).toBe("/old.jpg");
+      expect(scene.assets[0].selectedIndex).toBeUndefined();
     });
 
     it("no-ops for invalid scene index", () => {
@@ -154,20 +161,20 @@ describe("wizard-store", () => {
         draft_scenes: {
           scenes: [
             {
+              template: "slideshow",
               scriptText: "Hello",
-              searchKeyword: "sunset",
-              assetOptions: ["/a.jpg", "/b.jpg"],
-              selectedAssetIndex: 0,
+              searchKeywords: ["sunset"],
+              assets: [{ options: ["/a.jpg", "/b.jpg"], selectedIndex: 0 }],
             },
           ],
         } as unknown,
       });
       const store = createWizardStore(project);
 
-      store.getState().selectAsset(99, 0);
+      store.getState().selectAsset(99, 0, 0);
       const scene = store.getState().scenes[0];
 
-      expect(scene.selectedAssetIndex).toBe(0);
+      expect(scene.assets[0].selectedIndex).toBe(0);
     });
   });
 
@@ -175,8 +182,18 @@ describe("wizard-store", () => {
     it("parses old flat array format", () => {
       const project = makeProject({
         draft_scenes: [
-          { scriptText: "Scene 1", searchKeyword: "kw1" },
-          { scriptText: "Scene 2", searchKeyword: "kw2" },
+          {
+            template: "slideshow",
+            scriptText: "Scene 1",
+            searchKeywords: ["kw1"],
+            assets: [{}],
+          },
+          {
+            template: "slideshow",
+            scriptText: "Scene 2",
+            searchKeywords: ["kw2"],
+            assets: [{}],
+          },
         ] as unknown,
       });
       const store = createWizardStore(project);
@@ -186,25 +203,25 @@ describe("wizard-store", () => {
       expect(state.scenes[0].scriptText).toBe("Scene 1");
     });
 
-    it("parses new format with settings and assetOptions", () => {
+    it("parses new format with settings and asset options", () => {
       const project = makeProject({
         draft_scenes: {
           scenes: [
             {
+              template: "slideshow",
               scriptText: "Scene 1",
-              searchKeyword: "kw1",
-              assetOptions: ["/x.jpg", "/y.jpg"],
-              selectedAssetIndex: 1,
+              searchKeywords: ["kw1"],
+              assets: [{ options: ["/x.jpg", "/y.jpg"], selectedIndex: 1 }],
             },
           ],
-          settings: { sceneCount: 4, sceneDuration: 3, aspectRatio: "16:9", quality: "hd" },
+          settings: { sceneCount: 4, sceneDuration: 3, aspectRatio: "16:9", quality: "720p" },
         } as unknown,
       });
       const store = createWizardStore(project);
       const state = store.getState();
 
-      expect(state.scenes[0].assetOptions).toEqual(["/x.jpg", "/y.jpg"]);
-      expect(state.scenes[0].selectedAssetIndex).toBe(1);
+      expect(state.scenes[0].assets[0].options).toEqual(["/x.jpg", "/y.jpg"]);
+      expect(state.scenes[0].assets[0].selectedIndex).toBe(1);
       expect(state.settings.aspectRatio).toBe("16:9");
     });
 
@@ -221,7 +238,7 @@ describe("wizard-store", () => {
       const project = makeProject({
         draft_scenes: {
           scenes: [],
-          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
           targetKeywords: "fitness tips",
           videoDescription: "A great video about fitness",
           videoTags: ["fitness", "health", "tips"],

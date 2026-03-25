@@ -3,11 +3,13 @@ import { z } from "zod";
 import {
   enhanceIdeaPrompt,
   validateTrendPrompt,
-  generateStructurePrompt,
-  generateStructureUserMessage,
   generateSeoMetadataPrompt,
   generateSeoMetadataUserMessage,
 } from "./prompts";
+import type { Scene, TemplateId } from "@/templates/types";
+import { buildSlideshowPrompt, slideshowGeminiSchema, SlideshowResponseSchema } from "@/templates/slideshow";
+import { buildComparisonPrompt, comparisonGeminiSchema, ComparisonResponseSchema } from "@/templates/comparison";
+import { buildFactCardPrompt, factCardGeminiSchema, FactCardResponseSchema } from "@/templates/fact-card";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -104,66 +106,76 @@ export async function validateTrend(idea: string): Promise<TrendValidation> {
 
 // --- Generate Structure ---
 
-export interface SceneScript {
-  scriptText: string;
-  searchKeyword: string;
+function getTemplateAI(templateId: TemplateId) {
+  switch (templateId) {
+    case "slideshow":
+      return { buildPrompt: buildSlideshowPrompt, geminiSchema: slideshowGeminiSchema, zodSchema: SlideshowResponseSchema };
+    case "comparison":
+      return { buildPrompt: buildComparisonPrompt, geminiSchema: comparisonGeminiSchema, zodSchema: ComparisonResponseSchema };
+    case "fact-card":
+      return { buildPrompt: buildFactCardPrompt, geminiSchema: factCardGeminiSchema, zodSchema: FactCardResponseSchema };
+  }
 }
 
-const structureSchema: Schema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    scenes: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          scriptText: {
-            type: SchemaType.STRING,
-            description: "The spoken text for this scene.",
-          },
-          searchKeyword: {
-            type: SchemaType.STRING,
-            description: "Pinterest search query to find a cinematic background image.",
-          },
-        },
-        required: ["scriptText", "searchKeyword"],
-      },
-    },
-  },
-  required: ["scenes"],
-};
+function toScene(templateId: TemplateId, raw: any): Scene {
+  switch (templateId) {
+    case "slideshow":
+      return {
+        template: "slideshow",
+        scriptText: raw.scriptText,
+        searchKeywords: [raw.searchKeyword],
+        assets: [{}],
+      };
+    case "comparison":
+      return {
+        template: "comparison",
+        scriptText: raw.scriptText,
+        searchKeywords: raw.searchKeywords,
+        leftLabel: raw.leftLabel,
+        rightLabel: raw.rightLabel,
+        assets: [{}, {}],
+      };
+    case "fact-card":
+      return {
+        template: "fact-card",
+        scriptText: raw.scriptText,
+        searchKeywords: raw.searchKeywords,
+        title: raw.title,
+        subtitle: raw.subtitle,
+        facts: raw.facts,
+        assets: [{}, {}],
+      };
+  }
+}
 
 export async function generateStructure(
   idea: string,
-  template: string,
+  templateId: TemplateId,
   opts?: { aspectRatio?: string; sceneCount?: number; sceneDuration?: number }
-): Promise<SceneScript[]> {
+): Promise<Scene[]> {
   const sceneCount = opts?.sceneCount ?? 6;
   const sceneDuration = opts?.sceneDuration ?? 5;
   const aspectRatio = opts?.aspectRatio;
+
+  const ai = getTemplateAI(templateId);
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
-      responseSchema: structureSchema,
+      responseSchema: ai.geminiSchema,
     },
-    systemInstruction: generateStructurePrompt({ sceneCount, sceneDuration, aspectRatio }),
+    systemInstruction: ai.buildPrompt({ sceneCount, sceneDuration, aspectRatio }),
   });
 
-  const result = await model.generateContent(generateStructureUserMessage(idea, template, aspectRatio));
+  const result = await model.generateContent(
+    `Idea: ${idea}\nVideo orientation: ${aspectRatio === "16:9" ? "landscape" : "portrait"}`
+  );
   const text = result.response.text();
+  const parsed = ai.zodSchema.parse(JSON.parse(text));
 
-  const SceneSchema = z.object({
-    scriptText: z.string(),
-    searchKeyword: z.string(),
-  });
-  const ResponseSchema = z.object({
-    scenes: z.array(SceneSchema).min(1),
-  });
-
-  const parsed = ResponseSchema.parse(JSON.parse(text));
-  return parsed.scenes;
+  // Convert AI output to template-typed Scene[]
+  return parsed.scenes.map((raw: any) => toScene(templateId, raw));
 }
 
 // --- Generate SEO Metadata ---

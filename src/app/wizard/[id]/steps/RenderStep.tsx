@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { WizardState } from "@/lib/stores/wizard-store";
 import type { StoreApi } from "zustand";
 import { useStore } from "zustand";
+import { MusicSelector } from "@/components/wizard/music-selector";
+import { VoiceoverUpload } from "@/components/wizard/voiceover-upload";
 
 type Props = { store: StoreApi<WizardState> };
 
@@ -14,6 +16,8 @@ export function RenderStep({ store }: Props) {
   const { projectId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, saveProgress, setStep } = useStore(store);
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [backgroundMusic, setBackgroundMusic] = useState<string | null>(null);
+  const [voiceoverUrl, setVoiceoverUrl] = useState<string | null>(null);
   const router = useRouter();
 
   const isProcessing = projectStatus === "processing" || projectStatus === "rendering";
@@ -36,9 +40,13 @@ export function RenderStep({ store }: Props) {
       const res = await fetch("/api/wizard/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration }),
+        body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration, backgroundMusic, voiceoverUrl }),
       });
-      if (!res.ok) throw new Error("Failed to start render");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("Render API error:", res.status, body);
+        throw new Error(body.error || "Failed to start render");
+      }
       // Start polling by refreshing the server component
       router.refresh();
     } catch (error) {
@@ -214,6 +222,28 @@ export function RenderStep({ store }: Props) {
             <span className="text-lg text-white font-medium">~{totalDuration}s</span>
           </div>
         </div>
+      </div>
+
+      {/* Background Music */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-6">
+        <MusicSelector selected={backgroundMusic} onSelect={setBackgroundMusic} />
+      </div>
+
+      {/* Voiceover */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8">
+        <VoiceoverUpload
+          voiceoverUrl={voiceoverUrl}
+          onUpload={async (file) => {
+            const form = new FormData();
+            form.append("file", file);
+            form.append("projectId", projectId);
+            const res = await fetch("/api/wizard/upload-voiceover", { method: "POST", body: form });
+            if (!res.ok) throw new Error("Upload failed");
+            const data = await res.json();
+            setVoiceoverUrl(data.voiceoverUrl);
+          }}
+          onRemove={() => setVoiceoverUrl(null)}
+        />
       </div>
 
       {/* Render Error */}

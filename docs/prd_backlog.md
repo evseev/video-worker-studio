@@ -199,3 +199,31 @@
 ### Polish
 *   [x] Styling / UI components
 *   [x] Error handling, loading states
+
+## Epic 20: Template System — 3 Structural Archetypes
+**Description:** Replace cosmetic template presets with 3 structural template archetypes (Slideshow, Comparison, Fact Card) that drive the entire video pipeline: AI scene generation, asset fetching, preview layout, and Remotion rendering. Replaces Epics 6.3/6.5 and Epic 11 (caption styles absorbed into templates).
+**Design:** `docs/designs/2026-03-24-template-system-design.md`
+**Plan:** `docs/superpowers/plans/2026-03-24-template-system.md`
+
+*   [x] **Story 20.1:** Create template types, configs, and registry (`src/templates/` — types.ts, index.ts, slideshow/, comparison/, fact-card/ configs).
+*   [x] **Story 20.2:** Create template-specific AI prompts and Zod/Gemini schemas per archetype.
+*   [x] **Story 20.3:** Update wizard store with new Scene union type, 6-step WizardStep, multi-slot asset actions.
+*   [x] **Story 20.4:** Update AI generation pipeline (`wizard.ts`, `generate-structure` route) to use template-specific prompts and schemas.
+*   [x] **Story 20.5:** Update asset fetching route for multi-slot (1 or 2 keywords per scene based on template).
+*   [x] **Story 20.6:** Create 3 Remotion scene components (`SlideshowScene`, `ComparisonScene`, `FactCardScene`) under `src/remotion/templates/`.
+*   [x] **Story 20.7:** Update `VideoComposition.tsx` and `Root.tsx` for template-based scene dispatch.
+*   [x] **Story 20.8:** Build TemplateStep (wizard Step 1) with template picker + project settings form (topic, scene count, duration, aspect ratio, quality).
+*   [x] **Story 20.9:** Update wizard client for 6-step flow; update IdeaStep, ScriptStep, RenderStep for template-aware behavior.
+*   [x] **Story 20.10:** Create template-specific SceneCard components and update PreviewStep.
+*   [x] **Story 20.11:** Update render pipeline (render route, Inngest functions, render-video.ts) — remove captionStyle, pass template-typed scenes.
+*   [x] **Story 20.12:** Remove old files (template-selector.tsx, caption-style-selector.tsx, caption-styles.ts, Scene.tsx).
+*   [x] **Story 20.13:** E2E verification for all 3 templates, fix dashboard routing, video thumbnails.
+
+## Epic 21: Image Crop & Positioning
+**Description:** Add per-asset crop/pan controls so users can adjust which area of an image is visible in the final video. Different templates have different visible areas (slideshow = full frame, comparison = half-width portrait slot, fact card = hero banner + small thumbnail), and the crop aspect ratio should match the slot shape.
+
+*   [ ] **Story 21.1:** Add crop data model — `{ x, y, width, height }` or `objectPosition` per `AssetSlot` in scene types.
+*   [ ] **Story 21.2:** Build image crop UI component with drag-to-reposition, template-aware aspect ratio constraints.
+*   [ ] **Story 21.3:** Integrate crop UI into template-specific SceneCard components (slideshow, comparison, fact-card).
+*   [ ] **Story 21.4:** Thread crop coordinates through render pipeline to Remotion `Img` component (`objectPosition` style).
+*   [ ] **Story 21.5:** Persist crop data in `draft_scenes` JSON and restore on wizard resume.

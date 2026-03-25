@@ -8,7 +8,7 @@ import { useStore } from "zustand";
 type Props = { store: StoreApi<WizardState> };
 
 export function RefineStep({ store }: Props) {
-  const { projectId, topic, settings, refinedIdea, setRefinedIdea, setTopic, targetKeywords, setTargetKeywords, saveProgress, setStep } = useStore(store);
+  const { projectId, topic, selectedTemplate, settings, refinedIdea, setRefinedIdea, setTopic, targetKeywords, setTargetKeywords, saveProgress, setStep } = useStore(store);
   const [enhancing, setEnhancing] = useState(false);
   const [validating, setValidating] = useState(false);
   const [enhancedIdeas, setEnhancedIdeas] = useState<string[]>(refinedIdea?.ideas || []);
@@ -23,7 +23,7 @@ export function RefineStep({ store }: Props) {
       const res = await fetch("/api/wizard/enhance-idea", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, idea: topic, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
+        body: JSON.stringify({ projectId, idea: `${topic} (Template: ${selectedTemplate})`, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
       });
       const data = await res.json();
       if (data.ideas) {

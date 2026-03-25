@@ -42,14 +42,14 @@ describe("fetch-assets API route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns assetOptions format when multipleAssets is true", async () => {
+  it("returns scenes with populated assets when multipleAssets is true", async () => {
     mockFetchAssets.mockResolvedValue([
       ["/public/tmp_assets/vws-assets/proj-1/scene-0/a.jpg", "/public/tmp_assets/vws-assets/proj-1/scene-0/b.jpg", "/public/tmp_assets/vws-assets/proj-1/scene-0/c.jpg"],
     ]);
 
     const req = createMockRequest({
       projectId: "proj-1",
-      scenes: [{ searchKeyword: "sunset" }],
+      scenes: [{ searchKeywords: ["sunset"], assets: [] }],
       multipleAssets: true,
       aspectRatio: "9:16",
     });
@@ -58,11 +58,9 @@ describe("fetch-assets API route", () => {
     const response = await (POST as Function)(req, { user: mockUser, supabase: mockSupabase });
     const data = await response.json();
 
-    expect(data.assetOptions).toBeDefined();
-    expect(data.assetOptions[0]).toHaveProperty("options");
-    expect(data.assetOptions[0]).toHaveProperty("keyword");
-    expect(data.assetOptions[0]).toHaveProperty("sceneIndex", 0);
-    expect(Array.isArray(data.assetOptions[0].options)).toBe(true);
+    expect(data.scenes).toBeDefined();
+    expect(data.scenes[0].assets[0]).toHaveProperty("options");
+    expect(Array.isArray(data.scenes[0].assets[0].options)).toBe(true);
   });
 
   it("returns assets format when multipleAssets is absent", async () => {
@@ -72,7 +70,7 @@ describe("fetch-assets API route", () => {
 
     const req = createMockRequest({
       projectId: "proj-1",
-      scenes: [{ searchKeyword: "sunset" }],
+      scenes: [{ searchKeywords: ["sunset"], assets: [] }],
       aspectRatio: "9:16",
     });
 
@@ -90,7 +88,7 @@ describe("fetch-assets API route", () => {
 
     const req = createMockRequest({
       projectId: "proj-1",
-      scenes: [{ searchKeyword: "sunset" }],
+      scenes: [{ searchKeywords: ["sunset"], assets: [] }],
       multipleAssets: true,
       aspectRatio: "9:16",
     });
@@ -109,7 +107,7 @@ describe("fetch-assets API route", () => {
 
     const req = createMockRequest({
       projectId: "proj-1",
-      scenes: [{ searchKeyword: "sunset" }],
+      scenes: [{ searchKeywords: ["sunset"], assets: [] }],
       aspectRatio: "9:16",
     });
 
@@ -126,7 +124,7 @@ describe("fetch-assets API route", () => {
 
     const req = createMockRequest({
       projectId: "proj-1",
-      scenes: [{ searchKeyword: "sunset" }],
+      scenes: [{ searchKeywords: ["sunset"], assets: [] }],
       aspectRatio: "16:9",
     });
 

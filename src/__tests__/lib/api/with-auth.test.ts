@@ -81,7 +81,7 @@ describe("withAuth", () => {
 
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body.error).toBe("Internal server error");
+    expect(body.error).toBe("boom");
   });
 
   it("returns 429 when rate limited", async () => {

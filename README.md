@@ -14,9 +14,9 @@ Triggered via `/api/generate` and powered entirely by a 5-step Inngest backgroun
 
 **2. Video Generation Wizard:**
 ```text
-Idea (topic + settings) → Refine (AI enhance + trend score) → Script (template + scenes) → Preview (assets + reorder) → Render (progress + player)
+Template (archetype + settings) → Idea (AI hooks) → Refine (AI enhance + trend score) → Script (template-specific scenes) → Preview (assets + reorder) → Render (progress + player)
 ```
-A five-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, generate-seo, fetch-assets, render).
+A six-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. The first step selects one of 3 structural template archetypes (Slideshow, Comparison, Fact Card) that drives the entire pipeline. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, generate-seo, fetch-assets, render).
 
 The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
@@ -147,7 +147,7 @@ src/
 │   ├── wizard/[id]/        # Interactive video generation wizard
 │   │   ├── client.tsx      # Wizard orchestrator (Zustand store init + step routing)
 │   │   ├── page.tsx        # Server component (auth + project fetch)
-│   │   └── steps/          # 5 step components (IdeaStep, RefineStep, ScriptStep, PreviewStep, RenderStep)
+│   │   └── steps/          # 6 step components (TemplateStep, IdeaStep, RefineStep, ScriptStep, PreviewStep, RenderStep)
 │   ├── page.tsx            # Dashboard (server component, auth-gated)
 │   └── layout.tsx          # Root layout
 ├── components/
@@ -169,11 +169,20 @@ src/
 │   │   ├── render-video.ts      # Remotion Lambda renderer (local fallback optional)
 │   │   └── dimensions.ts        # Video dimension resolver (aspect ratio × quality → width/height)
 │   └── supabase/                # Supabase client helpers (server, browser, middleware)
+├── templates/                       # Template system (3 structural archetypes)
+│   ├── types.ts                     # TemplateId, TemplateConfig, Scene union types
+│   ├── index.ts                     # Template registry and lookup
+│   ├── slideshow/                   # Single-image slideshow archetype
+│   ├── comparison/                  # Side-by-side comparison archetype
+│   └── fact-card/                   # Two-image identity/fact card archetype
 ├── remotion/
 │   ├── index.ts                 # Remotion entry point
 │   ├── Root.tsx                 # Remotion root component
-│   ├── VideoComposition.tsx     # Main video composition with transitions
-│   └── Scene.tsx                # Individual scene component
+│   ├── VideoComposition.tsx     # Template-based scene dispatch
+│   └── templates/               # Remotion scene components per archetype
+│       ├── SlideshowScene.tsx
+│       ├── ComparisonScene.tsx
+│       └── FactCardScene.tsx
 └── middleware.ts                # Supabase auth session refresh
 docs/
 ├── adr/001-gemini-3-flash-upgrade.md  # Architecture decision records
@@ -183,7 +192,7 @@ docs/
 ├── tech_stack.md                # Tech stack rationale
 ├── workflow_design.md           # Pipeline design
 ├── ux_specification.md          # UX spec
-├── prd_backlog.md               # Product backlog (19 epics)
+├── prd_backlog.md               # Product backlog (21 epics)
 ├── mvp_development_plan.md      # Original development roadmap
 └── designs/remotion-lambda-migration.md # Render architecture design
 ```
@@ -239,9 +248,10 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Tech Stack](docs/tech_stack.md) — technology choices and rationale
 - [Workflow Design](docs/workflow_design.md) — pipeline design and failure modes
 - [UX Specification](docs/ux_specification.md) — screen-by-screen layout and interactions
-- [Product Backlog](docs/prd_backlog.md) — epics and stories (19 epics, all MVP stories complete)
+- [Product Backlog](docs/prd_backlog.md) — epics and stories (21 epics; Epics 1-20 complete, Epic 21 planned)
 - [MVP Development Plan](docs/mvp_development_plan.md) — original development roadmap
 - [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md) — render architecture design
+- [Template System Design](docs/designs/2026-03-24-template-system-design.md) — 3 structural archetypes design
 - [Gemini 3 Flash Upgrade ADR](docs/adr/001-gemini-3-flash-upgrade.md) — architecture decision record
 
 Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
