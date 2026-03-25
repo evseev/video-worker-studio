@@ -2,8 +2,15 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 
 export const PUT = withAuth(async (request, { user, supabase }) => {
-  const { projectId, topic, wizard_step, draft_scenes, template, video_description, video_tags, aspect_ratio, video_quality } =
-    await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch (e) {
+    console.error("[draft] Failed to parse request body:", e);
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const { projectId, topic, wizard_step, draft_scenes, template, video_description, video_tags, aspect_ratio, video_quality } = body;
 
   if (!projectId) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
@@ -27,7 +34,7 @@ export const PUT = withAuth(async (request, { user, supabase }) => {
       .eq("user_id", user.id);
 
     if (error) {
-      console.error("[draft] Supabase update error:", JSON.stringify(error), "updates:", JSON.stringify(updates));
+      console.error("[draft] Supabase update error:", JSON.stringify(error), "updates keys:", Object.keys(updates));
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }
