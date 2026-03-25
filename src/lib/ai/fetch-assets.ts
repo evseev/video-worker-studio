@@ -29,6 +29,8 @@ async function fetchForKeyword(
   count: number,
   sceneIndex: number
 ): Promise<string[]> {
+  // Clear stale images from previous fetches to prevent accumulation
+  await fs.promises.rm(sceneDir, { recursive: true, force: true });
   await fs.promises.mkdir(sceneDir, { recursive: true });
 
   if (!PINTEREST_DL_BIN) {
