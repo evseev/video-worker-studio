@@ -37,12 +37,28 @@ export function ProjectCard({
         </svg>
       </button>
       <a href={href} className="block p-5">
-        <div className="aspect-video rounded-xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-white/[0.04] flex items-center justify-center mb-4 overflow-hidden">
-          {project.status === "completed" ? (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400 group-hover:scale-110 transition-transform">
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
-            </svg>
+        <div className="aspect-video rounded-xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-white/[0.04] flex items-center justify-center mb-4 overflow-hidden relative">
+          {isCompleted && project.video_url ? (
+            <>
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video
+                src={project.video_url}
+                preload="metadata"
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                onLoadedData={(e) => {
+                  // Seek to 1 second for a better thumbnail frame
+                  (e.target as HTMLVideoElement).currentTime = 1;
+                }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white drop-shadow-lg group-hover:scale-110 transition-transform">
+                  <circle cx="12" cy="12" r="10" />
+                  <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
+                </svg>
+              </div>
+            </>
           ) : (
             <div className="text-zinc-600">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
