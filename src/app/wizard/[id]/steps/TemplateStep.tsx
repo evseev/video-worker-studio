@@ -148,8 +148,6 @@ export function TemplateStep({ store }: { store: WizardStoreApi }) {
               topic: state.topic,
               template: state.selectedTemplate,
               wizard_step: "idea",
-              aspect_ratio: state.settings.aspectRatio,
-              video_quality: state.settings.quality,
               draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea },
             });
             setStep("idea");
