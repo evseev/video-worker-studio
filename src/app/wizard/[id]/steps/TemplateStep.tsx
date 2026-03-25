@@ -125,12 +125,12 @@ export function TemplateStep({ store }: { store: WizardStoreApi }) {
             <select
               value={settings.quality}
               onChange={(e) =>
-                store.getState().setSettings({ quality: e.target.value as "hd" | "fullhd" | "4k" })
+                store.getState().setSettings({ quality: e.target.value as "720p" | "1080p" | "4k" })
               }
               className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
             >
-              <option value="hd">720p</option>
-              <option value="fullhd">1080p</option>
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
               <option value="4k">4K</option>
             </select>
           </div>

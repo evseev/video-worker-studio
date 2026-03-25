@@ -33,7 +33,7 @@ describe("wizard-store", () => {
               assets: [{ url: "/a.jpg", options: ["/a.jpg", "/b.jpg", "/c.jpg"], selectedIndex: 1 }],
             },
           ],
-          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
         } as unknown,
       });
       const store = createWizardStore(project);
@@ -54,7 +54,7 @@ describe("wizard-store", () => {
               assets: [{ url: "/old.jpg" }],
             },
           ],
-          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
         } as unknown,
       });
       const store = createWizardStore(project);
@@ -214,7 +214,7 @@ describe("wizard-store", () => {
               assets: [{ options: ["/x.jpg", "/y.jpg"], selectedIndex: 1 }],
             },
           ],
-          settings: { sceneCount: 4, sceneDuration: 3, aspectRatio: "16:9", quality: "hd" },
+          settings: { sceneCount: 4, sceneDuration: 3, aspectRatio: "16:9", quality: "720p" },
         } as unknown,
       });
       const store = createWizardStore(project);
@@ -238,7 +238,7 @@ describe("wizard-store", () => {
       const project = makeProject({
         draft_scenes: {
           scenes: [],
-          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+          settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
           targetKeywords: "fitness tips",
           videoDescription: "A great video about fitness",
           videoTags: ["fitness", "health", "tips"],

@@ -13,7 +13,7 @@ export type VideoSettings = {
   sceneCount: number;
   sceneDuration: number;
   aspectRatio: "16:9" | "9:16";
-  quality: "hd" | "fullhd" | "4k";
+  quality: "720p" | "1080p" | "4k";
 };
 
 export type RefinedIdea = {
@@ -71,7 +71,7 @@ const DEFAULT_SETTINGS: VideoSettings = {
   sceneCount: 6,
   sceneDuration: 5,
   aspectRatio: "9:16",
-  quality: "fullhd",
+  quality: "1080p",
 };
 
 function parseDraftData(project: Project): DraftData {

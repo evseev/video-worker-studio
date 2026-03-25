@@ -20,7 +20,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
         { template: "slideshow", scriptText: "Scene 1 text", searchKeywords: ["sunset beach"], assets: [{}] },
         { template: "slideshow", scriptText: "Scene 2 text", searchKeywords: ["mountain view"], assets: [{}] },
       ],
-      settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+      settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
     } as unknown,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -95,7 +95,7 @@ describe("PreviewStep", () => {
             assets: [{ options: ["/a.jpg", "/b.jpg", "/c.jpg"], selectedIndex: 0 }],
           },
         ],
-        settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+        settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
       } as unknown,
     }));
 
@@ -116,7 +116,7 @@ describe("PreviewStep", () => {
             assets: [{ url: "/old.jpg" }],
           },
         ],
-        settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "fullhd" },
+        settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
       } as unknown,
     }));
 
