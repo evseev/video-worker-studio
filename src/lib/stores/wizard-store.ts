@@ -1,21 +1,19 @@
 import { create } from "zustand";
 import type { Tables } from "@/lib/supabase/types";
+import type { Scene, TemplateId } from "@/templates/types";
+
+export type { Scene };
+export type { TemplateId };
 
 type Project = Tables<"projects">;
 
-export type WizardStep = "idea" | "refine" | "script" | "preview" | "render";
-
-export type Scene = {
-  scriptText: string;
-  searchKeyword: string;
-  assetUrl?: string;
-};
+export type WizardStep = "template" | "idea" | "refine" | "script" | "preview" | "render";
 
 export type VideoSettings = {
   sceneCount: number;
   sceneDuration: number;
   aspectRatio: "16:9" | "9:16";
-  quality: "hd" | "fullhd" | "4k";
+  quality: "720p" | "1080p" | "4k";
 };
 
 export type RefinedIdea = {
@@ -30,6 +28,9 @@ type DraftData = {
   scenes?: Scene[];
   settings?: VideoSettings;
   refinedIdea?: RefinedIdea;
+  targetKeywords?: string;
+  videoDescription?: string;
+  videoTags?: string[];
 };
 
 export type WizardState = {
@@ -37,9 +38,12 @@ export type WizardState = {
   topic: string;
   currentStep: WizardStep;
   scenes: Scene[];
-  selectedTemplate: string;
+  selectedTemplate: TemplateId;
   settings: VideoSettings;
   refinedIdea: RefinedIdea | null;
+  targetKeywords: string;
+  videoDescription: string;
+  videoTags: string[];
   projectStatus: string;
   videoUrl: string | null;
   renderErrorContext: unknown;
@@ -52,8 +56,12 @@ export type WizardState = {
   updateScene: (idx: number, updates: Partial<Scene>) => void;
   removeScene: (idx: number) => void;
   reorderScenes: (fromIdx: number, toIdx: number) => void;
-  setSelectedTemplate: (template: string) => void;
+  setSelectedTemplate: (template: TemplateId) => void;
   setSettings: (settings: Partial<VideoSettings>) => void;
+  selectAsset: (sceneIdx: number, slotIdx: number, assetIdx: number) => void;
+  setTargetKeywords: (keywords: string) => void;
+  setVideoDescription: (desc: string) => void;
+  setVideoTags: (tags: string[]) => void;
   setRefinedIdea: (idea: RefinedIdea | null) => void;
   syncFromProject: (project: Project) => void;
   saveProgress: (updates: Record<string, unknown>) => Promise<void>;
@@ -63,7 +71,7 @@ const DEFAULT_SETTINGS: VideoSettings = {
   sceneCount: 6,
   sceneDuration: 5,
   aspectRatio: "9:16",
-  quality: "fullhd",
+  quality: "1080p",
 };
 
 function parseDraftData(project: Project): DraftData {
@@ -72,7 +80,6 @@ function parseDraftData(project: Project): DraftData {
     ? JSON.parse(project.draft_scenes)
     : project.draft_scenes;
 
-  // Support both old format (flat array of scenes) and new format (object with scenes + settings)
   if (Array.isArray(raw)) {
     return { scenes: raw };
   }
@@ -86,11 +93,14 @@ export function createWizardStore(project: Project) {
   return create<WizardState>((set, get) => ({
     projectId: project.id,
     topic: project.topic || "",
-    currentStep: (project.wizard_step as WizardStep) || "idea",
+    currentStep: (project.wizard_step as WizardStep) || "template",
     scenes: draft.scenes || [],
-    selectedTemplate: project.selected_template || "Slideshow",
+    selectedTemplate: (project.selected_template as TemplateId) || "slideshow",
     settings: draft.settings || DEFAULT_SETTINGS,
     refinedIdea: draft.refinedIdea || null,
+    targetKeywords: draft.targetKeywords || "",
+    videoDescription: draft.videoDescription || project.video_description || "",
+    videoTags: draft.videoTags || (project.video_tags ? project.video_tags.split(", ") : []),
     projectStatus: project.status,
     videoUrl: project.video_url || null,
     renderErrorContext: (project as Record<string, unknown>).render_error_context ?? null,
@@ -104,7 +114,7 @@ export function createWizardStore(project: Project) {
 
     updateScene: (idx, updates) =>
       set((state) => ({
-        scenes: state.scenes.map((s, i) => (i === idx ? { ...s, ...updates } : s)),
+        scenes: state.scenes.map((s, i) => (i === idx ? { ...s, ...updates } as Scene : s)),
       })),
 
     removeScene: (idx) =>
@@ -127,6 +137,24 @@ export function createWizardStore(project: Project) {
         settings: { ...state.settings, ...updates },
       })),
 
+    selectAsset: (sceneIdx, slotIdx, assetIdx) =>
+      set((state) => ({
+        scenes: state.scenes.map((s, i) => {
+          if (i !== sceneIdx) return s;
+          const assets = [...s.assets];
+          const slot = assets[slotIdx];
+          if (!slot?.options?.[assetIdx]) return s;
+          assets[slotIdx] = { ...slot, url: slot.options[assetIdx], selectedIndex: assetIdx, objectPosition: undefined };
+          return { ...s, assets };
+        }),
+      })),
+
+    setTargetKeywords: (keywords) => set({ targetKeywords: keywords }),
+
+    setVideoDescription: (desc) => set({ videoDescription: desc }),
+
+    setVideoTags: (tags) => set({ videoTags: tags }),
+
     setRefinedIdea: (idea) => set({ refinedIdea: idea }),
 
     syncFromProject: (project) =>
@@ -145,8 +173,8 @@ export function createWizardStore(project: Project) {
           body: JSON.stringify({ projectId: get().projectId, ...updates }),
         });
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          console.error("Save failed:", res.status, body);
+          const text = await res.text().catch(() => "");
+          console.error("Save failed:", res.status, text);
         }
       } catch (e) {
         console.error("Failed to save progress", e);

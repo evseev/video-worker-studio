@@ -165,6 +165,115 @@ function SceneList({ scenes }: { scenes: Scene[] }) {
   );
 }
 
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+      aria-label={`Copy ${label}`}
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+
+function YouTubeMetadataExport({ project }: { project: Project }) {
+  const description = project.video_description;
+  const tags = project.video_tags;
+
+  if (!description && !tags) return null;
+
+  function downloadMetadata() {
+    const content = [
+      "TITLE",
+      project.topic,
+      "",
+      "DESCRIPTION",
+      description || "(none)",
+      "",
+      "TAGS",
+      tags || "(none)",
+    ].join("\n");
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project.topic.replace(/[^a-zA-Z0-9\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase()}-metadata.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-zinc-400">YouTube Metadata</h3>
+        <button
+          type="button"
+          onClick={downloadMetadata}
+          className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" x2="12" y1="15" y2="3" />
+          </svg>
+          Download .txt
+        </button>
+      </div>
+
+      {/* Title */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Title</span>
+          <CopyButton text={project.topic} label="title" />
+        </div>
+        <p className="text-sm text-zinc-200">{project.topic}</p>
+      </div>
+
+      {/* Description */}
+      {description && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Description</span>
+            <CopyButton text={description} label="description" />
+          </div>
+          <p className="text-sm text-zinc-300 whitespace-pre-wrap">{description}</p>
+        </div>
+      )}
+
+      {/* Tags */}
+      {tags && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Tags</span>
+            <CopyButton text={tags} label="tags" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tags.split(",").map((tag, idx) => (
+              <span
+                key={idx}
+                className="px-2.5 py-1 bg-violet-500/10 text-violet-300 text-xs rounded-full"
+              >
+                {tag.trim()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ErrorDetails({ project }: { project: Project }) {
   const errorContext = project.render_error_context as {
     message?: string;
@@ -313,7 +422,7 @@ export function ProjectDetailClient({
                   type="button"
                   onClick={() =>
                     router.push(
-                      `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+                      `/wizard/${project.id}?step=${project.wizard_step || "template"}`
                     )
                   }
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] cursor-pointer"
@@ -321,6 +430,7 @@ export function ProjectDetailClient({
                   Edit in Wizard
                 </button>
               </div>
+              <YouTubeMetadataExport project={project} />
             </>
           )}
 
@@ -338,7 +448,7 @@ export function ProjectDetailClient({
                   type="button"
                   onClick={() =>
                     router.push(
-                      `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+                      `/wizard/${project.id}?step=${project.wizard_step || "template"}`
                     )
                   }
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] cursor-pointer"
@@ -358,7 +468,7 @@ export function ProjectDetailClient({
                 type="button"
                 onClick={() =>
                   router.push(
-                    `/wizard/${project.id}?step=${project.wizard_step || "idea"}`
+                    `/wizard/${project.id}?step=${project.wizard_step || "template"}`
                   )
                 }
                 className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500 cursor-pointer"

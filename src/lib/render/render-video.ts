@@ -11,15 +11,20 @@ import * as path from "path";
 type RenderInput = {
   projectId: string;
   scenes: Array<{
+    template: string;
     scriptText: string;
-    assetUrl: string | null;
+    assets: Array<{ url?: string | null; objectPosition?: string }>;
+    leftLabel?: string;
+    rightLabel?: string;
+    title?: string;
+    subtitle?: string;
+    facts?: { label: string; value: string }[];
   }>;
   template?: string;
   aspectRatio?: string;
   videoQuality?: string;
   sceneDuration?: number;
   backgroundMusic?: string | null;
-  captionStyle?: string;
   voiceoverUrl?: string | null;
 };
 
@@ -126,7 +131,7 @@ export async function renderVideo(input: RenderInput): Promise<string> {
 }
 
 async function renderVideoOnLambda(input: RenderInput): Promise<string> {
-  const { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic, captionStyle } = input;
+  const { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic } = input;
   const { region, functionName, serveUrl } = getLambdaConfig();
   const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
   const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
@@ -141,8 +146,6 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
     scenes,
     sceneDurationFrames,
     transitionFrames: TRANSITION_FRAMES,
-    template,
-    captionStyle,
     musicUrl: musicTrack?.url ?? null,
     voiceoverUrl: input.voiceoverUrl ?? null,
   };
@@ -202,7 +205,10 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     ...scene,
     // Remotion bundle server runs on a different port than Next dev,
     // so relative /tmp_assets URLs must point to the app origin explicitly.
-    assetUrl: normalizeAssetUrlForLocalRender(scene.assetUrl),
+    assets: scene.assets.map((a) => ({
+      ...a,
+      url: normalizeAssetUrlForLocalRender(a.url ?? null),
+    })),
   }));
 
   console.log(`[render] Bundling Remotion for project ${projectId}...`);
@@ -236,8 +242,6 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     scenes: normalizedScenes,
     sceneDurationFrames,
     transitionFrames: TRANSITION_FRAMES,
-    template: input.template,
-    captionStyle: input.captionStyle,
     musicUrl: musicTrack?.url ?? null,
     voiceoverUrl: input.voiceoverUrl ?? null,
   };

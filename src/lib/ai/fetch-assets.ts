@@ -83,10 +83,11 @@ export async function fetchAssets(
   const baseDir = path.join(process.cwd(), assetPath, "vws-assets", projectId);
   await fs.promises.mkdir(baseDir, { recursive: true });
 
+  const batchId = Date.now();
   const tasks = keywords.map((keyword, i) => {
     return async () => {
       if (!keyword) return count > 1 ? [] : null;
-      const sceneDir = path.join(baseDir, `scene-${i}`);
+      const sceneDir = path.join(baseDir, `batch-${batchId}-${i}`);
       const images = await fetchForKeyword(keyword, sceneDir, count, i);
 
       if (count > 1) return images;

@@ -65,13 +65,15 @@ src/
     wizard/[id]/         # Interactive multi-step wizard UI
       client.tsx         # Wizard orchestrator (Zustand store init + step routing)
       page.tsx           # Server component (auth + project fetch)
-      steps/             # 5 step components
-        IdeaStep.tsx     # Topic + video settings + AI hook suggestions
+      steps/             # 6 step components
+        TemplateStep.tsx # Template archetype + project settings (topic, scenes, duration, ratio, quality)
+        IdeaStep.tsx     # AI hook suggestions for chosen topic
         RefineStep.tsx   # AI enhance + trend validation
-        ScriptStep.tsx   # Template selection + AI script generation
+        ScriptStep.tsx   # AI script generation (template-specific prompts)
         PreviewStep.tsx  # Asset preview + drag-and-drop reorder
         RenderStep.tsx   # Render summary + progress + video player
   components/
+    DraggableImage.tsx   # Shared hover-to-reveal drag-to-pan image component (used by all SceneCards)
     dashboard.tsx        # Dashboard orchestrator (imports sub-components)
     dashboard/           # Dashboard sub-components
       project-card.tsx
@@ -79,15 +81,9 @@ src/
       empty-state.tsx
       create-modal.tsx
       delete-modal.tsx
-    wizard/              # Legacy wizard components (being migrated to steps/)
-      idea-step.tsx
-      script-step.tsx
-      render-step.tsx    # Container with slots for config sub-components
-      scene-card.tsx
-      template-selector.tsx
+    wizard/              # Shared wizard sub-components
       video-config-selector.tsx
       music-selector.tsx
-      caption-style-selector.tsx
       voiceover-upload.tsx
     ui/
       toast.tsx           # Toast notification system (Zustand store)
@@ -109,7 +105,6 @@ src/
       wizard-store.ts    # Zustand store for wizard state (scenes, settings, refinedIdea)
     projects/
       delete-project-assets.ts # Storage + temp cleanup when deleting a project
-    caption-styles.ts    # 4 caption style presets (minimal, bold, strip, split)
     music-presets.ts     # 5 royalty-free music track presets
     rate-limit.ts        # In-memory sliding window rate limiter
     supabase/
@@ -117,10 +112,22 @@ src/
       server.ts          # Server client (uses cookies)
       middleware.ts      # Session refresh helper
       types.ts           # Auto-generated DB types — DO NOT HAND-EDIT
-  remotion/              # Remotion composition templates
+  templates/             # Template system (3 structural archetypes)
+    types.ts             # TemplateId, TemplateConfig, Scene union types
+    index.ts             # Template registry and lookup
+    slideshow/           # Single-image slideshow archetype
+      config.ts, prompt.ts, schema.ts, types.ts, SceneCard.tsx
+    comparison/          # Side-by-side comparison archetype
+      config.ts, prompt.ts, schema.ts, types.ts, SceneCard.tsx
+    fact-card/           # Two-image identity/fact card archetype
+      config.ts, prompt.ts, schema.ts, types.ts, SceneCard.tsx
+  remotion/              # Remotion composition and rendering
     Root.tsx
-    Scene.tsx
-    VideoComposition.tsx
+    VideoComposition.tsx # Template-based scene dispatch
+    templates/           # Remotion scene components per archetype
+      SlideshowScene.tsx
+      ComparisonScene.tsx
+      FactCardScene.tsx
   middleware.ts           # Auth guard (blocks all routes except public ones)
 
 supabase/
@@ -151,7 +158,7 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `caption_style`, `voiceover_url` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_description`, `video_tags` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 
 ### Project status lifecycle
@@ -207,7 +214,8 @@ draft → processing → rendering → completed
 | `/api/wizard/script` | POST | ✅ | Generate scene scripts |
 | `/api/wizard/fetch-assets` | POST | ✅ | Fetch scene assets from Pinterest (supports multi-asset mode) |
 | `/api/wizard/upload-voiceover` | POST | ✅ | Upload voice-over audio file (MP3/WAV, max 50MB) |
-| `/api/wizard/render` | POST | ✅ | Dispatch wizard render job (with video config, music, captions) |
+| `/api/wizard/generate-seo` | POST | ✅ | Generate YouTube SEO metadata (description + tags) |
+| `/api/wizard/render` | POST | ✅ | Dispatch wizard render job (with video config, music, template) |
 
 - Route handlers must return `NextResponse.json()` consistently.
 - All authenticated routes must validate the Supabase session and return `401` if missing.
@@ -290,9 +298,10 @@ draft → processing → rendering → completed
 | `docs/tech_stack.md` | Technology choices and rationale |
 | `docs/workflow_design.md` | Pipeline design, failure modes, retries |
 | `docs/ux_specification.md` | Screen-by-screen layout and interactions |
-| `docs/prd_backlog.md` | Product backlog (19 epics, all MVP stories complete) |
+| `docs/prd_backlog.md` | Product backlog (21 epics; Epics 1–20 complete, Epic 21 planned) |
 | `docs/mvp_development_plan.md` | Original development roadmap |
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
+| `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |
 | `docs/adr/001-gemini-3-flash-upgrade.md` | Architecture decision record |
 
 ---

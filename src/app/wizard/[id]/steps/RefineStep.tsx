@@ -8,7 +8,7 @@ import { useStore } from "zustand";
 type Props = { store: StoreApi<WizardState> };
 
 export function RefineStep({ store }: Props) {
-  const { projectId, topic, settings, refinedIdea, setRefinedIdea, setTopic, saveProgress, setStep } = useStore(store);
+  const { projectId, topic, selectedTemplate, settings, refinedIdea, setRefinedIdea, setTopic, targetKeywords, setTargetKeywords, saveProgress, setStep } = useStore(store);
   const [enhancing, setEnhancing] = useState(false);
   const [validating, setValidating] = useState(false);
   const [enhancedIdeas, setEnhancedIdeas] = useState<string[]>(refinedIdea?.ideas || []);
@@ -23,7 +23,7 @@ export function RefineStep({ store }: Props) {
       const res = await fetch("/api/wizard/enhance-idea", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, idea: topic, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
+        body: JSON.stringify({ projectId, idea: `${topic} (Template: ${selectedTemplate})`, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
       });
       const data = await res.json();
       if (data.ideas) {
@@ -88,6 +88,24 @@ export function RefineStep({ store }: Props) {
         >
           {enhancing ? "Enhancing..." : "Enhance with AI"}
         </button>
+      </div>
+
+      {/* Target Keywords (optional) */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-6">
+        <label className="block text-sm font-medium text-zinc-400 mb-1">
+          Target Keywords
+          <span className="text-zinc-600 font-normal ml-1">(optional)</span>
+        </label>
+        <p className="text-xs text-zinc-500 mb-3">
+          Enter keywords you want to rank for on YouTube. These will be used for SEO metadata generation.
+        </p>
+        <input
+          type="text"
+          value={targetKeywords}
+          onChange={(e) => setTargetKeywords(e.target.value)}
+          placeholder="e.g., productivity tips, morning routine, life hacks"
+          className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-base focus:outline-none focus:border-violet-500/50"
+        />
       </div>
 
       {/* Enhanced Ideas */}
@@ -168,7 +186,7 @@ export function RefineStep({ store }: Props) {
             await saveProgress({
               topic,
               wizard_step: "script",
-              draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea },
+              draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea, targetKeywords: state.targetKeywords },
             });
             setStep("script");
           }}

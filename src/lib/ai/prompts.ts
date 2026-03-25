@@ -4,13 +4,13 @@ type VideoFormatOpts = { totalDuration: number };
 type ScriptOpts = { sceneCount: number; sceneDuration: number; aspectRatio?: string };
 type IdeasOpts = { topic: string; totalDuration: number };
 
-function videoFormatLabel(totalDuration: number): string {
+export function videoFormatLabel(totalDuration: number): string {
   if (totalDuration <= 60) return "short-form";
   if (totalDuration <= 300) return "medium-length";
   return "long-form";
 }
 
-function durationDescription(totalDuration: number): string {
+export function durationDescription(totalDuration: number): string {
   if (totalDuration < 60) return `~${totalDuration} seconds`;
   const mins = Math.round(totalDuration / 60);
   return `~${mins} minute${mins > 1 ? "s" : ""}`;
@@ -77,6 +77,49 @@ RULES:
 - End with a strong call to action or surprising twist.
 - searchKeyword must be descriptive enough to find a beautiful, cinematic image.
 - Output MUST match the required JSON schema exactly.`;
+}
+
+type SeoOpts = { sceneCount: number; sceneDuration: number };
+
+export function generateSeoMetadataPrompt(opts: SeoOpts): string {
+  const totalDuration = opts.sceneCount * opts.sceneDuration;
+  const format = videoFormatLabel(totalDuration);
+  const duration = durationDescription(totalDuration);
+
+  return `You are a YouTube SEO specialist.
+Given a video idea, its scene scripts, and optional target keywords, generate:
+1. A YouTube video description optimized for search discovery and viewer engagement.
+2. A list of relevant YouTube tags for maximum discoverability.
+
+RULES for description:
+- Start with a compelling 1-2 sentence hook that includes the main keyword naturally.
+- Include a brief summary of what viewers will learn/see (2-3 sentences).
+- Add 10-15 relevant hashtags at the end.
+- Total length: 200-300 words.
+- The video is ${format}, approximately ${duration} long.
+- Do NOT include timestamps or links.
+
+RULES for tags:
+- Generate 20-30 tags.
+- Mix broad and specific keywords.
+- Include variations and long-tail keywords.
+- Each tag should be 1-4 words.
+- If the user provided target keywords, make sure they are included as tags and woven into the description.
+
+Output MUST match the required JSON schema.`;
+}
+
+export function generateSeoMetadataUserMessage(
+  idea: string,
+  scenes: { scriptText: string }[],
+  targetKeywords?: string
+): string {
+  const sceneSummary = scenes.map((s, i) => `Scene ${i + 1}: ${s.scriptText}`).join("\n");
+  let msg = `Video idea: ${idea}\n\nScene scripts:\n${sceneSummary}`;
+  if (targetKeywords?.trim()) {
+    msg += `\n\nTarget keywords: ${targetKeywords}`;
+  }
+  return msg;
 }
 
 export function generateIdeasPrompt(opts: IdeasOpts): string {

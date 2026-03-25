@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1.0] — 2026-03-25
+
+### Added
+- **Image repositioning** — hover any image thumbnail in the Preview step to reveal a drag-to-pan control. Drag to reposition which part of the image is visible in the final video. Works across all three templates (Slideshow, Comparison, Fact Card).
+- **Render-accurate preview thumbnails** — preview thumbnails now match the exact aspect ratio of the render slot (e.g., narrow portrait panels for Comparison in 9:16 video) so what you see in preview matches the final output.
+
+### Fixed
+- **Asset refresh no longer mixes images across scenes** — single-asset refreshes now use unique download directories, preventing Pinterest images from different searches from leaking into each other.
+- **Asset refresh API no longer crashes** when scenes are sent without an assets array (missing `assets` field in `normalizeScene`).
+- **Asset refresh response now reads the correct slot** — fixed response extraction to always read `assets[0]` since single-slot refreshes return results at index 0.
+
+### For Contributors
+- `AssetSlot` type gains optional `objectPosition?: string` field — stores CSS objectPosition values (e.g., "50% 50%"), persisted in `draft_scenes` JSONB.
+- New `DraggableImage` component at `src/components/DraggableImage.tsx` — shared hover/drag-to-pan with refresh button, used by all SceneCard types.
+- `objectPosition` threaded through full render pipeline: wizard store → Inngest → RenderInput → VideoComposition → Remotion scene components.
+- `fetchAssets` now uses `batch-{timestamp}-{index}` directories to prevent cross-call collisions.
+- 10 new tests (8 for DraggableImage, 2 for wizard store objectPosition behavior).
+
+## [0.4.0.0] — 2026-03-25
+
+### Added
+- **Template system with 3 structural archetypes** — replaced cosmetic template presets with Slideshow, Comparison, and Fact Card archetypes that drive the entire video pipeline: AI scene generation, asset fetching, preview layout, and Remotion rendering.
+- **6-step wizard flow** — new Template step at the start lets you pick an archetype and configure project settings (topic, scene count, duration, aspect ratio, quality) before moving to Idea, Refine, Script, Preview, and Render.
+- **Template-specific AI prompts and schemas** — each archetype has its own AI prompt, Zod schema, and scene data model so the AI generates structurally correct scripts per template.
+- **Multi-slot asset fetching** — Comparison and Fact Card templates fetch 2 images per scene (left/right or hero/thumbnail) instead of just 1.
+- **3 new Remotion scene components** — `SlideshowScene`, `ComparisonScene`, and `FactCardScene` under `src/remotion/templates/` replace the single generic `Scene.tsx`.
+- **Template-specific scene cards** — each archetype has its own `SceneCard` component with slot-aware asset pickers and layout previews.
+- **Dashboard improvements** — "New Video" now goes straight to the Template step; completed project cards show video thumbnails.
+
+### Changed
+- Scene data model uses a discriminated union with `searchKeywords[]` and `assets: AssetSlot[]` instead of flat `searchKeyword`/`assetUrl`.
+- Caption styles removed as a standalone concept — visual styling is now controlled by each template archetype.
+- Video quality values unified to `720p`/`1080p`/`4k`.
+
+### Removed
+- `src/components/wizard/template-selector.tsx` (replaced by TemplateStep)
+- `src/components/wizard/caption-style-selector.tsx` (absorbed into templates)
+- `src/lib/caption-styles.ts` (absorbed into templates)
+- `src/remotion/Scene.tsx` (replaced by 3 template-specific scene components)
+- Legacy wizard step components (`idea-step.tsx`, `script-step.tsx`, `render-step.tsx`, `scene-card.tsx`)
+
+### For contributors
+- New `src/templates/` directory with isolated modules per archetype (config, prompt, schema, types, SceneCard).
+- New `src/remotion/templates/` directory with Remotion scene components.
+- Template registry at `src/templates/index.ts` for looking up configs by template ID.
+- Design document at `docs/designs/2026-03-24-template-system-design.md`.
+
+## [0.3.4.0] - 2026-03-24
+
+### Added
+- **YouTube SEO metadata generation** — after generating your scene script, the AI automatically creates an SEO-optimized YouTube video description (200-300 words with hashtags) and 20-30 discoverable tags. Both are editable in a collapsible "YouTube Metadata" section below your scenes.
+- **Target keywords input** — optional field in the Refine step where you can enter keywords you want to rank for on YouTube. These get woven into your generated description and tags.
+- **Metadata export on project page** — completed projects now show a "YouTube Metadata" section with copy-to-clipboard buttons for title, description, and tags, plus a "Download .txt" button that exports everything in one file.
+### For contributors
+- New `POST /api/wizard/generate-seo` endpoint and `generateSeoMetadata()` AI helper.
+- Database migration adds `video_description` and `video_tags` columns to `projects`.
+- 6 new tests covering SEO store fields and prompt generation.
+
+## [0.3.3.0] - 2026-03-24
+
+### Fixed
+- **Multiple asset candidates restored** — the image picker that lets you choose from 3 image options per scene was lost during the 5-step wizard refactor. It's back: fetch images and you'll see 3 thumbnail options per scene to pick from.
+- Asset selection now persists immediately — picking a different thumbnail saves your choice to the server, so it survives page refreshes and tab closures.
+
+### Added
+- **32 regression tests** covering the wizard store, SceneCard asset picker, fetch-assets API route, PreviewStep fetch behavior, and the fetch-assets function — prevents the multi-asset feature from silently disappearing again.
+
 ## [0.3.2.0] - 2026-03-24
 
 ### Fixed

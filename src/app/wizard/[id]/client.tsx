@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "zustand";
 import type { Tables } from "@/lib/supabase/types";
 import { createWizardStore, type WizardStep, type WizardStoreApi } from "@/lib/stores/wizard-store";
+import { TemplateStep } from "./steps/TemplateStep";
 import { IdeaStep } from "./steps/IdeaStep";
 import { RefineStep } from "./steps/RefineStep";
 import { ScriptStep } from "./steps/ScriptStep";
@@ -14,6 +15,7 @@ import { RenderStep } from "./steps/RenderStep";
 type Project = Tables<"projects">;
 
 const STEPS: { key: WizardStep; label: string }[] = [
+  { key: "template", label: "Template" },
   { key: "idea", label: "Idea" },
   { key: "refine", label: "Refine" },
   { key: "script", label: "Script" },
@@ -107,6 +109,7 @@ export function WizardClient({ project }: { project: Project }) {
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-6xl px-6 py-8">
+          {currentStep === "template" && <TemplateStep store={store} />}
           {currentStep === "idea" && <IdeaStep store={store} />}
           {currentStep === "refine" && <RefineStep store={store} />}
           {currentStep === "script" && <ScriptStep store={store} />}
