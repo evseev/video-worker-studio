@@ -3,7 +3,6 @@ import {
   Img,
   interpolate,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
 
 type ComparisonSceneProps = {
@@ -25,7 +24,6 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   rightLabel,
 }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
 
   // Images slide in from sides over 15 frames
   const slideProgress = interpolate(frame, [0, 15], [0, 1], {
@@ -43,194 +41,159 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
     extrapolateRight: "clamp",
   });
 
-  // Keep scale stable (no Ken Burns for comparison layout)
-  void durationInFrames;
+  const captionSlideY = interpolate(frame, [10, 25], [20, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
-  const imageContainerStyle: React.CSSProperties = {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    overflow: "hidden",
-  };
-
-  const imageWrapperStyle: React.CSSProperties = {
-    flex: 1,
-    borderRadius: 8,
-    overflow: "hidden",
-    position: "relative",
-  };
-
-  const gradientOverlayStyle: React.CSSProperties = {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: "30%",
-    background:
-      "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)",
-    pointerEvents: "none",
-  };
+  const font = "system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
 
   return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: "#0a0a0f",
-        flexDirection: "column",
-        padding: 12,
-        gap: 0,
-      }}
-    >
-      {/* Images row */}
+    <AbsoluteFill style={{ backgroundColor: "#0a0a0f" }}>
+      {/* Two images side by side — fill entire frame */}
       <div
         style={{
+          position: "absolute",
+          inset: 0,
           display: "flex",
-          flex: 1,
-          gap: 6,
-          maxHeight: "55%",
+          gap: 4,
         }}
       >
-        {/* Left side */}
+        {/* Left image */}
         <div
           style={{
-            ...imageContainerStyle,
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
             opacity: imageOpacity,
             transform: `translateX(${leftX}px)`,
           }}
         >
-          {/* Left label */}
+          {leftAssetUrl ? (
+            <Img
+              src={leftAssetUrl}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{ width: "100%", height: "100%", background: LEFT_GRADIENT }}
+            />
+          )}
+          {/* Dark gradient overlay at bottom for label readability */}
           <div
             style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "40%",
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)",
+            }}
+          />
+          {/* Left label — large, overlaid at bottom of image */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 60,
+              left: 0,
+              right: 0,
               textAlign: "center",
-              fontSize: 14,
-              fontWeight: 700,
+              fontSize: 32,
+              fontWeight: 800,
               color: "#f5576c",
-              fontFamily:
-                "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+              fontFamily: font,
               textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              flexShrink: 0,
+              letterSpacing: "0.08em",
+              textShadow: "0 2px 8px rgba(0,0,0,0.6)",
             }}
           >
             {leftLabel}
           </div>
-
-          {/* Left image */}
-          <div style={imageWrapperStyle}>
-            {leftAssetUrl ? (
-              <Img
-                src={leftAssetUrl}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              <div
-                style={{ width: "100%", height: "100%", background: LEFT_GRADIENT }}
-              />
-            )}
-            <div style={gradientOverlayStyle} />
-          </div>
         </div>
 
-        {/* VS badge in center */}
+        {/* Right image */}
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            width: 32,
-            zIndex: 10,
-          }}
-        >
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              backgroundColor: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#0a0a0f",
-              fontFamily:
-                "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-              flexShrink: 0,
-            }}
-          >
-            VS
-          </div>
-        </div>
-
-        {/* Right side */}
-        <div
-          style={{
-            ...imageContainerStyle,
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
             opacity: imageOpacity,
             transform: `translateX(${rightX}px)`,
           }}
         >
-          {/* Right label */}
+          {rightAssetUrl ? (
+            <Img
+              src={rightAssetUrl}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                background: RIGHT_GRADIENT,
+              }}
+            />
+          )}
+          {/* Dark gradient overlay at bottom */}
           <div
             style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "40%",
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)",
+            }}
+          />
+          {/* Right label — large, overlaid at bottom of image */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 60,
+              left: 0,
+              right: 0,
               textAlign: "center",
-              fontSize: 14,
-              fontWeight: 700,
+              fontSize: 32,
+              fontWeight: 800,
               color: "#4facfe",
-              fontFamily:
-                "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+              fontFamily: font,
               textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              flexShrink: 0,
+              letterSpacing: "0.08em",
+              textShadow: "0 2px 8px rgba(0,0,0,0.6)",
             }}
           >
             {rightLabel}
           </div>
-
-          {/* Right image */}
-          <div style={imageWrapperStyle}>
-            {rightAssetUrl ? (
-              <Img
-                src={rightAssetUrl}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background: RIGHT_GRADIENT,
-                }}
-              />
-            )}
-            <div style={gradientOverlayStyle} />
-          </div>
         </div>
       </div>
 
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
-
-      {/* Caption bar */}
+      {/* Caption text — overlaid at very bottom of frame */}
       <div
         style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: "16px 24px",
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
           opacity: captionOpacity,
-          backgroundColor: "rgba(0,0,0,0.75)",
-          padding: "12px 16px",
-          borderRadius: 8,
-          marginTop: 8,
+          transform: `translateY(${captionSlideY}px)`,
         }}
       >
         <p
           style={{
-            fontSize: 14,
+            fontSize: 28,
             color: "white",
             textAlign: "center",
             margin: 0,
-            lineHeight: 1.4,
-            fontFamily:
-              "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+            lineHeight: 1.3,
+            fontWeight: 600,
+            fontFamily: font,
+            textShadow: "0 2px 6px rgba(0,0,0,0.5)",
           }}
         >
           {scriptText}
