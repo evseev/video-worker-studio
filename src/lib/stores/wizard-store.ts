@@ -144,7 +144,7 @@ export function createWizardStore(project: Project) {
           const assets = [...s.assets];
           const slot = assets[slotIdx];
           if (!slot?.options?.[assetIdx]) return s;
-          assets[slotIdx] = { ...slot, url: slot.options[assetIdx], selectedIndex: assetIdx };
+          assets[slotIdx] = { ...slot, url: slot.options[assetIdx], selectedIndex: assetIdx, objectPosition: undefined };
           return { ...s, assets };
         }),
       })),

@@ -42,7 +42,7 @@ export function PreviewStep({ store }: Props) {
           const assets = scene.assets.map((slot, slotIdx) => {
             const options = returnedScene.assets?.[slotIdx]?.options;
             if (!options || options.length === 0) return slot;
-            return { ...slot, options, url: options[0], selectedIndex: 0 };
+            return { ...slot, options, url: options[0], selectedIndex: 0, objectPosition: undefined };
           });
           return { ...scene, assets };
         });
@@ -76,11 +76,11 @@ export function PreviewStep({ store }: Props) {
         }),
       });
       const data = await res.json();
-      const options: string[] = data.scenes?.[0]?.assets?.[slotIdx]?.options ?? [];
+      const options: string[] = data.scenes?.[0]?.assets?.[0]?.options ?? [];
       if (options.length > 0) {
         const currentScene = store.getState().scenes[sceneIdx];
         const assets = [...currentScene.assets];
-        assets[slotIdx] = { ...assets[slotIdx], options, url: options[0], selectedIndex: 0 };
+        assets[slotIdx] = { ...assets[slotIdx], options, url: options[0], selectedIndex: 0, objectPosition: undefined };
         store.getState().updateScene(sceneIdx, { assets } as Partial<Scene>);
         const state = store.getState();
         await state.saveProgress({

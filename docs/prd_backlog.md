@@ -220,10 +220,15 @@
 *   [x] **Story 20.13:** E2E verification for all 3 templates, fix dashboard routing, video thumbnails.
 
 ## Epic 21: Image Crop & Positioning
-**Description:** Add per-asset crop/pan controls so users can adjust which area of an image is visible in the final video. Different templates have different visible areas (slideshow = full frame, comparison = half-width portrait slot, fact card = hero banner + small thumbnail), and the crop aspect ratio should match the slot shape.
+**Description:** Add per-asset pan controls so users can adjust which area of an image is visible in the final video. Pan-only model (no zoom) using CSS `objectPosition`. Hover-to-reveal drag-to-pan interaction inline on SceneCard thumbnails. Position auto-persists in `draft_scenes` JSONB (no DB migration).
 
-*   [ ] **Story 21.1:** Add crop data model — `{ x, y, width, height }` or `objectPosition` per `AssetSlot` in scene types.
-*   [ ] **Story 21.2:** Build image crop UI component with drag-to-reposition, template-aware aspect ratio constraints.
-*   [ ] **Story 21.3:** Integrate crop UI into template-specific SceneCard components (slideshow, comparison, fact-card).
-*   [ ] **Story 21.4:** Thread crop coordinates through render pipeline to Remotion `Img` component (`objectPosition` style).
-*   [ ] **Story 21.5:** Persist crop data in `draft_scenes` JSON and restore on wizard resume.
+**Spec:** `docs/superpowers/specs/2026-03-25-image-crop-positioning-design.md`
+**Plan:** `docs/superpowers/plans/2026-03-25-image-crop-positioning.md`
+
+*   [x] **Story 21.1:** Add `objectPosition?: string` to `AssetSlot` in `src/templates/types.ts`.
+*   [x] **Story 21.2:** Reset `objectPosition` on asset swap in wizard store `selectAsset` action + unit tests.
+*   [x] **Story 21.3:** Reset `objectPosition` on asset refresh in `PreviewStep` (`fetchAllAssets` and `handleRefreshAsset`).
+*   [x] **Story 21.4:** Build shared `DraggableImage` component (`src/components/DraggableImage.tsx`) — hover overlay, pointer-event drag-to-pan, position clamping, refresh button relocation + unit tests.
+*   [x] **Story 21.5:** Integrate `DraggableImage` into all 3 SceneCard types (slideshow, comparison, fact-card).
+*   [x] **Story 21.6:** Thread `objectPosition` through render pipeline — `VideoGenerateScene`, `RenderInput`, `VideoCompositionProps`, and all 3 Remotion scene components.
+*   [x] **Story 21.7:** E2E verification — full test suite, TypeScript check, manual verification across all templates.

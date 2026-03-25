@@ -9,7 +9,7 @@ export type VideoCompositionProps = {
   scenes: Array<{
     template: string;
     scriptText: string;
-    assets: Array<{ url?: string | null }>;
+    assets: Array<{ url?: string | null; objectPosition?: string }>;
     // Comparison-specific
     leftLabel?: string;
     rightLabel?: string;
@@ -66,6 +66,8 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                         scriptText={scene.scriptText}
                         leftAssetUrl={scene.assets[0]?.url ?? null}
                         rightAssetUrl={scene.assets[1]?.url ?? null}
+                        leftObjectPosition={scene.assets[0]?.objectPosition}
+                        rightObjectPosition={scene.assets[1]?.objectPosition}
                         leftLabel={scene.leftLabel ?? ""}
                         rightLabel={scene.rightLabel ?? ""}
                       />
@@ -76,6 +78,8 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                         scriptText={scene.scriptText}
                         mainAssetUrl={scene.assets[0]?.url ?? null}
                         secondaryAssetUrl={scene.assets[1]?.url ?? null}
+                        mainObjectPosition={scene.assets[0]?.objectPosition}
+                        secondaryObjectPosition={scene.assets[1]?.objectPosition}
                         title={scene.title ?? ""}
                         subtitle={scene.subtitle ?? ""}
                         facts={scene.facts ?? []}
@@ -86,6 +90,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                       <SlideshowScene
                         scriptText={scene.scriptText}
                         assetUrl={scene.assets[0]?.url ?? null}
+                        assetObjectPosition={scene.assets[0]?.objectPosition}
                       />
                     );
                 }

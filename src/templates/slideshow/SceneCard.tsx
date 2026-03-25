@@ -1,3 +1,4 @@
+import { DraggableImage } from "@/components/DraggableImage";
 import type { SlideshowScene } from "@/templates/types";
 
 type SceneCardProps = {
@@ -17,6 +18,7 @@ export function SlideshowSceneCard({
   scene,
   index,
   totalScenes,
+  aspectRatio,
   onUpdate,
   onRemove,
   onMoveUp,
@@ -27,6 +29,8 @@ export function SlideshowSceneCard({
   const slot = scene.assets[0];
   const displayUrl = slot?.url ?? slot?.options?.[slot?.selectedIndex ?? 0];
   const hasOptions = slot?.options && slot.options.length > 1;
+  // Preview thumbnail matches video aspect ratio (full-frame image)
+  const thumbAR = aspectRatio === "16:9" ? "16/9" : "9/16";
 
   return (
     <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 flex gap-4 group">
@@ -44,24 +48,19 @@ export function SlideshowSceneCard({
           </svg>
         </button>
 
-        <div className="w-20 h-24 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative">
-          {displayUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={displayUrl} alt={scene.searchKeywords[0] ?? ""} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-[10px] text-zinc-600">No image</span>
-          )}
-          <button
-            type="button"
-            onClick={() => onRefreshAsset(0)}
-            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-            aria-label="Refresh asset"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <polyline points="23 4 23 10 17 10" />
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-            </svg>
-          </button>
+        <div className="w-20 bg-black/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center relative" style={{ aspectRatio: thumbAR }}>
+          <DraggableImage
+            src={displayUrl ?? ""}
+            alt={scene.searchKeywords[0] ?? ""}
+            objectPosition={slot?.objectPosition}
+            onPositionChange={(pos) => {
+              const assets = [...scene.assets];
+              assets[0] = { ...assets[0], objectPosition: pos };
+              onUpdate({ assets } as Partial<SlideshowScene>);
+            }}
+            onRefresh={() => onRefreshAsset(0)}
+            className="w-full h-full"
+          />
         </div>
 
         <button

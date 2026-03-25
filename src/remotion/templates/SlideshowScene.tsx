@@ -9,6 +9,7 @@ import {
 type SlideshowSceneProps = {
   scriptText: string;
   assetUrl: string | null;
+  assetObjectPosition?: string;
 };
 
 const FALLBACK_GRADIENT =
@@ -17,6 +18,7 @@ const FALLBACK_GRADIENT =
 export const SlideshowScene: React.FC<SlideshowSceneProps> = ({
   scriptText,
   assetUrl,
+  assetObjectPosition,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
@@ -50,7 +52,7 @@ export const SlideshowScene: React.FC<SlideshowSceneProps> = ({
         {assetUrl ? (
           <Img
             src={assetUrl}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: assetObjectPosition ?? "50% 50%" }}
           />
         ) : (
           <div

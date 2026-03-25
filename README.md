@@ -151,7 +151,8 @@ src/
 │   ├── page.tsx            # Dashboard (server component, auth-gated)
 │   └── layout.tsx          # Root layout
 ├── components/
-│   └── dashboard.tsx       # Main dashboard UI
+│   ├── dashboard.tsx       # Main dashboard UI
+│   └── DraggableImage.tsx  # Shared hover-to-reveal drag-to-pan image component
 ├── lib/
 │   ├── ai/
 │   │   ├── prompts.ts           # Centralized LLM prompt templates (dynamic scene count, duration, aspect ratio)
@@ -248,7 +249,7 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Tech Stack](docs/tech_stack.md) — technology choices and rationale
 - [Workflow Design](docs/workflow_design.md) — pipeline design and failure modes
 - [UX Specification](docs/ux_specification.md) — screen-by-screen layout and interactions
-- [Product Backlog](docs/prd_backlog.md) — epics and stories (21 epics; Epics 1-20 complete, Epic 21 planned)
+- [Product Backlog](docs/prd_backlog.md) — epics and stories (21 epics; Epics 1-21 complete)
 - [MVP Development Plan](docs/mvp_development_plan.md) — original development roadmap
 - [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md) — render architecture design
 - [Template System Design](docs/designs/2026-03-24-template-system-design.md) — 3 structural archetypes design

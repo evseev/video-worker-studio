@@ -23,7 +23,8 @@ type Scene = SceneNew | SceneLegacy;
 
 function normalizeScene(scene: Scene): SceneNew {
   if ("searchKeywords" in scene && Array.isArray(scene.searchKeywords)) {
-    return scene as SceneNew;
+    const s = scene as SceneNew;
+    return { ...s, assets: s.assets ?? [] };
   }
   // Backward compatibility: convert singular searchKeyword → searchKeywords array
   const legacy = scene as SceneLegacy;

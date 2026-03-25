@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1.0] — 2026-03-25
+
+### Added
+- **Image repositioning** — hover any image thumbnail in the Preview step to reveal a drag-to-pan control. Drag to reposition which part of the image is visible in the final video. Works across all three templates (Slideshow, Comparison, Fact Card).
+- **Render-accurate preview thumbnails** — preview thumbnails now match the exact aspect ratio of the render slot (e.g., narrow portrait panels for Comparison in 9:16 video) so what you see in preview matches the final output.
+
+### Fixed
+- **Asset refresh no longer mixes images across scenes** — single-asset refreshes now use unique download directories, preventing Pinterest images from different searches from leaking into each other.
+- **Asset refresh API no longer crashes** when scenes are sent without an assets array (missing `assets` field in `normalizeScene`).
+- **Asset refresh response now reads the correct slot** — fixed response extraction to always read `assets[0]` since single-slot refreshes return results at index 0.
+
+### For Contributors
+- `AssetSlot` type gains optional `objectPosition?: string` field — stores CSS objectPosition values (e.g., "50% 50%"), persisted in `draft_scenes` JSONB.
+- New `DraggableImage` component at `src/components/DraggableImage.tsx` — shared hover/drag-to-pan with refresh button, used by all SceneCard types.
+- `objectPosition` threaded through full render pipeline: wizard store → Inngest → RenderInput → VideoComposition → Remotion scene components.
+- `fetchAssets` now uses `batch-{timestamp}-{index}` directories to prevent cross-call collisions.
+- 10 new tests (8 for DraggableImage, 2 for wizard store objectPosition behavior).
+
 ## [0.4.0.0] — 2026-03-25
 
 ### Added

@@ -9,6 +9,8 @@ type FactCardSceneProps = {
   scriptText: string;
   mainAssetUrl: string | null;
   secondaryAssetUrl: string | null;
+  mainObjectPosition?: string;
+  secondaryObjectPosition?: string;
   title: string;
   subtitle: string;
   facts: { label: string; value: string }[];
@@ -23,6 +25,8 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
   scriptText,
   mainAssetUrl,
   secondaryAssetUrl,
+  mainObjectPosition,
+  secondaryObjectPosition,
   title,
   subtitle,
   facts,
@@ -69,7 +73,7 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
         {mainAssetUrl ? (
           <Img
             src={mainAssetUrl}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: mainObjectPosition ?? "50% 50%" }}
           />
         ) : (
           <div
@@ -114,7 +118,7 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
             {secondaryAssetUrl ? (
               <Img
                 src={secondaryAssetUrl}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: secondaryObjectPosition ?? "50% 50%" }}
               />
             ) : (
               <div
