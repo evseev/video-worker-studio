@@ -24,19 +24,16 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     );
   }
 
-  // Save final settings to DB before rendering.
-  // Only update columns reliably in the PostgREST schema cache.
-  // Settings like aspectRatio, videoQuality are stored in draft_scenes JSON
-  // and passed directly to the Inngest event.
   const updates: Record<string, unknown> = {
     wizard_step: "render",
     selected_template: template,
     status: "processing",
   };
-  if (scenes) {
-    // Store full scenes + settings in draft_scenes for recovery
-    updates.draft_scenes = { scenes, settings: { aspectRatio, quality: videoQuality } };
-  }
+  if (scenes) updates.draft_scenes = scenes;
+  if (aspectRatio) updates.aspect_ratio = aspectRatio;
+  if (videoQuality) updates.video_quality = videoQuality;
+  if (backgroundMusic !== undefined) updates.background_music = backgroundMusic;
+  if (voiceoverUrl !== undefined) updates.voiceover_url = voiceoverUrl;
 
   await supabase
     .from("projects")

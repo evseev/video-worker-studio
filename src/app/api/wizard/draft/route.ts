@@ -16,21 +16,13 @@ export const PUT = withAuth(async (request, { user, supabase }) => {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
   }
 
-  // Only update columns that exist in the PostgREST schema cache.
-  // Other fields (video_description, video_tags, aspect_ratio, video_quality)
-  // are stored inside draft_scenes JSON and persisted to DB columns by the render route.
   const updates: Record<string, unknown> = {};
   if (topic !== undefined) updates.topic = topic;
   if (wizard_step !== undefined) updates.wizard_step = wizard_step;
+  if (draft_scenes !== undefined) updates.draft_scenes = draft_scenes;
   if (template !== undefined) updates.selected_template = template;
-
-  // Merge video_description and video_tags into draft_scenes if present,
-  // since their DB columns aren't reliably in the schema cache
-  let mergedDraftScenes = draft_scenes as Record<string, unknown> | undefined;
-  if (video_description !== undefined || video_tags !== undefined) {
-    mergedDraftScenes = { ...(mergedDraftScenes ?? {}), videoDescription: video_description, videoTags: video_tags };
-  }
-  if (mergedDraftScenes !== undefined) updates.draft_scenes = mergedDraftScenes;
+  if (video_description !== undefined) updates.video_description = video_description;
+  if (video_tags !== undefined) updates.video_tags = video_tags;
 
   if (Object.keys(updates).length > 0) {
     const { error } = await supabase
