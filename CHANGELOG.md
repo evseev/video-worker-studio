@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Template system with 3 structural archetypes** — replaced cosmetic template presets with Slideshow, Comparison, and Fact Card archetypes that drive the entire video pipeline: AI scene generation, asset fetching, preview layout, and Remotion rendering.
+- **6-step wizard flow** — new Template step at the start lets you pick an archetype and configure project settings (topic, scene count, duration, aspect ratio, quality) before moving to Idea, Refine, Script, Preview, and Render.
+- **Template-specific AI prompts and schemas** — each archetype has its own AI prompt, Zod schema, and scene data model so the AI generates structurally correct scripts per template.
+- **Multi-slot asset fetching** — Comparison and Fact Card templates fetch 2 images per scene (left/right or hero/thumbnail) instead of just 1.
+- **3 new Remotion scene components** — `SlideshowScene`, `ComparisonScene`, and `FactCardScene` under `src/remotion/templates/` replace the single generic `Scene.tsx`.
+- **Template-specific scene cards** — each archetype has its own `SceneCard` component with slot-aware asset pickers and layout previews.
+- **Dashboard improvements** — "New Video" now goes straight to the Template step; completed project cards show video thumbnails.
+
+### Changed
+- Scene data model uses a discriminated union with `searchKeywords[]` and `assets: AssetSlot[]` instead of flat `searchKeyword`/`assetUrl`.
+- Caption styles removed as a standalone concept — visual styling is now controlled by each template archetype.
+- Video quality values unified to `720p`/`1080p`/`4k`.
+
+### Removed
+- `src/components/wizard/template-selector.tsx` (replaced by TemplateStep)
+- `src/components/wizard/caption-style-selector.tsx` (absorbed into templates)
+- `src/lib/caption-styles.ts` (absorbed into templates)
+- `src/remotion/Scene.tsx` (replaced by 3 template-specific scene components)
+- Legacy wizard step components (`idea-step.tsx`, `script-step.tsx`, `render-step.tsx`, `scene-card.tsx`)
+
+### For contributors
+- New `src/templates/` directory with isolated modules per archetype (config, prompt, schema, types, SceneCard).
+- New `src/remotion/templates/` directory with Remotion scene components.
+- Template registry at `src/templates/index.ts` for looking up configs by template ID.
+- Design document at `docs/designs/2026-03-24-template-system-design.md`.
+
 ## [0.3.4.0] - 2026-03-24
 
 ### Added
