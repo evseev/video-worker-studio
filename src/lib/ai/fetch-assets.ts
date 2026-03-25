@@ -29,8 +29,6 @@ async function fetchForKeyword(
   count: number,
   sceneIndex: number
 ): Promise<string[]> {
-  // Clear stale images from previous fetches to prevent accumulation
-  await fs.promises.rm(sceneDir, { recursive: true, force: true });
   await fs.promises.mkdir(sceneDir, { recursive: true });
 
   if (!PINTEREST_DL_BIN) {
@@ -39,6 +37,9 @@ async function fetchForKeyword(
   }
 
   try {
+    // Snapshot existing files so we only return newly downloaded ones
+    const existingFiles = new Set(await fs.promises.readdir(sceneDir));
+
     console.log(`[fetch-assets] Scene ${sceneIndex}: searching for "${keyword}" (n=${count})`);
 
     const { stdout, stderr } = await execFileAsync(
@@ -52,11 +53,11 @@ async function fetchForKeyword(
 
     const files = await fs.promises.readdir(sceneDir);
     const imageFiles = files
-      .filter((f) => /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
+      .filter((f) => !existingFiles.has(f) && /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
       .sort()
       .map((f) => path.join(sceneDir, f));
 
-    console.log(`[fetch-assets] Scene ${sceneIndex}: found ${imageFiles.length} images`);
+    console.log(`[fetch-assets] Scene ${sceneIndex}: found ${imageFiles.length} new images`);
     return imageFiles;
   } catch (err) {
     console.error(`[fetch-assets] Scene ${sceneIndex}: Error fetching "${keyword}":`, err);
