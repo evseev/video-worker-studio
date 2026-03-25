@@ -37,9 +37,6 @@ async function fetchForKeyword(
   }
 
   try {
-    // Snapshot existing files so we only return newly downloaded ones
-    const existingFiles = new Set(await fs.promises.readdir(sceneDir));
-
     console.log(`[fetch-assets] Scene ${sceneIndex}: searching for "${keyword}" (n=${count})`);
 
     const { stdout, stderr } = await execFileAsync(
@@ -53,11 +50,11 @@ async function fetchForKeyword(
 
     const files = await fs.promises.readdir(sceneDir);
     const imageFiles = files
-      .filter((f) => !existingFiles.has(f) && /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
+      .filter((f) => /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
       .sort()
       .map((f) => path.join(sceneDir, f));
 
-    console.log(`[fetch-assets] Scene ${sceneIndex}: found ${imageFiles.length} new images`);
+    console.log(`[fetch-assets] Scene ${sceneIndex}: found ${imageFiles.length} images`);
     return imageFiles;
   } catch (err) {
     console.error(`[fetch-assets] Scene ${sceneIndex}: Error fetching "${keyword}":`, err);
@@ -86,10 +83,11 @@ export async function fetchAssets(
   const baseDir = path.join(process.cwd(), assetPath, "vws-assets", projectId);
   await fs.promises.mkdir(baseDir, { recursive: true });
 
+  const batchId = Date.now();
   const tasks = keywords.map((keyword, i) => {
     return async () => {
       if (!keyword) return count > 1 ? [] : null;
-      const sceneDir = path.join(baseDir, `scene-${i}`);
+      const sceneDir = path.join(baseDir, `batch-${batchId}-${i}`);
       const images = await fetchForKeyword(keyword, sceneDir, count, i);
 
       if (count > 1) return images;
