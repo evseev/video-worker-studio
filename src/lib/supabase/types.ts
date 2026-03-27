@@ -22,6 +22,9 @@ export type Database = {
           created_at: string;
           draft_scenes: Json | null;
           id: string;
+          image_motion: string;
+          scene_transition: string;
+          text_animation: string;
           render_error_context: Json | null;
           selected_template: string | null;
           status: string;
@@ -43,9 +46,12 @@ export type Database = {
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;
+          image_motion?: string;
           render_error_context?: Json | null;
+          scene_transition?: string;
           selected_template?: string | null;
           status?: string;
+          text_animation?: string;
           topic: string;
           trend_validation_data?: Json | null;
           updated_at?: string;
@@ -64,9 +70,12 @@ export type Database = {
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;
+          image_motion?: string;
           render_error_context?: Json | null;
+          scene_transition?: string;
           selected_template?: string | null;
           status?: string;
+          text_animation?: string;
           topic?: string;
           trend_validation_data?: Json | null;
           updated_at?: string;
