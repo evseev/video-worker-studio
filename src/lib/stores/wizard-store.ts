@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Tables } from "@/lib/supabase/types";
 import type { Scene, TemplateId } from "@/templates/types";
+import type { SceneTransition, ImageMotion, TextAnimation } from "@/lib/effects";
 
 export type { Scene };
 export type { TemplateId };
@@ -14,6 +15,9 @@ export type VideoSettings = {
   sceneDuration: number;
   aspectRatio: "16:9" | "9:16";
   quality: "720p" | "1080p" | "4k";
+  sceneTransition: SceneTransition;
+  imageMotion: ImageMotion;
+  textAnimation: TextAnimation;
 };
 
 export type RefinedIdea = {
@@ -72,6 +76,9 @@ const DEFAULT_SETTINGS: VideoSettings = {
   sceneDuration: 5,
   aspectRatio: "9:16",
   quality: "1080p",
+  sceneTransition: "fade",
+  imageMotion: "zoom-in",
+  textAnimation: "slide-up",
 };
 
 function parseDraftData(project: Project): DraftData {
