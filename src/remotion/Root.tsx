@@ -32,6 +32,9 @@ export const RemotionRoot = () => {
           scenes: DEFAULT_SCENES,
           sceneDurationFrames: SCENE_DURATION_FRAMES,
           transitionFrames: TRANSITION_FRAMES,
+          sceneTransitions: ["fade"],
+          imageMotions: ["zoom-in"],
+          textAnimations: ["slide-up"],
         } satisfies VideoCompositionProps
       }
     />

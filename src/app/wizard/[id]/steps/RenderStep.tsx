@@ -40,7 +40,7 @@ export function RenderStep({ store }: Props) {
       const res = await fetch("/api/wizard/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration, backgroundMusic, voiceoverUrl }),
+        body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition: settings.sceneTransition, imageMotion: settings.imageMotion, textAnimation: settings.textAnimation }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
