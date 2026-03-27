@@ -61,7 +61,7 @@ export const TEXT_ANIMATIONS: EffectOption<TextAnimation>[] = [
 
 const CONCRETE_TRANSITIONS: ResolvedTransition[] = ["fade", "slide", "wipe", "flip", "clock-wipe"];
 const CONCRETE_IMAGE_MOTIONS: ResolvedImageMotion[] = [
-  "zoom-in", "zoom-out", "pan-left", "pan-right", "pan-up", "pan-down", "pan-horizontal", "none",
+  "zoom-in", "zoom-out", "pan-left", "pan-right", "pan-up", "pan-down", "pan-horizontal", "pan-vertical", "none",
 ];
 const CONCRETE_TEXT_ANIMATIONS: ResolvedTextAnimation[] = [
   "slide-up", "slide-left", "typewriter", "pop", "fade-in",

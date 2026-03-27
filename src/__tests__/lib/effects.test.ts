@@ -94,7 +94,7 @@ describe("effects", () => {
       expect(result).toHaveLength(4);
       const validIds: ResolvedImageMotion[] = [
         "zoom-in", "zoom-out", "pan-left", "pan-right",
-        "pan-up", "pan-down", "pan-horizontal", "none",
+        "pan-up", "pan-down", "pan-horizontal", "pan-vertical", "none",
       ];
       for (const m of result) {
         expect(validIds).toContain(m);
