@@ -1,13 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "zustand";
 import { allTemplates } from "@/templates";
 import type { TemplateId } from "@/templates/types";
 import type { WizardStoreApi } from "@/lib/stores/wizard-store";
+import { EffectSelector } from "@/components/wizard/effect-selector";
+import {
+  SCENE_TRANSITIONS,
+  IMAGE_MOTIONS,
+  TEXT_ANIMATIONS,
+  type SceneTransition,
+  type ImageMotion,
+  type TextAnimation,
+} from "@/lib/effects";
 
 export function TemplateStep({ store }: { store: WizardStoreApi }) {
   const { topic, setTopic, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
   const isLandscape = settings.aspectRatio === "16:9";
+  const [effectsExpanded, setEffectsExpanded] = useState(true);
 
   const canContinue = topic.trim().length > 0 && !!selectedTemplate;
 
@@ -135,6 +146,69 @@ export function TemplateStep({ store }: { store: WizardStoreApi }) {
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Effects & Animations */}
+      <div className="rounded-xl border border-white/10 bg-white/5 mb-6">
+        <button
+          type="button"
+          onClick={() => setEffectsExpanded(!effectsExpanded)}
+          className="flex w-full items-center justify-between p-4"
+        >
+          <span className="text-sm font-medium text-white">Effects & Animations</span>
+          <svg
+            className={`h-4 w-4 text-gray-400 transition-transform ${effectsExpanded ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {effectsExpanded && (
+          <div className="space-y-4 border-t border-white/10 p-4">
+            <div>
+              <label className="mb-2 block text-xs font-medium text-gray-400">
+                Scene Transitions
+              </label>
+              <EffectSelector
+                options={SCENE_TRANSITIONS}
+                value={settings.sceneTransition}
+                onChange={(v: SceneTransition) =>
+                  store.getState().setSettings({ sceneTransition: v })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-medium text-gray-400">
+                Image Motion
+              </label>
+              <EffectSelector
+                options={IMAGE_MOTIONS}
+                value={settings.imageMotion}
+                onChange={(v: ImageMotion) =>
+                  store.getState().setSettings({ imageMotion: v })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-medium text-gray-400">
+                Text Animation
+              </label>
+              <EffectSelector
+                options={TEXT_ANIMATIONS}
+                value={settings.textAnimation}
+                onChange={(v: TextAnimation) =>
+                  store.getState().setSettings({ textAnimation: v })
+                }
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Continue */}
