@@ -1,9 +1,11 @@
 import {
   AbsoluteFill,
   Img,
-  interpolate,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
+import { getImageTransform, getTextStyle } from "@/remotion/animation-utils";
+import type { ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 
 type ComparisonSceneProps = {
   scriptText: string;
@@ -13,6 +15,8 @@ type ComparisonSceneProps = {
   rightObjectPosition?: string;
   leftLabel: string;
   rightLabel: string;
+  imageMotion?: ResolvedImageMotion;
+  textAnimation?: ResolvedTextAnimation;
 };
 
 const LEFT_GRADIENT = "linear-gradient(135deg, #f5576c 0%, #f093fb 100%)";
@@ -26,29 +30,15 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   rightObjectPosition,
   leftLabel,
   rightLabel,
+  imageMotion,
+  textAnimation,
 }) => {
   const frame = useCurrentFrame();
+  const { durationInFrames, fps } = useVideoConfig();
 
-  // Images slide in from sides over 15 frames
-  const slideProgress = interpolate(frame, [0, 15], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const leftX = interpolate(slideProgress, [0, 1], [-50, 0]);
-  const rightX = interpolate(slideProgress, [0, 1], [50, 0]);
-  const imageOpacity = interpolate(slideProgress, [0, 1], [0, 1]);
-
-  // Caption fades in after 10 frames
-  const captionOpacity = interpolate(frame, [10, 25], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const captionSlideY = interpolate(frame, [10, 25], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const progress = frame / durationInFrames;
+  const imageStyle = getImageTransform(imageMotion ?? "zoom-in", progress);
+  const textStyle = getTextStyle(textAnimation ?? "slide-up", frame, 10, fps);
 
   const font = "system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
 
@@ -69,8 +59,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
             flex: 1,
             position: "relative",
             overflow: "hidden",
-            opacity: imageOpacity,
-            transform: `translateX(${leftX}px)`,
+            ...imageStyle,
           }}
         >
           {leftAssetUrl ? (
@@ -122,8 +111,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
             flex: 1,
             position: "relative",
             overflow: "hidden",
-            opacity: imageOpacity,
-            transform: `translateX(${rightX}px)`,
+            ...imageStyle,
           }}
         >
           {rightAssetUrl ? (
@@ -184,8 +172,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
           padding: "16px 24px",
           background:
             "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
-          opacity: captionOpacity,
-          transform: `translateY(${captionSlideY}px)`,
+          ...textStyle,
         }}
       >
         <p
