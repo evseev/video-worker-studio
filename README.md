@@ -159,6 +159,7 @@ src/
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
 │   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure, generateSeoMetadata)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
+│   ├── effects.ts               # Scene transition, image motion, text animation types + random resolver
 │   ├── stores/
 │   │   └── wizard-store.ts      # Zustand store for wizard state management
 │   ├── projects/
@@ -180,6 +181,7 @@ src/
 │   ├── index.ts                 # Remotion entry point
 │   ├── Root.tsx                 # Remotion root component
 │   ├── VideoComposition.tsx     # Template-based scene dispatch
+│   ├── animation-utils.ts      # Shared image motion + text animation helpers
 │   └── templates/               # Remotion scene components per archetype
 │       ├── SlideshowScene.tsx
 │       ├── ComparisonScene.tsx
@@ -249,10 +251,11 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Tech Stack](docs/tech_stack.md) — technology choices and rationale
 - [Workflow Design](docs/workflow_design.md) — pipeline design and failure modes
 - [UX Specification](docs/ux_specification.md) — screen-by-screen layout and interactions
-- [Product Backlog](docs/prd_backlog.md) — epics and stories (21 epics; Epics 1-21 complete)
+- [Product Backlog](docs/prd_backlog.md) — epics and stories (22 epics; Epics 1-22 complete)
 - [MVP Development Plan](docs/mvp_development_plan.md) — original development roadmap
 - [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md) — render architecture design
 - [Template System Design](docs/designs/2026-03-24-template-system-design.md) — 3 structural archetypes design
+- [Transitions & Effects Design](docs/superpowers/specs/2026-03-27-transitions-and-effects-design.md) — configurable scene transitions and animation effects
 - [Gemini 3 Flash Upgrade ADR](docs/adr/001-gemini-3-flash-upgrade.md) — architecture decision record
 
 Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).

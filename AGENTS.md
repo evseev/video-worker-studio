@@ -105,6 +105,7 @@ src/
       wizard-store.ts    # Zustand store for wizard state (scenes, settings, refinedIdea)
     projects/
       delete-project-assets.ts # Storage + temp cleanup when deleting a project
+    effects.ts           # Scene transition, image motion, text animation types + random resolver
     music-presets.ts     # 5 royalty-free music track presets
     rate-limit.ts        # In-memory sliding window rate limiter
     supabase/
@@ -124,6 +125,7 @@ src/
   remotion/              # Remotion composition and rendering
     Root.tsx
     VideoComposition.tsx # Template-based scene dispatch
+    animation-utils.ts   # Shared image motion + text animation helpers
     templates/           # Remotion scene components per archetype
       SlideshowScene.tsx
       ComparisonScene.tsx
@@ -158,7 +160,7 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_description`, `video_tags` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 
 ### Project status lifecycle
@@ -298,7 +300,7 @@ draft → processing → rendering → completed
 | `docs/tech_stack.md` | Technology choices and rationale |
 | `docs/workflow_design.md` | Pipeline design, failure modes, retries |
 | `docs/ux_specification.md` | Screen-by-screen layout and interactions |
-| `docs/prd_backlog.md` | Product backlog (21 epics; Epics 1–20 complete, Epic 21 planned) |
+| `docs/prd_backlog.md` | Product backlog (22 epics; Epics 1–22 complete) |
 | `docs/mvp_development_plan.md` | Original development roadmap |
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
 | `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |

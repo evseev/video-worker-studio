@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2.0] — 2026-03-27
+
+### Added
+- **Configurable scene transitions** — choose from Fade, Slide, Wipe, Flip, or Clock Wipe between scenes, or pick Random for a different transition at each cut. Settings live in a new collapsible "Effects & Animations" section on the Template step.
+- **Image motion effects** — select how images move during each scene: Zoom In, Zoom Out, Pan Left/Right/Up/Down, Horizontal Sway, Vertical Sway, or None. Random picks a different motion per scene.
+- **Text animations** — control how captions appear: Slide Up, Slide Left, Typewriter, Pop, Fade In, or Random. Replaces the old hardcoded slide-up on every template.
+
+### For Contributors
+- New `src/lib/effects.ts` — type definitions, option arrays, and random resolver functions for all three effect categories.
+- New `src/remotion/animation-utils.ts` — shared `getImageTransform()` and `getTextStyle()` utilities replace per-component animation code.
+- New `src/components/wizard/effect-selector.tsx` — reusable grid selector component used 3x on TemplateStep.
+- DB migration adds `scene_transition`, `image_motion`, `text_animation` columns to `projects` (with CHECK constraints).
+- "Random" values resolve to concrete per-scene arrays in Inngest before reaching Remotion (deterministic Lambda rendering).
+- 38 new tests across effects, animation-utils, and EffectSelector.
+
 ## [0.4.1.0] — 2026-03-25
 
 ### Added
