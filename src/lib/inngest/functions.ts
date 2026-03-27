@@ -2,6 +2,7 @@ import { inngest } from "./client";
 import { generateScript } from "@/lib/ai/generate-script";
 import { fetchAssets } from "@/lib/ai/fetch-assets";
 import { renderVideo } from "@/lib/render/render-video";
+import { resolveTransitions, resolveImageMotions, resolveTextAnimations } from "@/lib/effects";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -28,6 +29,9 @@ interface VideoGenerateEventData {
   sceneDuration?: number;
   backgroundMusic?: string | null;
   voiceoverUrl?: string | null;
+  sceneTransition?: string;
+  imageMotion?: string;
+  textAnimation?: string;
   userId?: string;
 }
 
@@ -98,7 +102,7 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl } = event.data as VideoGenerateEventData;
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation } = event.data as VideoGenerateEventData;
 
 
 
@@ -195,7 +199,11 @@ export const generateVideo = inngest.createFunction(
           subtitle: s.subtitle,
           facts: s.facts,
         }));
-        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl });
+        const sceneCount = renderScenes.length;
+        const resolvedTransitions = resolveTransitions((sceneTransition || "fade") as Parameters<typeof resolveTransitions>[0], sceneCount);
+        const resolvedImageMotions = resolveImageMotions((imageMotion || "zoom-in") as Parameters<typeof resolveImageMotions>[0], sceneCount);
+        const resolvedTextAnimations = resolveTextAnimations((textAnimation || "slide-up") as Parameters<typeof resolveTextAnimations>[0], sceneCount);
+        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransitions: resolvedTransitions, imageMotions: resolvedImageMotions, textAnimations: resolvedTextAnimations });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         await updateRenderError(db, projectId, {

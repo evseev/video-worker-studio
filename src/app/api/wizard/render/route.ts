@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api/with-auth";
 import { inngest } from "@/lib/inngest/client";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, scenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl } = await request.json();
+  const { projectId, scenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation } = await request.json();
 
   if (!projectId) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
@@ -34,6 +34,9 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   if (videoQuality) updates.video_quality = videoQuality;
   if (backgroundMusic !== undefined) updates.background_music = backgroundMusic;
   if (voiceoverUrl !== undefined) updates.voiceover_url = voiceoverUrl;
+  updates.scene_transition = sceneTransition || "fade";
+  updates.image_motion = imageMotion || "zoom-in";
+  updates.text_animation = textAnimation || "slide-up";
 
   await supabase
     .from("projects")
@@ -43,7 +46,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
 
   await inngest.send({
     name: "video/generate",
-    data: { projectId, scenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, userId: user.id },
+    data: { projectId, scenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition: sceneTransition || "fade", imageMotion: imageMotion || "zoom-in", textAnimation: textAnimation || "slide-up", userId: user.id },
   });
 
   return NextResponse.json({ success: true });
