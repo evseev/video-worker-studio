@@ -60,19 +60,20 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
           borderRadius: 10,
           overflow: "hidden",
           flexShrink: 0,
-          ...imageStyle,
         }}
       >
-        {mainAssetUrl ? (
-          <Img
-            src={mainAssetUrl}
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: mainObjectPosition ?? "50% 50%" }}
-          />
-        ) : (
-          <div
-            style={{ width: "100%", height: "100%", background: MAIN_FALLBACK }}
-          />
-        )}
+        <div style={{ width: "100%", height: "100%", ...imageStyle }}>
+          {mainAssetUrl ? (
+            <Img
+              src={mainAssetUrl}
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: mainObjectPosition ?? "50% 50%" }}
+            />
+          ) : (
+            <div
+              style={{ width: "100%", height: "100%", background: MAIN_FALLBACK }}
+            />
+          )}
+        </div>
       </div>
 
       {/* Card body */}

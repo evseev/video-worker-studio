@@ -59,19 +59,20 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
             flex: 1,
             position: "relative",
             overflow: "hidden",
-            ...imageStyle,
           }}
         >
-          {leftAssetUrl ? (
-            <Img
-              src={leftAssetUrl}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: leftObjectPosition ?? "50% 50%" }}
-            />
-          ) : (
-            <div
-              style={{ width: "100%", height: "100%", background: LEFT_GRADIENT }}
-            />
-          )}
+          <div style={{ width: "100%", height: "100%", ...imageStyle }}>
+            {leftAssetUrl ? (
+              <Img
+                src={leftAssetUrl}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: leftObjectPosition ?? "50% 50%" }}
+              />
+            ) : (
+              <div
+                style={{ width: "100%", height: "100%", background: LEFT_GRADIENT }}
+              />
+            )}
+          </div>
           {/* Dark gradient overlay at bottom for label readability */}
           <div
             style={{
@@ -111,23 +112,24 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
             flex: 1,
             position: "relative",
             overflow: "hidden",
-            ...imageStyle,
           }}
         >
-          {rightAssetUrl ? (
-            <Img
-              src={rightAssetUrl}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: rightObjectPosition ?? "50% 50%" }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                background: RIGHT_GRADIENT,
-              }}
-            />
-          )}
+          <div style={{ width: "100%", height: "100%", ...imageStyle }}>
+            {rightAssetUrl ? (
+              <Img
+                src={rightAssetUrl}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: rightObjectPosition ?? "50% 50%" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: RIGHT_GRADIENT,
+                }}
+              />
+            )}
+          </div>
           {/* Dark gradient overlay at bottom */}
           <div
             style={{
