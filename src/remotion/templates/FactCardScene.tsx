@@ -1,9 +1,11 @@
 import {
   AbsoluteFill,
   Img,
-  interpolate,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
+import { getImageTransform, getTextStyle } from "@/remotion/animation-utils";
+import type { ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 
 type FactCardSceneProps = {
   scriptText: string;
@@ -14,6 +16,8 @@ type FactCardSceneProps = {
   title: string;
   subtitle: string;
   facts: { label: string; value: string }[];
+  imageMotion?: ResolvedImageMotion;
+  textAnimation?: ResolvedTextAnimation;
 };
 
 const MAIN_FALLBACK = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
@@ -30,24 +34,15 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
   title,
   subtitle,
   facts,
+  imageMotion,
+  textAnimation,
 }) => {
   const frame = useCurrentFrame();
+  const { durationInFrames, fps } = useVideoConfig();
 
-  // Main image: fade in + scale from 0.95 to 1.0 over 15 frames
-  const heroProgress = interpolate(frame, [0, 15], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const heroOpacity = heroProgress;
-  const heroScale = interpolate(heroProgress, [0, 1], [0.95, 1.0]);
-
-  // Card: slides up from +40px and fades in over 20 frames starting at frame 8
-  const cardProgress = interpolate(frame, [8, 28], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const cardOpacity = cardProgress;
-  const cardY = interpolate(cardProgress, [0, 1], [40, 0]);
+  const progress = frame / durationInFrames;
+  const imageStyle = getImageTransform(imageMotion ?? "zoom-in", progress);
+  const textStyle = getTextStyle(textAnimation ?? "slide-up", frame, 8, fps);
 
   return (
     <AbsoluteFill
@@ -65,9 +60,7 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
           borderRadius: 10,
           overflow: "hidden",
           flexShrink: 0,
-          opacity: heroOpacity,
-          transform: `scale(${heroScale})`,
-          transformOrigin: "center center",
+          ...imageStyle,
         }}
       >
         {mainAssetUrl ? (
@@ -92,8 +85,7 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
           display: "flex",
           flexDirection: "column",
           gap: 10,
-          opacity: cardOpacity,
-          transform: `translateY(${cardY}px)`,
+          ...textStyle,
         }}
       >
         {/* Top row: thumbnail + title + subtitle */}
