@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3.0] — 2026-04-07
+
+### Added
+- **Comparison caption styles** — pick how the bottom script and side labels look (Minimal, Bold viral, Bottom strip, Split labels, or Glowing neon). The Preview step shows a live mini-preview for each option.
+- **Comparison overlay mode** — show only the side labels, only the bottom caption, or both, without leaving the wizard.
+- **Reliable render retries** — `POST /api/wizard/render` merges the JSON body with your saved project row and draft so dashboard retries that send only `projectId` still get full scenes and settings.
+
+### Changed
+- **Glowing style** — larger caption and label type plus more padding under the bottom caption bar so the line reads clearly in the final video.
+
+### Fixed
+- **Render API errors** — failed updates or Inngest queue errors now return a readable `error` string instead of an empty JSON body.
+- **Fetch assets (single-slot)** — keywords are derived from normalized scenes so TypeScript and PostgREST agree on types.
+
+### For Contributors
+- New migrations: `20260404115959_ensure_caption_style_column.sql`, `20260404120000_glowing_caption_comparison_overlay.sql` — extend `caption_style` with `glowing`, add `comparison_overlay_mode`. Regenerate `src/lib/supabase/types.ts` from the database after applying.
+- New modules: `src/lib/merge-render-payload.ts`, `src/lib/comparison-caption-styles.ts`; tests under `src/__tests__/lib/merge-render-payload.test.ts` and `src/__tests__/components/wizard/caption-style-selector.test.tsx`.
+
 ## [0.4.2.0] — 2026-03-27
 
 ### Added
