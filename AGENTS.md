@@ -58,7 +58,7 @@ src/
       inngest/           # POST /api/inngest — Inngest webhook sink (must stay public)
       projects/          # CRUD for projects table
       wizard/            # Wizard-specific API routes (draft, ideas, enhance-idea, validate-trend,
-                         #   generate-structure, script, fetch-assets, upload-voiceover, render)
+                         #   generate-structure, script, generate-seo, fetch-assets, upload-voiceover, render)
     auth/                # Auth callback route (Supabase magic link)
     login/               # Login page
     projects/[id]/       # Project detail page (video player, download, retry)
@@ -70,7 +70,7 @@ src/
         IdeaStep.tsx     # AI hook suggestions for chosen topic
         RefineStep.tsx   # AI enhance + trend validation
         ScriptStep.tsx   # AI script generation (template-specific prompts)
-        PreviewStep.tsx  # Asset preview + drag-and-drop reorder
+        PreviewStep.tsx  # Asset preview + reorder; Comparison: caption style + overlay mode
         RenderStep.tsx   # Render summary + progress + video player
   components/
     DraggableImage.tsx   # Shared hover-to-reveal drag-to-pan image component (used by all SceneCards)
@@ -85,6 +85,8 @@ src/
       video-config-selector.tsx
       music-selector.tsx
       voiceover-upload.tsx
+      caption-style-selector.tsx
+      comparison-overlay-mode-selector.tsx
     ui/
       toast.tsx           # Toast notification system (Zustand store)
   lib/
@@ -106,6 +108,8 @@ src/
     projects/
       delete-project-assets.ts # Storage + temp cleanup when deleting a project
     effects.ts           # Scene transition, image motion, text animation types + random resolver
+    comparison-caption-styles.ts # Comparison caption presets + overlay visibility (used by UI + Remotion)
+    merge-render-payload.ts    # Merge render POST body with DB row + draft_scenes
     music-presets.ts     # 5 royalty-free music track presets
     rate-limit.ts        # In-memory sliding window rate limiter
     supabase/
@@ -160,7 +164,7 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation`, `caption_style`, `comparison_overlay_mode` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 
 ### Project status lifecycle
@@ -217,7 +221,7 @@ draft → processing → rendering → completed
 | `/api/wizard/fetch-assets` | POST | ✅ | Fetch scene assets from Pinterest (supports multi-asset mode) |
 | `/api/wizard/upload-voiceover` | POST | ✅ | Upload voice-over audio file (MP3/WAV, max 50MB) |
 | `/api/wizard/generate-seo` | POST | ✅ | Generate YouTube SEO metadata (description + tags) |
-| `/api/wizard/render` | POST | ✅ | Dispatch wizard render job (with video config, music, template) |
+| `/api/wizard/render` | POST | ✅ | Merge body + DB + draft; dispatch `video/generate` (full scenes for retries) |
 
 - Route handlers must return `NextResponse.json()` consistently.
 - All authenticated routes must validate the Supabase session and return `401` if missing.

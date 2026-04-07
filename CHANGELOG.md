@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.3.0] — 2026-04-07
 
 ### Added
-- **Comparison caption styles** — pick how the bottom script and side labels look (Minimal, Bold viral, Bottom strip, Split labels, or Glowing neon). The Preview step shows a live mini-preview for each option.
+- **Comparison caption styles** — choose how the bottom line and side labels look: Minimal, Bold viral, Bottom strip, Split labels, or Glowing neon, each with a mini-preview on the Preview step.
 - **Comparison overlay mode** — show only the side labels, only the bottom caption, or both, without leaving the wizard.
-- **Reliable render retries** — `POST /api/wizard/render` merges the JSON body with your saved project row and draft so dashboard retries that send only `projectId` still get full scenes and settings.
+- **Reliable render retries** — starting a render from the dashboard with only `projectId` still works: the server merges your saved project row and draft with the request so Inngest always receives full scenes and settings.
 
 ### Changed
 - **Glowing style** — larger caption and label type plus more padding under the bottom caption bar so the line reads clearly in the final video.

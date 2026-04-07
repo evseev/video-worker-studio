@@ -16,7 +16,7 @@ Triggered via `/api/generate` and powered entirely by a 5-step Inngest backgroun
 ```text
 Template (archetype + settings) → Idea (AI hooks) → Refine (AI enhance + trend score) → Script (template-specific scenes) → Preview (assets + reorder) → Render (progress + player)
 ```
-A six-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. The first step selects one of 3 structural template archetypes (Slideshow, Comparison, Fact Card) that drives the entire pipeline. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, generate-seo, fetch-assets, render).
+A six-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. The first step selects one of 3 structural template archetypes (Slideshow, Comparison, Fact Card) that drives the entire pipeline. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, script, generate-seo, fetch-assets, upload-voiceover, render). On the **Preview** step, **Comparison** projects can pick **caption styles** (including a glowing neon look) and whether to show **side labels**, the **bottom caption**, or **both**. **`POST /api/wizard/render`** merges the request with the saved project row and draft so retries (for example from the dashboard with only `projectId`) still send full scenes and settings to Inngest.
 
 The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
@@ -141,13 +141,13 @@ src/
 │   │   ├── generate/       # POST endpoint to trigger one-click video generation
 │   │   ├── inngest/        # Inngest webhook endpoint
 │   │   ├── projects/[id]/  # Delete endpoint for a project
-│   │   └── wizard/         # Wizard endpoints (draft, ideas, enhance-idea, structure, script, assets, render)
+│   │   └── wizard/         # Wizard endpoints (draft, ideas, enhance-idea, structure, script, generate-seo, fetch-assets, upload-voiceover, render)
 │   ├── auth/               # Supabase auth callback handler
 │   ├── login/              # Login page
 │   ├── wizard/[id]/        # Interactive video generation wizard
 │   │   ├── client.tsx      # Wizard orchestrator (Zustand store init + step routing)
 │   │   ├── page.tsx        # Server component (auth + project fetch)
-│   │   └── steps/          # 6 step components (TemplateStep, IdeaStep, RefineStep, ScriptStep, PreviewStep, RenderStep)
+│   │   └── steps/          # 6 steps: Template, Idea, Refine, Script, Preview (comparison caption/overlay on Comparison), Render
 │   ├── page.tsx            # Dashboard (server component, auth-gated)
 │   └── layout.tsx          # Root layout
 ├── components/
@@ -159,6 +159,8 @@ src/
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
 │   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure, generateSeoMetadata)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
+│   ├── comparison-caption-styles.ts  # Comparison caption presets + overlay helpers (shared with Remotion)
+│   ├── merge-render-payload.ts  # Merge JSON body with DB row + draft for /api/wizard/render
 │   ├── effects.ts               # Scene transition, image motion, text animation types + random resolver
 │   ├── stores/
 │   │   └── wizard-store.ts      # Zustand store for wizard state management
@@ -195,7 +197,7 @@ docs/
 ├── tech_stack.md                # Tech stack rationale
 ├── workflow_design.md           # Pipeline design
 ├── ux_specification.md          # UX spec
-├── prd_backlog.md               # Product backlog (21 epics)
+├── prd_backlog.md               # Product backlog (22 epics)
 ├── mvp_development_plan.md      # Original development roadmap
 └── designs/remotion-lambda-migration.md # Render architecture design
 ```
