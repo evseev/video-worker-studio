@@ -107,10 +107,10 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   }
 
   // Single-asset mode (backwards compatible)
-  const keywords = (scenes as Scene[]).map((s) => {
-    const kw = "searchKeyword" in s ? s.searchKeyword : (s as SceneNew).searchKeywords[0] ?? null;
-    return applyOrientation(kw ?? null);
-  });
+  const normalizedSingle = (scenes as Scene[]).map(normalizeScene);
+  const keywords = normalizedSingle.map((s) =>
+    applyOrientation(s.searchKeywords[0] ?? null)
+  );
 
   const localPaths = await fetchAssets(keywords, projectId);
 

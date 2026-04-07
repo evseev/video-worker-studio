@@ -3,6 +3,7 @@ import { generateScript } from "@/lib/ai/generate-script";
 import { fetchAssets } from "@/lib/ai/fetch-assets";
 import { renderVideo } from "@/lib/render/render-video";
 import { resolveTransitions, resolveImageMotions, resolveTextAnimations } from "@/lib/effects";
+import { parseCaptionStyle, parseComparisonOverlayMode } from "@/lib/comparison-caption-styles";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -32,6 +33,8 @@ interface VideoGenerateEventData {
   sceneTransition?: string;
   imageMotion?: string;
   textAnimation?: string;
+  captionStyle?: string;
+  comparisonOverlayMode?: string;
   userId?: string;
 }
 
@@ -102,7 +105,7 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation } = event.data as VideoGenerateEventData;
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode } = event.data as VideoGenerateEventData;
 
 
 
@@ -203,7 +206,21 @@ export const generateVideo = inngest.createFunction(
         const resolvedTransitions = resolveTransitions((sceneTransition || "fade") as Parameters<typeof resolveTransitions>[0], sceneCount);
         const resolvedImageMotions = resolveImageMotions((imageMotion || "zoom-in") as Parameters<typeof resolveImageMotions>[0], sceneCount);
         const resolvedTextAnimations = resolveTextAnimations((textAnimation || "slide-up") as Parameters<typeof resolveTextAnimations>[0], sceneCount);
-        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransitions: resolvedTransitions, imageMotions: resolvedImageMotions, textAnimations: resolvedTextAnimations });
+        return await renderVideo({
+          projectId,
+          scenes: renderScenes,
+          template,
+          aspectRatio,
+          videoQuality,
+          sceneDuration,
+          backgroundMusic,
+          voiceoverUrl,
+          sceneTransitions: resolvedTransitions,
+          imageMotions: resolvedImageMotions,
+          textAnimations: resolvedTextAnimations,
+          captionStyle: parseCaptionStyle(captionStyle),
+          comparisonOverlayMode: parseComparisonOverlayMode(comparisonOverlayMode),
+        });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         await updateRenderError(db, projectId, {

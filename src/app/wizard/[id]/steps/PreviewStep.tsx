@@ -8,11 +8,13 @@ import type { Scene } from "@/templates/types";
 import { SlideshowSceneCard } from "@/templates/slideshow/SceneCard";
 import { ComparisonSceneCard } from "@/templates/comparison/SceneCard";
 import { FactCardSceneCard } from "@/templates/fact-card/SceneCard";
+import { CaptionStyleSelector } from "@/components/wizard/caption-style-selector";
+import { ComparisonOverlayModeSelector } from "@/components/wizard/comparison-overlay-mode-selector";
 
 type Props = { store: StoreApi<WizardState> };
 
 export function PreviewStep({ store }: Props) {
-  const { projectId, scenes, setScenes, updateScene, selectAsset, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
+  const { projectId, scenes, setScenes, updateScene, selectAsset, selectedTemplate, settings, setSettings, saveProgress, setStep } = useStore(store);
   const [fetchingAll, setFetchingAll] = useState(false);
   const [fetchingScene, setFetchingScene] = useState<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -144,6 +146,39 @@ export function PreviewStep({ store }: Props) {
     <div className="mx-auto max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="text-2xl font-semibold text-white mb-2">Preview & Edit</h2>
       <p className="text-zinc-400 mb-6 text-base">Review your scenes, fetch images, reorder, and fine-tune before rendering.</p>
+
+      {selectedTemplate === "comparison" && (
+        <div className="mb-8 space-y-8 rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <CaptionStyleSelector
+            value={settings.captionStyle}
+            onChange={async (captionStyle) => {
+              setSettings({ captionStyle });
+              const state = store.getState();
+              await state.saveProgress({
+                draft_scenes: {
+                  scenes: state.scenes,
+                  settings: state.settings,
+                  refinedIdea: state.refinedIdea,
+                },
+              });
+            }}
+          />
+          <ComparisonOverlayModeSelector
+            value={settings.comparisonOverlayMode}
+            onChange={async (comparisonOverlayMode) => {
+              setSettings({ comparisonOverlayMode });
+              const state = store.getState();
+              await state.saveProgress({
+                draft_scenes: {
+                  scenes: state.scenes,
+                  settings: state.settings,
+                  refinedIdea: state.refinedIdea,
+                },
+              });
+            }}
+          />
+        </div>
+      )}
 
       {/* Global Settings Panel */}
       <div className="mb-6">

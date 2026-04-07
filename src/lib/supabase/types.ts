@@ -19,6 +19,7 @@ export type Database = {
           aspect_ratio: string;
           background_music: string | null;
           caption_style: string | null;
+          comparison_overlay_mode: string;
           created_at: string;
           draft_scenes: Json | null;
           id: string;
@@ -43,6 +44,7 @@ export type Database = {
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
+          comparison_overlay_mode?: string;
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;
@@ -67,6 +69,7 @@ export type Database = {
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
+          comparison_overlay_mode?: string;
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;

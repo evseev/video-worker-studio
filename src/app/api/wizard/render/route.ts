@@ -1,53 +1,108 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { inngest } from "@/lib/inngest/client";
+import { mergeRenderPayload, buildPersistedDraft } from "@/lib/merge-render-payload";
+import type { Tables } from "@/lib/supabase/types";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, scenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation } = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
+  const projectId = body.projectId as string | undefined;
   if (!projectId) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
   }
 
-  // Check if project is already processing/rendering to prevent double-submit
-  const { data: project } = await supabase
+  const { data: row, error: fetchError } = await supabase
     .from("projects")
-    .select("status")
+    .select("*")
     .eq("id", projectId)
     .eq("user_id", user.id)
     .single();
 
-  if (project?.status === "processing" || project?.status === "rendering") {
+  if (fetchError || !row) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  const project = row as Tables<"projects">;
+
+  if (project.status === "processing" || project.status === "rendering") {
     return NextResponse.json(
       { error: "Project is already being processed" },
       { status: 409 }
     );
   }
 
+  const merged = mergeRenderPayload(body, project);
+
   const updates: Record<string, unknown> = {
     wizard_step: "render",
-    selected_template: template,
+    selected_template: merged.template,
     status: "processing",
+    draft_scenes: buildPersistedDraft(project, merged),
+    aspect_ratio: merged.aspectRatio,
+    video_quality: merged.videoQuality,
+    background_music: merged.backgroundMusic,
+    voiceover_url: merged.voiceoverUrl,
+    scene_transition: merged.sceneTransition,
+    image_motion: merged.imageMotion,
+    text_animation: merged.textAnimation,
+    caption_style: merged.captionStyle,
+    comparison_overlay_mode: merged.comparisonOverlayMode,
   };
-  if (scenes) updates.draft_scenes = scenes;
-  if (aspectRatio) updates.aspect_ratio = aspectRatio;
-  if (videoQuality) updates.video_quality = videoQuality;
-  if (backgroundMusic !== undefined) updates.background_music = backgroundMusic;
-  if (voiceoverUrl !== undefined) updates.voiceover_url = voiceoverUrl;
-  updates.scene_transition = sceneTransition || "fade";
-  updates.image_motion = imageMotion || "zoom-in";
-  updates.text_animation = textAnimation || "slide-up";
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("projects")
     .update(updates)
     .eq("id", projectId)
     .eq("user_id", user.id);
 
-  await inngest.send({
-    name: "video/generate",
-    data: { projectId, scenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition: sceneTransition || "fade", imageMotion: imageMotion || "zoom-in", textAnimation: textAnimation || "slide-up", userId: user.id },
-  });
+  if (updateError) {
+    const msg =
+      [updateError.message, updateError.code, updateError.details]
+        .filter(Boolean)
+        .join(" — ") || "Database update failed";
+    console.error("[wizard/render] projects update failed:", updateError);
+    return NextResponse.json(
+      { error: msg, code: updateError.code },
+      { status: 500 }
+    );
+  }
+
+  try {
+    await inngest.send({
+      name: "video/generate",
+      data: {
+        projectId: merged.projectId,
+        topic: project.topic,
+        scenes: merged.scenes,
+        template: merged.template,
+        aspectRatio: merged.aspectRatio,
+        videoQuality: merged.videoQuality,
+        sceneDuration: merged.sceneDuration,
+        backgroundMusic: merged.backgroundMusic,
+        voiceoverUrl: merged.voiceoverUrl,
+        sceneTransition: merged.sceneTransition,
+        imageMotion: merged.imageMotion,
+        textAnimation: merged.textAnimation,
+        captionStyle: merged.captionStyle,
+        comparisonOverlayMode: merged.comparisonOverlayMode,
+        userId: user.id,
+      },
+    });
+  } catch (inngestErr) {
+    console.error("[wizard/render] inngest.send failed:", inngestErr);
+    const msg =
+      inngestErr instanceof Error ? inngestErr.message : String(inngestErr);
+    return NextResponse.json(
+      { error: msg || "Failed to queue render job" },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ success: true });
 }, { rateLimit: "render" });

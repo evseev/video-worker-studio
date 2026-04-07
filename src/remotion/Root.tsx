@@ -35,6 +35,8 @@ export const RemotionRoot = () => {
           sceneTransitions: ["fade"],
           imageMotions: ["zoom-in"],
           textAnimations: ["slide-up"],
+          captionStyle: "minimal",
+          comparisonOverlayMode: "both",
         } satisfies VideoCompositionProps
       }
     />

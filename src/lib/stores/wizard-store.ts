@@ -2,9 +2,16 @@ import { create } from "zustand";
 import type { Tables } from "@/lib/supabase/types";
 import type { Scene, TemplateId } from "@/templates/types";
 import type { SceneTransition, ImageMotion, TextAnimation } from "@/lib/effects";
+import {
+  parseCaptionStyle,
+  parseComparisonOverlayMode,
+  type CaptionStyleId,
+  type ComparisonOverlayMode,
+} from "@/lib/comparison-caption-styles";
 
 export type { Scene };
 export type { TemplateId };
+export type { CaptionStyleId, ComparisonOverlayMode };
 
 type Project = Tables<"projects">;
 
@@ -18,6 +25,8 @@ export type VideoSettings = {
   sceneTransition: SceneTransition;
   imageMotion: ImageMotion;
   textAnimation: TextAnimation;
+  captionStyle: CaptionStyleId;
+  comparisonOverlayMode: ComparisonOverlayMode;
 };
 
 export type RefinedIdea = {
@@ -79,7 +88,23 @@ const DEFAULT_SETTINGS: VideoSettings = {
   sceneTransition: "fade",
   imageMotion: "zoom-in",
   textAnimation: "slide-up",
+  captionStyle: "minimal",
+  comparisonOverlayMode: "both",
 };
+
+function buildSettingsFromDraft(project: Project, draft: DraftData): VideoSettings {
+  const s = draft.settings;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...s,
+    captionStyle: parseCaptionStyle(
+      (s?.captionStyle as string | undefined) ?? project.caption_style
+    ),
+    comparisonOverlayMode: parseComparisonOverlayMode(
+      (s?.comparisonOverlayMode as string | undefined) ?? project.comparison_overlay_mode
+    ),
+  };
+}
 
 function parseDraftData(project: Project): DraftData {
   if (!project.draft_scenes) return {};
@@ -103,7 +128,7 @@ export function createWizardStore(project: Project) {
     currentStep: (project.wizard_step as WizardStep) || "template",
     scenes: draft.scenes || [],
     selectedTemplate: (project.selected_template as TemplateId) || "slideshow",
-    settings: draft.settings || DEFAULT_SETTINGS,
+    settings: buildSettingsFromDraft(project, draft),
     refinedIdea: draft.refinedIdea || null,
     targetKeywords: draft.targetKeywords || "",
     videoDescription: draft.videoDescription || project.video_description || "",

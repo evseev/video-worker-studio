@@ -14,6 +14,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     video_url: null,
     selected_template: "slideshow",
     draft_scenes: null,
+    comparison_overlay_mode: "both",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...overrides,

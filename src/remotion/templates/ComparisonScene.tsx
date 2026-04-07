@@ -6,6 +6,14 @@ import {
 } from "remotion";
 import { getImageTransform, getTextStyle } from "@/remotion/animation-utils";
 import type { ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
+import {
+  getComparisonCaptionStyles,
+  getComparisonLabelStyle,
+  showComparisonCaption,
+  showComparisonLabels,
+  type CaptionStyleId,
+  type ComparisonOverlayMode,
+} from "@/lib/comparison-caption-styles";
 
 type ComparisonSceneProps = {
   scriptText: string;
@@ -17,6 +25,8 @@ type ComparisonSceneProps = {
   rightLabel: string;
   imageMotion?: ResolvedImageMotion;
   textAnimation?: ResolvedTextAnimation;
+  captionStyleId: CaptionStyleId;
+  comparisonOverlayMode: ComparisonOverlayMode;
 };
 
 const LEFT_GRADIENT = "linear-gradient(135deg, #f5576c 0%, #f093fb 100%)";
@@ -32,6 +42,8 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   rightLabel,
   imageMotion,
   textAnimation,
+  captionStyleId,
+  comparisonOverlayMode,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
@@ -40,11 +52,14 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   const imageStyle = getImageTransform(imageMotion ?? "zoom-in", progress);
   const textStyle = getTextStyle(textAnimation ?? "slide-up", frame, 10, fps);
 
-  const font = "system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  const showLabels = showComparisonLabels(comparisonOverlayMode);
+  const showCaption = showComparisonCaption(comparisonOverlayMode);
+  const labelLeft = getComparisonLabelStyle(captionStyleId, "left");
+  const labelRight = getComparisonLabelStyle(captionStyleId, "right");
+  const cap = getComparisonCaptionStyles(captionStyleId);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0a0a0f" }}>
-      {/* Two images side by side — fill entire frame */}
       <div
         style={{
           position: "absolute",
@@ -53,7 +68,6 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
           gap: 4,
         }}
       >
-        {/* Left image */}
         <div
           style={{
             flex: 1,
@@ -73,7 +87,6 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
               />
             )}
           </div>
-          {/* Dark gradient overlay at bottom for label readability */}
           <div
             style={{
               position: "absolute",
@@ -85,28 +98,13 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
                 "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)",
             }}
           />
-          {/* Left label — large, overlaid at bottom of image */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 60,
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              fontSize: 32,
-              fontWeight: 800,
-              color: "#f5576c",
-              fontFamily: font,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              textShadow: "0 2px 8px rgba(0,0,0,0.6)",
-            }}
-          >
-            {leftLabel}
-          </div>
+          {showLabels && (
+            <div style={labelLeft}>
+              {leftLabel}
+            </div>
+          )}
         </div>
 
-        {/* Right image */}
         <div
           style={{
             flex: 1,
@@ -130,7 +128,6 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
               />
             )}
           </div>
-          {/* Dark gradient overlay at bottom */}
           <div
             style={{
               position: "absolute",
@@ -142,56 +139,30 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
                 "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)",
             }}
           />
-          {/* Right label — large, overlaid at bottom of image */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 60,
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              fontSize: 32,
-              fontWeight: 800,
-              color: "#4facfe",
-              fontFamily: font,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              textShadow: "0 2px 8px rgba(0,0,0,0.6)",
-            }}
-          >
-            {rightLabel}
-          </div>
+          {showLabels && (
+            <div style={labelRight}>
+              {rightLabel}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Caption text — overlaid at very bottom of frame */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          padding: "16px 24px",
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
-          ...textStyle,
-        }}
-      >
-        <p
+      {showCaption && (
+        <div
           style={{
-            fontSize: 28,
-            color: "white",
-            textAlign: "center",
-            margin: 0,
-            lineHeight: 1.3,
-            fontWeight: 600,
-            fontFamily: font,
-            textShadow: "0 2px 6px rgba(0,0,0,0.5)",
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            ...cap.bar,
+            ...textStyle,
           }}
         >
-          {scriptText}
-        </p>
-      </div>
+          <p style={cap.text}>
+            {scriptText}
+          </p>
+        </div>
+      )}
     </AbsoluteFill>
   );
 };

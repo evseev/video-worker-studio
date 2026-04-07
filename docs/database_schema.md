@@ -23,7 +23,8 @@ Tracks the global state of a video generation request.
 | `aspect_ratio` | `text` | Not Null, Default `'9:16'`, CHECK `IN ('9:16','16:9')` | Video aspect ratio (portrait or landscape) |
 | `video_quality` | `text` | Not Null, Default `'1080p'`, CHECK `IN ('720p','1080p','4k')` | Render quality |
 | `background_music` | `text` | Nullable | Selected music preset ID (e.g., `'upbeat'`, `'chill'`) or null for no music |
-| `caption_style` | `text` | Nullable, CHECK `IN ('minimal','bold','strip','split')` | Caption style preset |
+| `caption_style` | `text` | Nullable, CHECK `IN ('minimal','bold','strip','split','glowing')` | Caption style preset (comparison template) |
+| `comparison_overlay_mode` | `text` | Not Null, Default `'both'`, CHECK `IN ('labels','caption','both')` | Comparison template: show labels, bottom caption, or both |
 | `voiceover_url` | `text` | Nullable | URL to user-uploaded voice-over audio (MP3/WAV) in Supabase Storage |
 | `video_description` | `text` | Nullable | AI-generated SEO-optimized YouTube video description |
 | `video_tags` | `text` | Nullable | Comma-separated YouTube tags for discoverability |
