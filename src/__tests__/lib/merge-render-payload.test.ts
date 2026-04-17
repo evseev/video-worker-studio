@@ -98,4 +98,12 @@ describe("mergeRenderPayload", () => {
     expect(merged.captionStyle).toBe("split");
     expect(merged.comparisonOverlayMode).toBe("caption");
   });
+
+  it("keeps scenes undefined when retry payload and draft have none", () => {
+    const row = baseRow({
+      draft_scenes: null,
+    });
+    const merged = mergeRenderPayload({ projectId: "p1" }, row);
+    expect(merged.scenes).toBeUndefined();
+  });
 });
