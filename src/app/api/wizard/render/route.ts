@@ -74,27 +74,43 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   }
 
   try {
+    const eventData: Record<string, unknown> = {
+      projectId: merged.projectId,
+      topic: project.topic,
+      template: merged.template,
+      aspectRatio: merged.aspectRatio,
+      videoQuality: merged.videoQuality,
+      sceneDuration: merged.sceneDuration,
+      backgroundMusic: merged.backgroundMusic,
+      voiceoverUrl: merged.voiceoverUrl,
+      sceneTransition: merged.sceneTransition,
+      imageMotion: merged.imageMotion,
+      textAnimation: merged.textAnimation,
+      captionStyle: merged.captionStyle,
+      comparisonOverlayMode: merged.comparisonOverlayMode,
+      userId: user.id,
+    };
+    if (merged.scenes !== undefined) {
+      eventData.scenes = merged.scenes;
+    }
+
     await inngest.send({
       name: "video/generate",
-      data: {
-        projectId: merged.projectId,
-        topic: project.topic,
-        scenes: merged.scenes,
-        template: merged.template,
-        aspectRatio: merged.aspectRatio,
-        videoQuality: merged.videoQuality,
-        sceneDuration: merged.sceneDuration,
-        backgroundMusic: merged.backgroundMusic,
-        voiceoverUrl: merged.voiceoverUrl,
-        sceneTransition: merged.sceneTransition,
-        imageMotion: merged.imageMotion,
-        textAnimation: merged.textAnimation,
-        captionStyle: merged.captionStyle,
-        comparisonOverlayMode: merged.comparisonOverlayMode,
-        userId: user.id,
-      },
+      data: eventData,
     });
   } catch (inngestErr) {
+    const { error: rollbackError } = await supabase
+      .from("projects")
+      .update({
+        status: project.status,
+        wizard_step: project.wizard_step,
+      })
+      .eq("id", projectId)
+      .eq("user_id", user.id);
+    if (rollbackError) {
+      console.error("[wizard/render] rollback after queue failure failed:", rollbackError);
+    }
+
     console.error("[wizard/render] inngest.send failed:", inngestErr);
     const msg =
       inngestErr instanceof Error ? inngestErr.message : String(inngestErr);

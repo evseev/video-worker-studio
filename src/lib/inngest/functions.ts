@@ -111,8 +111,10 @@ export const generateVideo = inngest.createFunction(
 
     const db = getWorkerClient();
 
+    const hasPassedScenes = Array.isArray(passedScenes) && passedScenes.length > 0;
+
     // Step 1: Generate script via Gemini (or use passed scenes)
-    const scenes = passedScenes || await step.run("generate-script", async () => {
+    const scenes = hasPassedScenes ? passedScenes : await step.run("generate-script", async () => {
       console.log(`[generate-script] Project: ${projectId}, Topic: ${topic}`);
       try {
         if (!topic) throw new Error("Topic is required if scenes are not provided");

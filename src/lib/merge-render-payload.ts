@@ -11,7 +11,7 @@ export type ProjectRow = Tables<"projects">;
 
 export type MergedRenderPayload = {
   projectId: string;
-  scenes: unknown;
+  scenes?: unknown;
   template: string;
   aspectRatio: string;
   videoQuality: string;
@@ -73,7 +73,7 @@ export function mergeRenderPayload(
 
   const projectId = (body.projectId as string) ?? row.id;
 
-  const scenes = body.scenes !== undefined ? body.scenes : draft.scenes ?? [];
+  const scenes = body.scenes !== undefined ? body.scenes : draft.scenes;
 
   const template = (body.template as string) ?? row.selected_template ?? "slideshow";
 
