@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3.0] — 2026-04-07
+
+### Added
+- **Comparison caption styles** — choose how the bottom line and side labels look: Minimal, Bold viral, Bottom strip, Split labels, or Glowing neon, each with a mini-preview on the Preview step.
+- **Comparison overlay mode** — show only the side labels, only the bottom caption, or both, without leaving the wizard.
+- **Reliable render retries** — starting a render from the dashboard with only `projectId` still works: the server merges your saved project row and draft with the request so Inngest always receives full scenes and settings.
+
+### Changed
+- **Glowing style** — larger caption and label type plus more padding under the bottom caption bar so the line reads clearly in the final video.
+
+### Fixed
+- **Render API errors** — failed updates or Inngest queue errors now return a readable `error` string instead of an empty JSON body.
+- **Fetch assets (single-slot)** — keywords are derived from normalized scenes so TypeScript and PostgREST agree on types.
+
+### For Contributors
+- New migrations: `20260404115959_ensure_caption_style_column.sql`, `20260404120000_glowing_caption_comparison_overlay.sql` — extend `caption_style` with `glowing`, add `comparison_overlay_mode`. Regenerate `src/lib/supabase/types.ts` from the database after applying.
+- New modules: `src/lib/merge-render-payload.ts`, `src/lib/comparison-caption-styles.ts`; tests under `src/__tests__/lib/merge-render-payload.test.ts` and `src/__tests__/components/wizard/caption-style-selector.test.tsx`.
+
+## [0.4.2.0] — 2026-03-27
+
+### Added
+- **Configurable scene transitions** — choose from Fade, Slide, Wipe, Flip, or Clock Wipe between scenes, or pick Random for a different transition at each cut. Settings live in a new collapsible "Effects & Animations" section on the Template step.
+- **Image motion effects** — select how images move during each scene: Zoom In, Zoom Out, Pan Left/Right/Up/Down, Horizontal Sway, Vertical Sway, or None. Random picks a different motion per scene.
+- **Text animations** — control how captions appear: Slide Up, Slide Left, Typewriter, Pop, Fade In, or Random. Replaces the old hardcoded slide-up on every template.
+
+### For Contributors
+- New `src/lib/effects.ts` — type definitions, option arrays, and random resolver functions for all three effect categories.
+- New `src/remotion/animation-utils.ts` — shared `getImageTransform()` and `getTextStyle()` utilities replace per-component animation code.
+- New `src/components/wizard/effect-selector.tsx` — reusable grid selector component used 3x on TemplateStep.
+- DB migration adds `scene_transition`, `image_motion`, `text_animation` columns to `projects` (with CHECK constraints).
+- "Random" values resolve to concrete per-scene arrays in Inngest before reaching Remotion (deterministic Lambda rendering).
+- 38 new tests across effects, animation-utils, and EffectSelector.
+
 ## [0.4.1.0] — 2026-03-25
 
 ### Added

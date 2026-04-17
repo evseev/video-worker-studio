@@ -13,7 +13,7 @@ type Props = { store: StoreApi<WizardState> };
 const QUALITY_LABELS: Record<string, string> = { hd: "HD (720p)", fullhd: "Full HD (1080p)", "4k": "4K (2160p)" };
 
 export function RenderStep({ store }: Props) {
-  const { projectId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, saveProgress, setStep } = useStore(store);
+  const { projectId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, setStep } = useStore(store);
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [backgroundMusic, setBackgroundMusic] = useState<string | null>(null);
@@ -40,7 +40,21 @@ export function RenderStep({ store }: Props) {
       const res = await fetch("/api/wizard/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration, backgroundMusic, voiceoverUrl }),
+        body: JSON.stringify({
+          projectId,
+          scenes,
+          template: selectedTemplate,
+          aspectRatio: settings.aspectRatio,
+          videoQuality: settings.quality,
+          sceneDuration: settings.sceneDuration,
+          backgroundMusic,
+          voiceoverUrl,
+          sceneTransition: settings.sceneTransition,
+          imageMotion: settings.imageMotion,
+          textAnimation: settings.textAnimation,
+          captionStyle: settings.captionStyle,
+          comparisonOverlayMode: settings.comparisonOverlayMode,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

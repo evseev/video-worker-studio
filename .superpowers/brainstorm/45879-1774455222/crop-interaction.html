@@ -1,0 +1,165 @@
+<h2>Crop Interaction — All Three Templates</h2>
+<p class="subtitle">How the hover-to-reveal, drag-to-pan interaction looks on each SceneCard type</p>
+
+<div style="display: flex; flex-direction: column; gap: 32px; max-width: 800px; margin: 0 auto;">
+
+  <!-- Slideshow -->
+  <div class="mockup">
+    <div class="mockup-header">Slideshow SceneCard — Single Image Slot</div>
+    <div class="mockup-body" style="background: #0f0f14; padding: 20px;">
+      <div style="display: flex; gap: 16px;">
+        <!-- Reorder column + image -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0;">
+          <div style="color: #555; font-size: 10px;">▲</div>
+
+          <!-- Image thumbnail — HOVER STATE -->
+          <div style="position: relative; width: 80px; height: 96px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+            <!-- Hover overlay -->
+            <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: grab;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" opacity="0.8">
+                <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/>
+              </svg>
+              <span style="color: white; font-size: 8px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Reposition</span>
+            </div>
+            <!-- Refresh button — moved to corner -->
+            <div style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: rgba(0,0,0,0.6); border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: white; font-size: 10px;">↻</span>
+            </div>
+          </div>
+
+          <div style="color: #555; font-size: 10px;">▼</div>
+        </div>
+
+        <!-- Content column -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.1em;">Scene 1</span>
+            <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 8px; font-size: 10px; color: #888;">beach sunset</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: #ccc; font-size: 12px; line-height: 1.5;">
+            The golden hour at Malibu Beach creates a breathtaking canvas...
+          </div>
+          <!-- Asset options -->
+          <div style="display: flex; gap: 6px;">
+            <div style="width: 40px; height: 40px; border-radius: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 2px solid #7c3aed;"></div>
+            <div style="width: 40px; height: 40px; border-radius: 6px; background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%); border: 2px solid rgba(255,255,255,0.1);"></div>
+            <div style="width: 40px; height: 40px; border-radius: 6px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: 2px solid rgba(255,255,255,0.1);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison -->
+  <div class="mockup">
+    <div class="mockup-header">Comparison SceneCard — Two Side-by-Side Slots</div>
+    <div class="mockup-body" style="background: #0f0f14; padding: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 10px; color: #555; text-transform: uppercase;">◀ Scene 2 ▶</span>
+          <span style="font-size: 10px; color: #555;">×</span>
+        </div>
+
+        <!-- Two image slots -->
+        <div style="display: flex; gap: 12px;">
+          <!-- Left slot - normal state -->
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            <span style="font-size: 9px; color: #555; text-transform: uppercase;">Left</span>
+            <div style="position: relative; width: 100%; aspect-ratio: 3/4; background: #222; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+              <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);"></div>
+              <!-- Normal state — no overlay until hover -->
+            </div>
+          </div>
+
+          <!-- Right slot - hover state -->
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            <span style="font-size: 9px; color: #555; text-transform: uppercase;">Right</span>
+            <div style="position: relative; width: 100%; aspect-ratio: 3/4; background: #222; border-radius: 8px; overflow: hidden; border: 1px solid rgba(124,58,237,0.5);">
+              <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+              <!-- Hover state -->
+              <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" opacity="0.8">
+                  <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/>
+                </svg>
+                <span style="color: white; font-size: 8px; font-weight: 600; text-transform: uppercase;">Reposition</span>
+              </div>
+              <div style="position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; background: rgba(0,0,0,0.6); border-radius: 3px; display: flex; align-items: center; justify-content: center;">
+                <span style="color: white; font-size: 9px;">↻</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fact Card -->
+  <div class="mockup">
+    <div class="mockup-header">Fact Card SceneCard — Main + Secondary Slots</div>
+    <div class="mockup-body" style="background: #0f0f14; padding: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 10px; color: #555; text-transform: uppercase;">◀ Scene 3 ▶</span>
+          <span style="font-size: 10px; color: #555;">×</span>
+        </div>
+
+        <!-- Image slots -->
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <!-- Main image — large, hover state -->
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            <span style="font-size: 9px; color: #555; text-transform: uppercase;">Main Image</span>
+            <div style="position: relative; width: 128px; height: 144px; background: #222; border-radius: 8px; overflow: hidden; border: 1px solid rgba(124,58,237,0.5);">
+              <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+              <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" opacity="0.8">
+                  <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/>
+                </svg>
+                <span style="color: white; font-size: 8px; font-weight: 600; text-transform: uppercase;">Reposition</span>
+              </div>
+              <div style="position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; background: rgba(0,0,0,0.6); border-radius: 3px; display: flex; align-items: center; justify-content: center;">
+                <span style="color: white; font-size: 9px;">↻</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary image — small, normal state -->
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            <span style="font-size: 9px; color: #555; text-transform: uppercase;">Secondary</span>
+            <div style="position: relative; width: 80px; height: 96px; background: #222; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+              <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Interaction notes -->
+<div style="max-width: 800px; margin: 24px auto 0;">
+  <h3>Interaction Details</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="background: #1a1a2e; border-radius: 8px; padding: 16px;">
+      <h4 style="color: #7c3aed; margin: 0 0 8px; font-size: 13px;">Hover State</h4>
+      <ul style="color: #aaa; font-size: 11px; line-height: 1.8; margin: 0; padding-left: 16px;">
+        <li>Semi-transparent dark overlay (bg-black/40)</li>
+        <li>Move icon + "Reposition" text</li>
+        <li>Refresh button moves to top-right corner</li>
+        <li>Violet border hint on container</li>
+        <li>Cursor: <code style="background: #333; padding: 1px 4px; border-radius: 3px;">grab</code></li>
+      </ul>
+    </div>
+    <div style="background: #1a1a2e; border-radius: 8px; padding: 16px;">
+      <h4 style="color: #7c3aed; margin: 0 0 8px; font-size: 13px;">Drag State</h4>
+      <ul style="color: #aaa; font-size: 11px; line-height: 1.8; margin: 0; padding-left: 16px;">
+        <li>Overlay disappears — see image move</li>
+        <li>Image pans under the fixed window</li>
+        <li>Cursor: <code style="background: #333; padding: 1px 4px; border-radius: 3px;">grabbing</code></li>
+        <li>Clamped to edges (can't pan image off-screen)</li>
+        <li>On mouseup: save objectPosition to store</li>
+      </ul>
+    </div>
+  </div>
+</div>

@@ -1,9 +1,15 @@
 import { AbsoluteFill, Audio, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { TransitionSeries, linearTiming, type TransitionPresentation } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
+import { slide } from "@remotion/transitions/slide";
+import { wipe } from "@remotion/transitions/wipe";
+import { flip } from "@remotion/transitions/flip";
+import { clockWipe } from "@remotion/transitions/clock-wipe";
 import { SlideshowScene } from "./templates/SlideshowScene";
 import { ComparisonScene } from "./templates/ComparisonScene";
 import { FactCardScene } from "./templates/FactCardScene";
+import type { ResolvedTransition, ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
+import type { CaptionStyleId, ComparisonOverlayMode } from "@/lib/comparison-caption-styles";
 
 export type VideoCompositionProps = {
   scenes: Array<{
@@ -22,7 +28,38 @@ export type VideoCompositionProps = {
   transitionFrames: number;
   musicUrl?: string | null;
   voiceoverUrl?: string | null;
+  sceneTransitions?: ResolvedTransition[];
+  imageMotions?: ResolvedImageMotion[];
+  textAnimations?: ResolvedTextAnimation[];
+  captionStyle?: CaptionStyleId;
+  comparisonOverlayMode?: ComparisonOverlayMode;
 };
+
+function asPresentation<P extends Record<string, unknown>>(
+  p: TransitionPresentation<P>
+): TransitionPresentation<Record<string, unknown>> {
+  return p as unknown as TransitionPresentation<Record<string, unknown>>;
+}
+
+function resolveTransitionPresentation(
+  kind: ResolvedTransition,
+  width: number,
+  height: number
+): TransitionPresentation<Record<string, unknown>> {
+  switch (kind) {
+    case "slide":
+      return asPresentation(slide({ direction: "from-right" }));
+    case "wipe":
+      return asPresentation(wipe());
+    case "flip":
+      return asPresentation(flip());
+    case "clock-wipe":
+      return asPresentation(clockWipe({ width, height }));
+    case "fade":
+    default:
+      return asPresentation(fade());
+  }
+}
 
 function BackgroundMusic({ src }: { src: string }) {
   const frame = useCurrentFrame();
@@ -45,7 +82,14 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
   transitionFrames,
   musicUrl,
   voiceoverUrl,
+  sceneTransitions = [],
+  imageMotions = [],
+  textAnimations = [],
+  captionStyle = "minimal",
+  comparisonOverlayMode = "both",
 }) => {
+  const { width, height } = useVideoConfig();
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       {musicUrl && <BackgroundMusic src={musicUrl} />}
@@ -53,6 +97,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
 
       <TransitionSeries>
         {scenes.flatMap((scene, index) => {
+          const i = index;
           const elements = [
             <TransitionSeries.Sequence
               key={`scene-${index}`}
@@ -70,6 +115,10 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                         rightObjectPosition={scene.assets[1]?.objectPosition}
                         leftLabel={scene.leftLabel ?? ""}
                         rightLabel={scene.rightLabel ?? ""}
+                        imageMotion={imageMotions[i] ?? "zoom-in"}
+                        textAnimation={textAnimations[i] ?? "slide-up"}
+                        captionStyleId={captionStyle}
+                        comparisonOverlayMode={comparisonOverlayMode}
                       />
                     );
                   case "fact-card":
@@ -83,6 +132,8 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                         title={scene.title ?? ""}
                         subtitle={scene.subtitle ?? ""}
                         facts={scene.facts ?? []}
+                        imageMotion={imageMotions[i] ?? "zoom-in"}
+                        textAnimation={textAnimations[i] ?? "slide-up"}
                       />
                     );
                   default:
@@ -91,6 +142,8 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                         scriptText={scene.scriptText}
                         assetUrl={scene.assets[0]?.url ?? null}
                         assetObjectPosition={scene.assets[0]?.objectPosition}
+                        imageMotion={imageMotions[i] ?? "zoom-in"}
+                        textAnimation={textAnimations[i] ?? "slide-up"}
                       />
                     );
                 }
@@ -102,7 +155,11 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
             elements.push(
               <TransitionSeries.Transition
                 key={`transition-${index}`}
-                presentation={fade()}
+                presentation={resolveTransitionPresentation(
+                  sceneTransitions[i] ?? "fade",
+                  width,
+                  height
+                )}
                 timing={linearTiming({ durationInFrames: transitionFrames })}
               />
             );

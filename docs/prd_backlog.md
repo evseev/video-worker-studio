@@ -232,3 +232,23 @@
 *   [x] **Story 21.5:** Integrate `DraggableImage` into all 3 SceneCard types (slideshow, comparison, fact-card).
 *   [x] **Story 21.6:** Thread `objectPosition` through render pipeline — `VideoGenerateScene`, `RenderInput`, `VideoCompositionProps`, and all 3 Remotion scene components.
 *   [x] **Story 21.7:** E2E verification — full test suite, TypeScript check, manual verification across all templates.
+
+## Epic 22: Scene Transitions & Animation Effects
+**Description:** Add user-configurable transitions between scenes and animation effects within scenes. Three granular selectors (transition type, image motion, text animation) with a "random" option that varies per scene. Settings live on the Template step in a collapsible "Effects & Animations" section.
+
+**Spec:** `docs/superpowers/specs/2026-03-27-transitions-and-effects-design.md`
+**Plan:** `docs/superpowers/plans/2026-03-27-transitions-and-effects.md`
+
+*   [x] **Story 22.1:** Create `src/lib/effects.ts` — types, option arrays, resolver function + tests.
+*   [x] **Story 22.2:** DB migration — 3 new columns (`scene_transition`, `image_motion`, `text_animation`) with CHECK constraints + update `types.ts`.
+*   [x] **Story 22.3:** Create `src/remotion/animation-utils.ts` — shared `getImageTransform()` and `getTextStyle()` + tests.
+*   [x] **Story 22.4:** Build `EffectSelector` component (`src/components/wizard/effect-selector.tsx`) + tests.
+*   [x] **Story 22.5:** Update wizard store — add 3 effect fields to `VideoSettings` and `DEFAULT_SETTINGS`.
+*   [x] **Story 22.6:** Add collapsible Effects & Animations section to TemplateStep with 3 `EffectSelector` instances.
+*   [x] **Story 22.7:** Thread effects through render pipeline — render route, Inngest function (with random resolution), `RenderInput`.
+*   [x] **Story 22.8:** Update `VideoComposition.tsx` — per-scene transition presentation mapping, pass motion/animation to scenes.
+*   [x] **Story 22.9:** Update `SlideshowScene.tsx` — replace hardcoded Ken Burns with configurable `imageMotion` + `textAnimation`.
+*   [x] **Story 22.10:** Update `ComparisonScene.tsx` — replace hardcoded slide-in with configurable effects.
+*   [x] **Story 22.11:** Update `FactCardScene.tsx` — replace hardcoded pop-in with configurable effects.
+*   [x] **Story 22.12:** Update `Root.tsx` default props + `RenderStep.tsx` submission.
+*   [x] **Story 22.13:** Final verification — tests, lint, build, update backlog and TODOS.

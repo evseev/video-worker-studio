@@ -4,6 +4,8 @@ import { renderMedia, selectComposition } from "@remotion/renderer";
 import { createClient } from "@supabase/supabase-js";
 import { resolveVideoDimensions } from "./dimensions";
 import { getMusicTrack } from "@/lib/music-presets";
+import type { ResolvedTransition, ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
+import type { CaptionStyleId, ComparisonOverlayMode } from "@/lib/comparison-caption-styles";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -26,6 +28,11 @@ type RenderInput = {
   sceneDuration?: number;
   backgroundMusic?: string | null;
   voiceoverUrl?: string | null;
+  sceneTransitions?: ResolvedTransition[];
+  imageMotions?: ResolvedImageMotion[];
+  textAnimations?: ResolvedTextAnimation[];
+  captionStyle?: CaptionStyleId;
+  comparisonOverlayMode?: ComparisonOverlayMode;
 };
 
 const DEFAULT_SCENE_DURATION_SECONDS = 5;
@@ -148,6 +155,11 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
     transitionFrames: TRANSITION_FRAMES,
     musicUrl: musicTrack?.url ?? null,
     voiceoverUrl: input.voiceoverUrl ?? null,
+    sceneTransitions: input.sceneTransitions ?? Array(scenes.length - 1).fill("fade"),
+    imageMotions: input.imageMotions ?? Array(scenes.length).fill("zoom-in"),
+    textAnimations: input.textAnimations ?? Array(scenes.length).fill("slide-up"),
+    captionStyle: input.captionStyle ?? "minimal",
+    comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
   };
 
   console.log(`[render] Starting Lambda render for project ${projectId} (${width}x${height})`);
@@ -244,6 +256,11 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     transitionFrames: TRANSITION_FRAMES,
     musicUrl: musicTrack?.url ?? null,
     voiceoverUrl: input.voiceoverUrl ?? null,
+    sceneTransitions: input.sceneTransitions ?? Array(normalizedScenes.length - 1).fill("fade"),
+    imageMotions: input.imageMotions ?? Array(normalizedScenes.length).fill("zoom-in"),
+    textAnimations: input.textAnimations ?? Array(normalizedScenes.length).fill("slide-up"),
+    captionStyle: input.captionStyle ?? "minimal",
+    comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
   };
 
   // Select the composition

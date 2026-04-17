@@ -15,6 +15,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     wizard_step: "preview",
     video_url: null,
     selected_template: "slideshow",
+    comparison_overlay_mode: "both",
     draft_scenes: {
       scenes: [
         { template: "slideshow", scriptText: "Scene 1 text", searchKeywords: ["sunset beach"], assets: [{}] },
