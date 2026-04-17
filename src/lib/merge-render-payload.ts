@@ -102,20 +102,20 @@ export function mergeRenderPayload(
 
   const sceneTransition =
     (body.sceneTransition as string) ??
-    row.scene_transition ??
     (typeof settings.sceneTransition === "string" ? settings.sceneTransition : undefined) ??
+    row.scene_transition ??
     "fade";
 
   const imageMotion =
     (body.imageMotion as string) ??
-    row.image_motion ??
     (typeof settings.imageMotion === "string" ? settings.imageMotion : undefined) ??
+    row.image_motion ??
     "zoom-in";
 
   const textAnimation =
     (body.textAnimation as string) ??
-    row.text_animation ??
     (typeof settings.textAnimation === "string" ? settings.textAnimation : undefined) ??
+    row.text_animation ??
     "slide-up";
 
   /** Draft settings reflect latest wizard edits; prefer over row columns until render persists. */

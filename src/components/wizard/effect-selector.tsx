@@ -1,10 +1,6 @@
 "use client";
 
-export interface EffectOption<T extends string = string> {
-  id: T;
-  label: string;
-  description: string;
-}
+import type { EffectOption } from "@/lib/effects";
 
 export function EffectSelector<T extends string>({
   options,
