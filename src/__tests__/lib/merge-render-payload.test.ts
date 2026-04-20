@@ -34,6 +34,7 @@ function baseRow(overrides: Partial<Tables<"projects">> = {}): Tables<"projects"
     voiceover_url: null,
     video_description: null,
     video_tags: null,
+    video_title: null,
     scene_transition: "fade",
     image_motion: "zoom-in",
     text_animation: "slide-up",

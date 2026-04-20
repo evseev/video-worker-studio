@@ -5,10 +5,13 @@ import {
   useVideoConfig,
 } from "remotion";
 import { getImageTransform, getTextStyle } from "@/remotion/animation-utils";
+import { resolveCaption } from "@/remotion/caption-fallback";
 import type { ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 
 type FactCardSceneProps = {
   scriptText: string;
+  /** On-screen headline/caption. Falls back to scriptText when empty. */
+  captionText?: string;
   mainAssetUrl: string | null;
   secondaryAssetUrl: string | null;
   mainObjectPosition?: string;
@@ -27,6 +30,7 @@ const PILL_COLORS = ["#764ba2", "#667eea", "#f5576c", "#4facfe", "#43e97b"];
 
 export const FactCardScene: React.FC<FactCardSceneProps> = ({
   scriptText,
+  captionText,
   mainAssetUrl,
   secondaryAssetUrl,
   mainObjectPosition,
@@ -43,6 +47,7 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
   const progress = frame / durationInFrames;
   const imageStyle = getImageTransform(imageMotion ?? "zoom-in", progress);
   const textStyle = getTextStyle(textAnimation ?? "slide-up", frame, 8, fps);
+  const displayCaption = resolveCaption(captionText, scriptText);
 
   return (
     <AbsoluteFill
@@ -174,7 +179,7 @@ export const FactCardScene: React.FC<FactCardSceneProps> = ({
             overflow: "hidden",
           }}
         >
-          {scriptText}
+          {displayCaption}
         </p>
 
         {/* Fact pills */}

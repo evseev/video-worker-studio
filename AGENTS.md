@@ -164,7 +164,7 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation`, `caption_style`, `comparison_overlay_mode` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_title`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation`, `caption_style`, `comparison_overlay_mode` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 
 ### Project status lifecycle
@@ -304,7 +304,7 @@ draft → processing → rendering → completed
 | `docs/tech_stack.md` | Technology choices and rationale |
 | `docs/workflow_design.md` | Pipeline design, failure modes, retries |
 | `docs/ux_specification.md` | Screen-by-screen layout and interactions |
-| `docs/prd_backlog.md` | Product backlog (22 epics; Epics 1–22 complete) |
+| `docs/prd_backlog.md` | Product backlog (23 epics; Epics 1–23 complete) |
 | `docs/mvp_development_plan.md` | Original development roadmap |
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
 | `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |

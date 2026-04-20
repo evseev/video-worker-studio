@@ -252,3 +252,17 @@
 *   [x] **Story 22.11:** Update `FactCardScene.tsx` — replace hardcoded pop-in with configurable effects.
 *   [x] **Story 22.12:** Update `Root.tsx` default props + `RenderStep.tsx` submission.
 *   [x] **Story 22.13:** Final verification — tests, lint, build, update backlog and TODOS.
+
+## Epic 23: Video Title & Scene Caption Field
+**Description:** Two small but critical fixes. (1) The catchy video title generated at the Idea step is now persisted to a new `projects.video_title` column, editable on the Script step, and used as the YouTube publish title on the project page (with `topic` as fallback). (2) Separate on-screen captions from voiceover narration: every scene gains a new `captionText` field (rendered by Remotion, edited on the Preview step) while `scriptText` stays reserved for voiceover. Example: for a "most famous Hollywood stars of the 1990s" comparison, each scene's `captionText` is just the actor's name (e.g. "Tom Cruise"), not the full narration sentence.
+
+**Plan:** `.cursor/plans/epic-23-title-captions_b8566a39.plan.md`
+
+*   [x] **Story 23.1:** DB migration `20260420120000_add_video_title.sql` adds `projects.video_title` column + regenerate `src/lib/supabase/types.ts`.
+*   [x] **Story 23.2:** Wire `video_title` through wizard store, `/api/wizard/draft`, IdeaStep (capture `idea.title`), and ScriptStep (editable title input).
+*   [x] **Story 23.3:** Use `project.video_title ?? project.topic` in `YouTubeMetadataExport` on `/projects/[id]`.
+*   [x] **Story 23.4:** Add `captionText` to `BaseScene`, all three Gemini/Zod schemas, and all three template prompts with per-template guidance (short names for comparison, headlines for fact-card, punchy summaries for slideshow).
+*   [x] **Story 23.5:** Include `captionText` in `toScene()` and thread it through Inngest (`VideoGenerateScene`, `renderScenes` mapping) and `VideoComposition.tsx` to every Remotion scene component, with `scriptText` fallback via shared `resolveCaption` helper.
+*   [x] **Story 23.6:** Preview step SceneCards (slideshow, comparison, fact-card) edit `captionText` instead of `scriptText`; `addScene` defaults `captionText` to `""`.
+*   [x] **Story 23.7:** Update affected tests (wizard-store, preview-step, merge-render-payload) and add Remotion `resolveCaption` fallback unit tests.
+*   [x] **Story 23.8:** Update `AGENTS.md` projects row table, `CHANGELOG.md`, and this backlog with Epic 23 entry.

@@ -5,10 +5,16 @@ import {
   useVideoConfig,
 } from "remotion";
 import { getImageTransform, getTextStyle } from "@/remotion/animation-utils";
+import { resolveCaption } from "@/remotion/caption-fallback";
 import type { ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 
 type SlideshowSceneProps = {
   scriptText: string;
+  /**
+   * Short on-screen caption. When omitted or empty, falls back to `scriptText`
+   * so legacy scenes without a caption still render correctly.
+   */
+  captionText?: string;
   assetUrl: string | null;
   assetObjectPosition?: string;
   imageMotion?: ResolvedImageMotion;
@@ -20,11 +26,13 @@ const FALLBACK_GRADIENT =
 
 export const SlideshowScene: React.FC<SlideshowSceneProps> = ({
   scriptText,
+  captionText,
   assetUrl,
   assetObjectPosition,
   imageMotion,
   textAnimation,
 }) => {
+  const displayCaption = resolveCaption(captionText, scriptText);
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
 
@@ -88,7 +96,7 @@ export const SlideshowScene: React.FC<SlideshowSceneProps> = ({
               margin: 0,
             }}
           >
-            {scriptText}
+            {displayCaption}
           </p>
         </div>
       </AbsoluteFill>

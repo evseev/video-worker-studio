@@ -10,7 +10,7 @@ export const PUT = withAuth(async (request, { user, supabase }) => {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { projectId, topic, wizard_step, draft_scenes, template, video_description, video_tags } = body;
+  const { projectId, topic, wizard_step, draft_scenes, template, video_title, video_description, video_tags } = body;
 
   if (!projectId) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
@@ -21,6 +21,7 @@ export const PUT = withAuth(async (request, { user, supabase }) => {
   if (wizard_step !== undefined) updates.wizard_step = wizard_step;
   if (draft_scenes !== undefined) updates.draft_scenes = draft_scenes;
   if (template !== undefined) updates.selected_template = template;
+  if (video_title !== undefined) updates.video_title = video_title;
   if (video_description !== undefined) updates.video_description = video_description;
   if (video_tags !== undefined) updates.video_tags = video_tags;
 

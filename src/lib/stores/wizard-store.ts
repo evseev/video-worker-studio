@@ -42,6 +42,7 @@ type DraftData = {
   settings?: VideoSettings;
   refinedIdea?: RefinedIdea;
   targetKeywords?: string;
+  videoTitle?: string;
   videoDescription?: string;
   videoTags?: string[];
 };
@@ -55,6 +56,7 @@ export type WizardState = {
   settings: VideoSettings;
   refinedIdea: RefinedIdea | null;
   targetKeywords: string;
+  videoTitle: string;
   videoDescription: string;
   videoTags: string[];
   projectStatus: string;
@@ -73,6 +75,7 @@ export type WizardState = {
   setSettings: (settings: Partial<VideoSettings>) => void;
   selectAsset: (sceneIdx: number, slotIdx: number, assetIdx: number) => void;
   setTargetKeywords: (keywords: string) => void;
+  setVideoTitle: (title: string) => void;
   setVideoDescription: (desc: string) => void;
   setVideoTags: (tags: string[]) => void;
   setRefinedIdea: (idea: RefinedIdea | null) => void;
@@ -131,6 +134,7 @@ export function createWizardStore(project: Project) {
     settings: buildSettingsFromDraft(project, draft),
     refinedIdea: draft.refinedIdea || null,
     targetKeywords: draft.targetKeywords || "",
+    videoTitle: draft.videoTitle || project.video_title || "",
     videoDescription: draft.videoDescription || project.video_description || "",
     videoTags: draft.videoTags || (project.video_tags ? project.video_tags.split(", ") : []),
     projectStatus: project.status,
@@ -182,6 +186,8 @@ export function createWizardStore(project: Project) {
       })),
 
     setTargetKeywords: (keywords) => set({ targetKeywords: keywords }),
+
+    setVideoTitle: (title) => set({ videoTitle: title }),
 
     setVideoDescription: (desc) => set({ videoDescription: desc }),
 

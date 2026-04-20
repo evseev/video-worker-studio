@@ -10,6 +10,8 @@ import { z } from "zod";
 interface VideoGenerateScene {
   template: string;
   scriptText: string;
+  /** On-screen caption (Remotion). Falls back to scriptText if missing. */
+  captionText?: string;
   searchKeywords: string[];
   assets: Array<{ url?: string; options?: string[]; selectedIndex?: number; objectPosition?: string }>;
   // Template-specific optional fields
@@ -197,6 +199,8 @@ export const generateVideo = inngest.createFunction(
         const renderScenes = (scenesWithAssets as VideoGenerateScene[]).map((s) => ({
           template: s.template,
           scriptText: s.scriptText,
+          // Fall back to scriptText so legacy scenes still render a caption.
+          captionText: s.captionText ?? s.scriptText,
           assets: s.assets.map((a) => ({ url: a.url ?? null, objectPosition: a.objectPosition })),
           leftLabel: s.leftLabel,
           rightLabel: s.rightLabel,

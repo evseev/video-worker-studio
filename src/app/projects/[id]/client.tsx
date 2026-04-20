@@ -189,13 +189,14 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 function YouTubeMetadataExport({ project }: { project: Project }) {
   const description = project.video_description;
   const tags = project.video_tags;
+  const title = project.video_title?.trim() || project.topic;
 
   if (!description && !tags) return null;
 
   function downloadMetadata() {
     const content = [
       "TITLE",
-      project.topic,
+      title,
       "",
       "DESCRIPTION",
       description || "(none)",
@@ -208,7 +209,7 @@ function YouTubeMetadataExport({ project }: { project: Project }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${project.topic.replace(/[^a-zA-Z0-9\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase()}-metadata.txt`;
+    a.download = `${title.replace(/[^a-zA-Z0-9\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase()}-metadata.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -235,9 +236,9 @@ function YouTubeMetadataExport({ project }: { project: Project }) {
       <div>
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Title</span>
-          <CopyButton text={project.topic} label="title" />
+          <CopyButton text={title} label="title" />
         </div>
-        <p className="text-sm text-zinc-200">{project.topic}</p>
+        <p className="text-sm text-zinc-200">{title}</p>
       </div>
 
       {/* Description */}

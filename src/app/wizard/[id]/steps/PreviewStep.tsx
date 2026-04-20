@@ -132,6 +132,7 @@ export function PreviewStep({ store }: Props) {
     const blankScene: Scene = {
       template: selectedTemplate,
       scriptText: "",
+      captionText: "",
       searchKeywords: selectedTemplate === "slideshow" ? [""] : ["", ""],
       assets: selectedTemplate === "slideshow" ? [{}] : [{}, {}],
       ...(selectedTemplate === "comparison" ? { leftLabel: "", rightLabel: "" } : {}),

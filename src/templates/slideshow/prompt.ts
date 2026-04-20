@@ -22,7 +22,8 @@ ${orientationHint}
 RULES:
 - Video is ${orientation} format.
 - Each scene will be displayed for ${opts.sceneDuration} seconds.
-- scriptText: 1-2 short sentences, maximum 15 words. Spoken caption for the scene.
+- scriptText: 1-2 full sentences of SPOKEN NARRATION (used for voiceover), max 25 words.
+- captionText: A short ON-SCREEN caption that will be shown over the image, 3-8 words. It should summarize the single idea of the scene at a glance — do NOT repeat the full narration verbatim. Example: if scriptText is "Sleeping less than 6 hours doubles your risk of heart disease", captionText might be "Sleep under 6 hours = heart risk doubles".
 - searchKeyword: A single descriptive keyword phrase for Pinterest (e.g. "moody cinematic coffee shop"). Must match the visual story.
 - Scene 1 MUST hook the viewer with a bold claim or question.
 - Each scene should build on the previous — maintain narrative momentum.

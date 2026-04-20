@@ -15,6 +15,7 @@ export type VideoCompositionProps = {
   scenes: Array<{
     template: string;
     scriptText: string;
+    captionText?: string;
     assets: Array<{ url?: string | null; objectPosition?: string }>;
     // Comparison-specific
     leftLabel?: string;
@@ -109,6 +110,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                     return (
                       <ComparisonScene
                         scriptText={scene.scriptText}
+                        captionText={scene.captionText}
                         leftAssetUrl={scene.assets[0]?.url ?? null}
                         rightAssetUrl={scene.assets[1]?.url ?? null}
                         leftObjectPosition={scene.assets[0]?.objectPosition}
@@ -125,6 +127,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                     return (
                       <FactCardScene
                         scriptText={scene.scriptText}
+                        captionText={scene.captionText}
                         mainAssetUrl={scene.assets[0]?.url ?? null}
                         secondaryAssetUrl={scene.assets[1]?.url ?? null}
                         mainObjectPosition={scene.assets[0]?.objectPosition}
@@ -140,6 +143,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                     return (
                       <SlideshowScene
                         scriptText={scene.scriptText}
+                        captionText={scene.captionText}
                         assetUrl={scene.assets[0]?.url ?? null}
                         assetObjectPosition={scene.assets[0]?.objectPosition}
                         imageMotion={imageMotions[i] ?? "zoom-in"}

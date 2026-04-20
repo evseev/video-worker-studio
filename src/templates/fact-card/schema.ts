@@ -11,7 +11,11 @@ export const factCardGeminiSchema: Schema = {
         properties: {
           scriptText: {
             type: SchemaType.STRING,
-            description: "The spoken narration text for this fact-card scene.",
+            description: "The spoken narration text for this fact-card scene (for voiceover). 1-2 full sentences.",
+          },
+          captionText: {
+            type: SchemaType.STRING,
+            description: "Short headline or key fact shown on the card itself. 3-8 words. Do NOT repeat the full narration — summarize the main hook of this subject.",
           },
           searchKeywords: {
             type: SchemaType.ARRAY,
@@ -47,7 +51,7 @@ export const factCardGeminiSchema: Schema = {
             description: "2-3 quick facts about the subject.",
           },
         },
-        required: ["scriptText", "searchKeywords", "title", "subtitle", "facts"],
+        required: ["scriptText", "captionText", "searchKeywords", "title", "subtitle", "facts"],
       },
     },
   },
@@ -59,6 +63,7 @@ export const FactCardResponseSchema = z.object({
     .array(
       z.object({
         scriptText: z.string(),
+        captionText: z.string(),
         searchKeywords: z.array(z.string()).length(2),
         title: z.string(),
         subtitle: z.string(),
