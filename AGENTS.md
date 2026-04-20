@@ -304,7 +304,7 @@ draft → processing → rendering → completed
 | `docs/tech_stack.md` | Technology choices and rationale |
 | `docs/workflow_design.md` | Pipeline design, failure modes, retries |
 | `docs/ux_specification.md` | Screen-by-screen layout and interactions |
-| `docs/prd_backlog.md` | Product backlog (22 epics; Epics 1–22 complete) |
+| `docs/prd_backlog.md` | Product backlog (23 epics; Epics 1–23 complete) |
 | `docs/mvp_development_plan.md` | Original development roadmap |
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
 | `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |

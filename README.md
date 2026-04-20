@@ -197,7 +197,7 @@ docs/
 ├── tech_stack.md                # Tech stack rationale
 ├── workflow_design.md           # Pipeline design
 ├── ux_specification.md          # UX spec
-├── prd_backlog.md               # Product backlog (22 epics)
+├── prd_backlog.md               # Product backlog (23 epics)
 ├── mvp_development_plan.md      # Original development roadmap
 └── designs/remotion-lambda-migration.md # Render architecture design
 ```
@@ -253,7 +253,7 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Tech Stack](docs/tech_stack.md) — technology choices and rationale
 - [Workflow Design](docs/workflow_design.md) — pipeline design and failure modes
 - [UX Specification](docs/ux_specification.md) — screen-by-screen layout and interactions
-- [Product Backlog](docs/prd_backlog.md) — epics and stories (22 epics; Epics 1-22 complete)
+- [Product Backlog](docs/prd_backlog.md) — epics and stories (23 epics; Epics 1-23 complete)
 - [MVP Development Plan](docs/mvp_development_plan.md) — original development roadmap
 - [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md) — render architecture design
 - [Template System Design](docs/designs/2026-03-24-template-system-design.md) — 3 structural archetypes design
