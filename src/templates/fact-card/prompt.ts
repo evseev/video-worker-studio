@@ -21,7 +21,8 @@ ${orientationHint}
 RULES:
 - Video is ${orientation} format.
 - Each scene will be displayed for ${opts.sceneDuration} seconds.
-- scriptText: 1-2 short sentences introducing or narrating the subject. Keep it informative and engaging.
+- scriptText: 1-2 full sentences of SPOKEN NARRATION introducing the subject (for voiceover). Keep it informative and engaging.
+- captionText: A short ON-SCREEN caption — a headline or key fact about the subject shown on the card. 3-8 words. Do NOT repeat the full narration — summarize the hook (e.g. "Changed physics forever" rather than a full sentence).
 - searchKeywords: Exactly 2 keyword phrases — first for the MAIN image, second for a SECONDARY image (e.g. related context or background). Both should be Pinterest-friendly.
 - title: The name of the person, place, or subject (e.g. "Albert Einstein", "Tokyo", "Photosynthesis").
 - subtitle: A short descriptor of their role, relationship, or category (e.g. "Theoretical Physicist", "Capital of Japan", "Plant Biology").

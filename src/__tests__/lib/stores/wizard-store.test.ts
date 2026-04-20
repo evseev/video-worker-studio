@@ -337,4 +337,80 @@ describe("wizard-store", () => {
       expect(store.getState().videoTags).toEqual(["a", "b", "c"]);
     });
   });
+
+  describe("videoTitle field (Epic 23)", () => {
+    it("initializes videoTitle from draft_scenes.videoTitle", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [],
+          videoTitle: "Draft Title Wins",
+        } as unknown,
+        video_title: "DB Title",
+      });
+      const store = createWizardStore(project);
+      expect(store.getState().videoTitle).toBe("Draft Title Wins");
+    });
+
+    it("falls back to project.video_title column when draft missing", () => {
+      const project = makeProject({
+        draft_scenes: null,
+        video_title: "Column Title",
+      });
+      const store = createWizardStore(project);
+      expect(store.getState().videoTitle).toBe("Column Title");
+    });
+
+    it("defaults to empty string when neither draft nor column has a title", () => {
+      const project = makeProject({ draft_scenes: null, video_title: null });
+      const store = createWizardStore(project);
+      expect(store.getState().videoTitle).toBe("");
+    });
+
+    it("setVideoTitle updates state", () => {
+      const store = createWizardStore(makeProject());
+      store.getState().setVideoTitle("My New Title");
+      expect(store.getState().videoTitle).toBe("My New Title");
+    });
+  });
+
+  describe("captionText field (Epic 23)", () => {
+    it("hydrates captionText from draft_scenes", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [
+            {
+              template: "slideshow",
+              scriptText: "Full narration sentence.",
+              captionText: "Short caption",
+              searchKeywords: ["kw"],
+              assets: [{}],
+            },
+          ],
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+      expect(store.getState().scenes[0].captionText).toBe("Short caption");
+    });
+
+    it("updateScene can edit captionText independently of scriptText", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [
+            {
+              template: "slideshow",
+              scriptText: "Narration",
+              captionText: "Old",
+              searchKeywords: ["kw"],
+              assets: [{}],
+            },
+          ],
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+      store.getState().updateScene(0, { captionText: "New" });
+      const scene = store.getState().scenes[0];
+      expect(scene.captionText).toBe("New");
+      expect(scene.scriptText).toBe("Narration");
+    });
+  });
 });

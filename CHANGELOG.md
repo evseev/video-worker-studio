@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Epic 23: Video Title & Scene Caption Field
+
+### Added
+- **Dedicated video title** — the catchy title generated at the Idea step now sticks around instead of getting discarded. It persists to a new `projects.video_title` column, is editable on the Script step ("Video Title" input in the YouTube Metadata section), and is used as the published title on the project page (with the long topic as a fallback for existing projects).
+- **Separate on-screen caption field** — every scene now has a dedicated `captionText` for what's shown on screen, distinct from `scriptText` (reserved for voiceover narration). The Preview step now edits Caption instead of Script. For comparison videos, captions are short and specific (e.g. "Tom Cruise") rather than the full narration sentence.
+
+### Changed
+- **Preview step scene cards** (slideshow, comparison, fact-card) — the on-screen caption textarea is now labeled "Caption (on-screen)" and is bound to `captionText`. `scriptText` is still editable on the Script step so the voiceover flow stays wired.
+- **Gemini prompts + schemas** for all three templates now emit both `scriptText` (1-2 sentences of narration) and `captionText` (3-8 word on-screen caption) with template-specific guidance.
+
+### Fixed
+- **YouTube publish title** — no longer shows the long topic/description sentence when a short idea title is available.
+
+### Backward Compatibility
+- Existing projects without `video_title` automatically fall back to `topic` for YouTube export.
+- Existing scenes without `captionText` fall back to `scriptText` at render time, so legacy drafts render identically.
+
+### For Contributors
+- New migration: `20260420120000_add_video_title.sql` adds `projects.video_title text`. Regenerate `src/lib/supabase/types.ts` from the database after applying (Row/Insert/Update already updated).
+- New helper: `src/remotion/caption-fallback.ts` exports `resolveCaption(captionText, scriptText)` — used by all three Remotion scene components so the fallback rule lives in one place.
+- Draft JSON now carries `videoTitle` and per-scene `captionText`; both flow through `wizard-store`, `/api/wizard/draft`, and the Inngest `video/generate` event payload.
+- New tests: `src/__tests__/remotion/caption-fallback.test.ts`; plus expanded coverage in `wizard-store.test.ts` (videoTitle + captionText) and `preview-step.test.tsx` (Caption edit binding).
+
 ## [0.4.3.0] — 2026-04-07
 
 ### Added

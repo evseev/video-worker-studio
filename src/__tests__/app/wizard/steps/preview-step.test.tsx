@@ -106,6 +106,33 @@ describe("PreviewStep", () => {
     expect(screen.getAllByRole("button", { name: /Option \d/ })).toHaveLength(3);
   });
 
+  it("edits captionText (not scriptText) when the Caption textarea changes", () => {
+    const store = createWizardStore(makeProject({
+      draft_scenes: {
+        scenes: [
+          {
+            template: "slideshow",
+            scriptText: "Full narration goes here.",
+            captionText: "Old caption",
+            searchKeywords: ["sunset"],
+            assets: [{ url: "/a.jpg" }],
+          },
+        ],
+        settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
+      } as unknown,
+    }));
+
+    render(<PreviewStep store={store} />);
+
+    const captionInput = screen.getByPlaceholderText(/Short on-screen caption/i) as HTMLTextAreaElement;
+    expect(captionInput.value).toBe("Old caption");
+    fireEvent.change(captionInput, { target: { value: "New caption" } });
+
+    const state = store.getState();
+    expect(state.scenes[0].captionText).toBe("New caption");
+    expect(state.scenes[0].scriptText).toBe("Full narration goes here.");
+  });
+
   it("sends multipleAssets: true when refreshing single scene", async () => {
     const store = createWizardStore(makeProject({
       draft_scenes: {

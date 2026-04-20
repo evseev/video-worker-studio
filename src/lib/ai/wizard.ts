@@ -118,11 +118,15 @@ function getTemplateAI(templateId: TemplateId) {
 }
 
 function toScene(templateId: TemplateId, raw: any): Scene {
+  // Fall back to scriptText if the AI didn't emit captionText (should be rare
+  // with the updated schema, but keeps legacy behavior safe).
+  const captionText: string = raw.captionText ?? raw.scriptText ?? "";
   switch (templateId) {
     case "slideshow":
       return {
         template: "slideshow",
         scriptText: raw.scriptText,
+        captionText,
         searchKeywords: [raw.searchKeyword],
         assets: [{}],
       };
@@ -130,6 +134,7 @@ function toScene(templateId: TemplateId, raw: any): Scene {
       return {
         template: "comparison",
         scriptText: raw.scriptText,
+        captionText,
         searchKeywords: raw.searchKeywords,
         leftLabel: raw.leftLabel,
         rightLabel: raw.rightLabel,
@@ -139,6 +144,7 @@ function toScene(templateId: TemplateId, raw: any): Scene {
       return {
         template: "fact-card",
         scriptText: raw.scriptText,
+        captionText,
         searchKeywords: raw.searchKeywords,
         title: raw.title,
         subtitle: raw.subtitle,

@@ -8,7 +8,7 @@ import { useStore } from "zustand";
 type Props = { store: StoreApi<WizardState> };
 
 export function IdeaStep({ store }: Props) {
-  const { topic, setTopic, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
+  const { topic, setTopic, setVideoTitle, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
   const [ideas, setIdeas] = useState<{ title: string; description: string; trendScore: number }[]>([]);
 
@@ -74,7 +74,10 @@ export function IdeaStep({ store }: Props) {
             <div
               key={idx}
               className="group cursor-pointer bg-white/[0.02] border border-white/[0.06] hover:border-violet-500/50 hover:bg-violet-500/[0.02] rounded-xl p-5 transition-all"
-              onClick={() => setTopic(idea.description)}
+              onClick={() => {
+                setTopic(idea.description);
+                setVideoTitle(idea.title);
+              }}
             >
               <div className="flex items-start justify-between gap-4 mb-2">
                 <h4 className="text-white font-medium group-hover:text-violet-400 transition-colors">{idea.title}</h4>
@@ -101,10 +104,12 @@ export function IdeaStep({ store }: Props) {
           disabled={!topic.trim()}
           className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           onClick={async () => {
+            const state = store.getState();
             await saveProgress({
               topic,
               wizard_step: "refine",
-              draft_scenes: { scenes: store.getState().scenes, settings, refinedIdea: store.getState().refinedIdea },
+              video_title: state.videoTitle,
+              draft_scenes: { scenes: state.scenes, settings, refinedIdea: state.refinedIdea, videoTitle: state.videoTitle },
             });
             setStep("refine");
           }}

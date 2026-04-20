@@ -21,7 +21,8 @@ ${orientationHint}
 RULES:
 - Video is ${orientation} format.
 - Each scene will be displayed for ${opts.sceneDuration} seconds.
-- scriptText: 1-2 short sentences describing the comparison. Keep it punchy and contrasting.
+- scriptText: 1-2 full sentences of SPOKEN NARRATION describing the comparison (used for voiceover). Keep it punchy.
+- captionText: A short ON-SCREEN caption identifying the subject of this scene. 2-6 words. Do NOT include the full narration — just the subject being compared. For example, for a video about "most famous Hollywood stars of the 1990s", captionText for each scene should be just the star's full name (e.g. "Tom Cruise"), NOT the full narration sentence.
 - searchKeywords: Exactly 2 keyword phrases — first for the LEFT image, second for the RIGHT image. Each should be descriptive enough to find a relevant Pinterest image.
 - leftLabel: Short label for the left side (e.g. "Before", "1990", "Budget").
 - rightLabel: Short label for the right side (e.g. "After", "2024", "Luxury").

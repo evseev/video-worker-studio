@@ -36,6 +36,7 @@ export type Database = {
           video_description: string | null;
           video_quality: string;
           video_tags: string | null;
+          video_title: string | null;
           video_url: string | null;
           voiceover_url: string | null;
           wizard_step: string | null;
@@ -61,6 +62,7 @@ export type Database = {
           video_description?: string | null;
           video_quality?: string;
           video_tags?: string | null;
+          video_title?: string | null;
           video_url?: string | null;
           voiceover_url?: string | null;
           wizard_step?: string | null;
@@ -86,6 +88,7 @@ export type Database = {
           video_description?: string | null;
           video_quality?: string;
           video_tags?: string | null;
+          video_title?: string | null;
           video_url?: string | null;
           voiceover_url?: string | null;
           wizard_step?: string | null;

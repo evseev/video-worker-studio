@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/toast";
 type Props = { store: StoreApi<WizardState> };
 
 export function ScriptStep({ store }: Props) {
-  const { projectId, topic, scenes, setScenes, selectedTemplate, refinedIdea, settings, targetKeywords, videoDescription, videoTags, setVideoDescription, setVideoTags, saveProgress, setStep } = useStore(store);
+  const { projectId, topic, scenes, setScenes, selectedTemplate, refinedIdea, settings, targetKeywords, videoTitle, videoDescription, videoTags, setVideoTitle, setVideoDescription, setVideoTags, saveProgress, setStep } = useStore(store);
   const [generatingScript, setGeneratingScript] = useState(false);
   const [generatingSeo, setGeneratingSeo] = useState(false);
   const [seoExpanded, setSeoExpanded] = useState(true);
@@ -151,6 +151,22 @@ export function ScriptStep({ store }: Props) {
 
           {seoExpanded && (
             <div className="mt-4 space-y-4">
+              {/* Title */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                  Video Title
+                </label>
+                <input
+                  type="text"
+                  value={videoTitle}
+                  onChange={(e) => setVideoTitle(e.target.value)}
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                  placeholder="Short, catchy YouTube title"
+                  maxLength={100}
+                />
+                <p className="text-xs text-zinc-600 mt-1.5">Used when publishing to YouTube. YouTube limits titles to 100 characters.</p>
+              </div>
+
               {/* Description */}
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
@@ -232,9 +248,10 @@ export function ScriptStep({ store }: Props) {
             await saveProgress({
               wizard_step: "preview",
               template: selectedTemplate,
+              video_title: state.videoTitle,
               video_description: state.videoDescription,
               video_tags: state.videoTags.join(", "),
-              draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea, targetKeywords: state.targetKeywords, videoDescription: state.videoDescription, videoTags: state.videoTags },
+              draft_scenes: { scenes: state.scenes, settings: state.settings, refinedIdea: state.refinedIdea, targetKeywords: state.targetKeywords, videoTitle: state.videoTitle, videoDescription: state.videoDescription, videoTags: state.videoTags },
             });
             setStep("preview");
           }}

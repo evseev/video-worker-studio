@@ -11,7 +11,11 @@ export const comparisonGeminiSchema: Schema = {
         properties: {
           scriptText: {
             type: SchemaType.STRING,
-            description: "The spoken text describing the comparison for this scene.",
+            description: "The spoken narration describing the comparison (for voiceover). 1-2 full sentences.",
+          },
+          captionText: {
+            type: SchemaType.STRING,
+            description: "Short on-screen caption identifying the subject of this scene (e.g. a full name, a year, or a single concept). 2-6 words. Do NOT include the full narration — just the subject being compared.",
           },
           searchKeywords: {
             type: SchemaType.ARRAY,
@@ -29,7 +33,7 @@ export const comparisonGeminiSchema: Schema = {
             description: "Short label for the right side (e.g. 'After', '2024', 'Luxury').",
           },
         },
-        required: ["scriptText", "searchKeywords", "leftLabel", "rightLabel"],
+        required: ["scriptText", "captionText", "searchKeywords", "leftLabel", "rightLabel"],
       },
     },
   },
@@ -41,6 +45,7 @@ export const ComparisonResponseSchema = z.object({
     .array(
       z.object({
         scriptText: z.string(),
+        captionText: z.string(),
         searchKeywords: z.array(z.string()).length(2),
         leftLabel: z.string(),
         rightLabel: z.string(),

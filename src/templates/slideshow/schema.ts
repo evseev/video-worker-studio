@@ -11,14 +11,18 @@ export const slideshowGeminiSchema: Schema = {
         properties: {
           scriptText: {
             type: SchemaType.STRING,
-            description: "The spoken caption text for this scene (max 15 words, 1-2 sentences).",
+            description: "The spoken narration for this scene (for voiceover). 1-2 full sentences, max 25 words.",
+          },
+          captionText: {
+            type: SchemaType.STRING,
+            description: "Short on-screen caption displayed over the image. Visually punchy, 3-8 words. Do NOT repeat the full narration — summarize the single idea of the scene.",
           },
           searchKeyword: {
             type: SchemaType.STRING,
             description: "A single Pinterest search keyword phrase to find a background image.",
           },
         },
-        required: ["scriptText", "searchKeyword"],
+        required: ["scriptText", "captionText", "searchKeyword"],
       },
     },
   },
@@ -30,6 +34,7 @@ export const SlideshowResponseSchema = z.object({
     .array(
       z.object({
         scriptText: z.string(),
+        captionText: z.string(),
         searchKeyword: z.string(),
       })
     )

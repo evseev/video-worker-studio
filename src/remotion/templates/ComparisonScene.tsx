@@ -5,6 +5,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { getImageTransform, getTextStyle } from "@/remotion/animation-utils";
+import { resolveCaption } from "@/remotion/caption-fallback";
 import type { ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 import {
   getComparisonCaptionStyles,
@@ -17,6 +18,8 @@ import {
 
 type ComparisonSceneProps = {
   scriptText: string;
+  /** On-screen caption. Falls back to scriptText when empty. */
+  captionText?: string;
   leftAssetUrl: string | null;
   rightAssetUrl: string | null;
   leftObjectPosition?: string;
@@ -34,6 +37,7 @@ const RIGHT_GRADIENT = "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)";
 
 export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   scriptText,
+  captionText,
   leftAssetUrl,
   rightAssetUrl,
   leftObjectPosition,
@@ -57,6 +61,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   const labelLeft = getComparisonLabelStyle(captionStyleId, "left");
   const labelRight = getComparisonLabelStyle(captionStyleId, "right");
   const cap = getComparisonCaptionStyles(captionStyleId);
+  const displayCaption = resolveCaption(captionText, scriptText);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0a0a0f" }}>
@@ -159,7 +164,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
           }}
         >
           <p style={cap.text}>
-            {scriptText}
+            {displayCaption}
           </p>
         </div>
       )}
