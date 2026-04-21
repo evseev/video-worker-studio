@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Epic 23: Video Title & Scene Caption Field
+## [0.4.4.1] — 2026-04-20 — Epic 24: Scalable Scene Count & Duration
+
+### Added
+- **Expanded scene controls** — Template step now supports 3-120 scenes and 3-15 seconds per scene with slider + numeric inputs, plus a live total-duration readout.
+- **Large-project guardrails** — UI warning bands now appear for long durations (>10 min and >20 min) to help users avoid expensive configurations accidentally.
+- **Batched Pinterest fetching** — asset downloads are now processed in env-configurable batches (`PINTEREST_BATCH_SIZE`, `PINTEREST_BATCH_PAUSE_MS`, `PINTEREST_CONCURRENCY`) with inter-batch pauses to reduce provider throttling risk.
+- **Progressive asset loading** — Preview step consumes streamed NDJSON batches and updates scene thumbnails incrementally as each batch completes.
+
+### Changed
+- **Render timeout budgeting** — Lambda render timeout now scales with total video duration (floor 8m, cap 40m) instead of a fixed timeout.
+- **AI structure generation at scale** — large scene counts switch to chunked structure generation for better output reliability.
+- **Request validation** — wizard routes now validate scene settings against shared min/max constraints.
+- **Local backend output behavior** — when `RENDER_BACKEND=local`, final MP4 stays in `public/local_renders` and is served directly to the UI instead of uploading to Supabase Storage.
+
+### For Contributors
+- New helper module: `src/lib/video-constraints.ts`.
+- New UI component: `src/components/wizard/range-slider-input.tsx`.
+- New tests for constraints and large-project pipeline behavior, including `fetch-assets-batched.test.ts` and `template-step.test.tsx`.
+
+## [0.4.4.0] — 2026-04-20 — Epic 23: Video Title & Scene Caption Field
 
 ### Added
 - **Dedicated video title** — the catchy title generated at the Idea step now sticks around instead of getting discarded. It persists to a new `projects.video_title` column, is editable on the Script step ("Video Title" input in the YouTube Metadata section), and is used as the published title on the project page (with the long topic as a fallback for existing projects).
