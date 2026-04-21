@@ -9,6 +9,11 @@ export const factCardGeminiSchema: Schema = {
       items: {
         type: SchemaType.OBJECT,
         properties: {
+          subjectKey: {
+            type: SchemaType.STRING,
+            description:
+              "Canonical name/identifier of the subject of this scene (e.g. 'Tom Cruise', 'Tokyo', 'Theory of Relativity'). Short, singular, no adjectives.",
+          },
           scriptText: {
             type: SchemaType.STRING,
             description: "The spoken narration text for this fact-card scene (for voiceover). 1-2 full sentences.",
@@ -51,7 +56,7 @@ export const factCardGeminiSchema: Schema = {
             description: "2-3 quick facts about the subject.",
           },
         },
-        required: ["scriptText", "captionText", "searchKeywords", "title", "subtitle", "facts"],
+        required: ["subjectKey", "scriptText", "captionText", "searchKeywords", "title", "subtitle", "facts"],
       },
     },
   },
@@ -62,6 +67,7 @@ export const FactCardResponseSchema = z.object({
   scenes: z
     .array(
       z.object({
+        subjectKey: z.string(),
         scriptText: z.string(),
         captionText: z.string(),
         searchKeywords: z.array(z.string()).length(2),

@@ -36,7 +36,12 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   }
 
   const templateId = template as TemplateId;
-  const scenes = await generateStructure(idea, templateId, { aspectRatio, sceneCount, sceneDuration });
+  const scenes = await generateStructure(idea, templateId, {
+    aspectRatio,
+    sceneCount,
+    sceneDuration,
+    userId: user.id,
+  });
 
   if (projectId) {
     await supabase

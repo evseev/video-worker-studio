@@ -166,6 +166,7 @@ supabase/
 |---|---|
 | `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_title`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation`, `caption_style`, `comparison_overlay_mode` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
+| `video_subjects` | `id`, `user_id`, `project_id`, `subject_key`, `subject_normalized`, `embedding`, `created_at` |
 
 ### Project status lifecycle
 ```
@@ -239,6 +240,7 @@ draft → processing → rendering → completed
 | `worker_insert_scenes` RPC | Bypasses RLS; changing signature breaks the worker |
 | `worker_update_project_status` RPC | Same as above |
 | `worker_update_project_error` RPC | Same as above |
+| `worker_insert_video_subjects` RPC | Same as above |
 | `.env.local` | Never commit; never log env values |
 
 ---
@@ -309,6 +311,7 @@ draft → processing → rendering → completed
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
 | `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |
 | `docs/adr/001-gemini-3-flash-upgrade.md` | Architecture decision record |
+| `docs/adr/002-subject-deduplication.md` | Architecture decision record |
 
 ---
 

@@ -133,6 +133,44 @@ export type Database = {
           },
         ];
       };
+      video_subjects: {
+        Row: {
+          created_at: string;
+          embedding: string | null;
+          id: string;
+          project_id: string;
+          subject_key: string;
+          subject_normalized: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          project_id: string;
+          subject_key: string;
+          subject_normalized: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          project_id?: string;
+          subject_key?: string;
+          subject_normalized?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "video_subjects_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -140,6 +178,14 @@ export type Database = {
     Functions: {
       worker_insert_scenes: {
         Args: { p_project_id: string; p_scenes: Json };
+        Returns: undefined;
+      };
+      worker_insert_video_subjects: {
+        Args: { p_project_id: string; p_rows: Json; p_user_id: string };
+        Returns: undefined;
+      };
+      worker_update_project_error: {
+        Args: { p_error_context: Json; p_project_id: string };
         Returns: undefined;
       };
       worker_update_project_status: {

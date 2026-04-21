@@ -10,6 +10,8 @@ import type { Scene, TemplateId } from "@/templates/types";
 import { buildSlideshowPrompt, slideshowGeminiSchema, SlideshowResponseSchema } from "@/templates/slideshow";
 import { buildComparisonPrompt, comparisonGeminiSchema, ComparisonResponseSchema } from "@/templates/comparison";
 import { buildFactCardPrompt, factCardGeminiSchema, FactCardResponseSchema } from "@/templates/fact-card";
+import { normalizeSubject } from "@/lib/ai/dedupe";
+import { getExcludedSubjectsForUser } from "@/lib/ai/subject-memory";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -125,6 +127,7 @@ function toScene(templateId: TemplateId, raw: Record<string, unknown>): Scene {
     case "slideshow":
       return {
         template: "slideshow",
+        subjectKey: raw.subjectKey as string,
         scriptText: raw.scriptText as string,
         captionText,
         searchKeywords: [raw.searchKeyword as string],
@@ -133,6 +136,7 @@ function toScene(templateId: TemplateId, raw: Record<string, unknown>): Scene {
     case "comparison":
       return {
         template: "comparison",
+        subjectKey: raw.subjectKey as string,
         scriptText: raw.scriptText as string,
         captionText,
         searchKeywords: raw.searchKeywords as string[],
@@ -143,6 +147,7 @@ function toScene(templateId: TemplateId, raw: Record<string, unknown>): Scene {
     case "fact-card":
       return {
         template: "fact-card",
+        subjectKey: raw.subjectKey as string,
         scriptText: raw.scriptText as string,
         captionText,
         searchKeywords: raw.searchKeywords as string[],
@@ -157,12 +162,25 @@ function toScene(templateId: TemplateId, raw: Record<string, unknown>): Scene {
 const CHUNK_THRESHOLD = 24;
 const CHUNK_SIZE = 16;
 
-type StructureOptions = { aspectRatio?: string; sceneCount?: number; sceneDuration?: number };
+type StructureOptions = {
+  aspectRatio?: string;
+  sceneCount?: number;
+  sceneDuration?: number;
+  userId?: string;
+  crossVideoExcludes?: string[];
+};
 
 async function generateStructureChunk(
   idea: string,
   templateId: TemplateId,
-  opts: { aspectRatio?: string; sceneCount: number; sceneDuration: number; chunkStart: number; chunkSize: number }
+  opts: {
+    aspectRatio?: string;
+    sceneCount: number;
+    sceneDuration: number;
+    chunkStart: number;
+    chunkSize: number;
+    excludeSubjects?: string[];
+  }
 ): Promise<Scene[]> {
   const ai = getTemplateAI(templateId);
   const model = genAI.getGenerativeModel({
@@ -175,6 +193,7 @@ async function generateStructureChunk(
       sceneCount: opts.chunkSize,
       sceneDuration: opts.sceneDuration,
       aspectRatio: opts.aspectRatio,
+      excludeSubjects: opts.excludeSubjects,
     }),
   });
 
@@ -191,20 +210,57 @@ async function generateStructureChunk(
   return parsed.scenes.map((raw: unknown) => toScene(templateId, raw as Record<string, unknown>));
 }
 
+function filterUniqueScenes(scenes: Scene[], seenSubjects: Set<string>): { uniqueScenes: Scene[]; droppedCount: number } {
+  const workingSeen = new Set(seenSubjects);
+  const uniqueScenes: Scene[] = [];
+  let droppedCount = 0;
+  for (const scene of scenes) {
+    const normalized = normalizeSubject(scene.subjectKey);
+    if (!normalized || workingSeen.has(normalized)) {
+      droppedCount += 1;
+      continue;
+    }
+    workingSeen.add(normalized);
+    uniqueScenes.push(scene);
+  }
+  return { uniqueScenes, droppedCount };
+}
+
 async function generateStructureChunked(
   idea: string,
   templateId: TemplateId,
-  opts: { aspectRatio?: string; sceneCount: number; sceneDuration: number }
+  opts: { aspectRatio?: string; sceneCount: number; sceneDuration: number; excludeSubjects?: string[] }
 ): Promise<Scene[]> {
   const chunks: Scene[] = [];
+  const seenSubjects = new Set((opts.excludeSubjects ?? []).map(normalizeSubject).filter(Boolean));
   for (let chunkStart = 0; chunkStart < opts.sceneCount; chunkStart += CHUNK_SIZE) {
     const chunkSize = Math.min(CHUNK_SIZE, opts.sceneCount - chunkStart);
-    const chunkScenes = await generateStructureChunk(idea, templateId, {
+    const excludeSubjects = Array.from(seenSubjects);
+    const firstPassScenes = await generateStructureChunk(idea, templateId, {
       ...opts,
       chunkStart,
       chunkSize,
+      excludeSubjects,
     });
-    chunks.push(...chunkScenes.slice(0, chunkSize));
+    let { uniqueScenes, droppedCount } = filterUniqueScenes(firstPassScenes, seenSubjects);
+
+    if (droppedCount > 1) {
+      const retryScenes = await generateStructureChunk(idea, templateId, {
+        ...opts,
+        chunkStart,
+        chunkSize,
+        excludeSubjects: Array.from(seenSubjects),
+      });
+      ({ uniqueScenes } = filterUniqueScenes(retryScenes, seenSubjects));
+    }
+
+    for (const scene of uniqueScenes) {
+      const normalized = normalizeSubject(scene.subjectKey);
+      if (normalized) {
+        seenSubjects.add(normalized);
+      }
+    }
+    chunks.push(...uniqueScenes.slice(0, chunkSize));
   }
   return chunks.slice(0, opts.sceneCount);
 }
@@ -217,9 +273,11 @@ export async function generateStructure(
   const sceneCount = opts?.sceneCount ?? 6;
   const sceneDuration = opts?.sceneDuration ?? 5;
   const aspectRatio = opts?.aspectRatio;
+  const crossVideoExcludes = opts?.crossVideoExcludes
+    ?? (opts?.userId ? await getExcludedSubjectsForUser(opts.userId, idea) : []);
 
   if (sceneCount > CHUNK_THRESHOLD) {
-    return generateStructureChunked(idea, templateId, { aspectRatio, sceneCount, sceneDuration });
+    return generateStructureChunked(idea, templateId, { aspectRatio, sceneCount, sceneDuration, excludeSubjects: crossVideoExcludes });
   }
 
   return generateStructureChunk(idea, templateId, {
@@ -228,6 +286,7 @@ export async function generateStructure(
     sceneDuration,
     chunkStart: 0,
     chunkSize: sceneCount,
+    excludeSubjects: crossVideoExcludes,
   });
 }
 
