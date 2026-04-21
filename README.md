@@ -76,9 +76,12 @@ Required environment variables:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for local storage uploads) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for server-side project/storage operations) |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `PINTEREST_DL_BIN` | Absolute path to the `pinterest-dl` binary (e.g. `/path/to/.venv/bin/pinterest-dl`) |
+| `PINTEREST_BATCH_SIZE` | Number of keyword fetches per Pinterest batch before pausing (default: `60`) |
+| `PINTEREST_BATCH_PAUSE_MS` | Pause between Pinterest batches in milliseconds (default: `10000`) |
+| `PINTEREST_CONCURRENCY` | Parallel fetches inside one Pinterest batch (default: `6`) |
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
 | `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |
@@ -105,7 +108,7 @@ You'll also need two RPC functions used by the worker:
 
 Both should be `SECURITY DEFINER` to bypass RLS for background processing.
 
-If you use the local render fallback (`RENDER_BACKEND=local`), ensure your worker can upload the generated MP4 to Supabase Storage by setting `SUPABASE_SERVICE_ROLE_KEY` and keeping storage policies restricted to `renders/videos/*`.
+If you use the local render fallback (`RENDER_BACKEND=local`), final MP4 files are written to `public/local_renders` and served directly from your app (for example `/local_renders/<projectId>.mp4`) instead of being uploaded to Supabase Storage.
 
 ### 5. Run the dev server
 
@@ -253,7 +256,7 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Tech Stack](docs/tech_stack.md) — technology choices and rationale
 - [Workflow Design](docs/workflow_design.md) — pipeline design and failure modes
 - [UX Specification](docs/ux_specification.md) — screen-by-screen layout and interactions
-- [Product Backlog](docs/prd_backlog.md) — epics and stories (23 epics; Epics 1-23 complete)
+- [Product Backlog](docs/prd_backlog.md) — epics and stories (24 epics; Epics 1-24 complete)
 - [MVP Development Plan](docs/mvp_development_plan.md) — original development roadmap
 - [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md) — render architecture design
 - [Template System Design](docs/designs/2026-03-24-template-system-design.md) — 3 structural archetypes design

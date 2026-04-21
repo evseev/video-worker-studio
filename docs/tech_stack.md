@@ -40,7 +40,11 @@ Video generation natively structured as React code.
 *   **Rendering:** Can render using `@remotion/bundler` and `@remotion/renderer` either on the server or via AWS Lambda.
 
 ## 6. TTS and Asset APIs
-*   **Assets:** `pinterest-dl` executed via local `execFile` in the Inngest worker.
+*   **Assets:** `pinterest-dl` executed via local `execFile` in the Inngest worker and wizard API.
+*   **Batch controls:** Asset fetching uses env-tunable batching and throttling controls for large projects:
+    - `PINTEREST_BATCH_SIZE` (default `60`)
+    - `PINTEREST_BATCH_PAUSE_MS` (default `10000`)
+    - `PINTEREST_CONCURRENCY` (default `6`)
 *   *(Future)* TTS: ElevenLabs or standard Web Speech APIs.
 
 ## 7. Storage

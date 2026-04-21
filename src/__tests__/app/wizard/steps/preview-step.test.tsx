@@ -34,8 +34,17 @@ describe("PreviewStep", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    fetchSpy = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ assetOptions: [] }),
+    fetchSpy = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/wizard/draft") {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(""),
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ assetOptions: [] }),
+      });
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     global.fetch = fetchSpy as any;
@@ -104,6 +113,45 @@ describe("PreviewStep", () => {
 
     // SceneCard asset picker thumbnails should be rendered (the main assertion)
     expect(screen.getAllByRole("button", { name: /Option \d/ })).toHaveLength(3);
+  });
+
+  it("merges streamed batches progressively", async () => {
+    const store = createWizardStore(makeProject());
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `${JSON.stringify({
+              type: "batch",
+              batchIndex: 0,
+              batchCount: 2,
+              scenes: [{ sceneIdx: 0, assets: [{ slotIdx: 0, options: ["/a1.jpg", "/a2.jpg"] }] }],
+            })}\n`
+          )
+        );
+        controller.enqueue(new TextEncoder().encode(`${JSON.stringify({ type: "done" })}\n`));
+        controller.close();
+      },
+    });
+
+    fetchSpy.mockImplementation((url: string) => {
+      if (url === "/api/wizard/draft") {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(""),
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      return Promise.resolve({ body: stream });
+    });
+    render(<PreviewStep store={store} />);
+    fireEvent.click(screen.getByText("Fetch All Images"));
+
+    await waitFor(() => {
+      const scenes = store.getState().scenes;
+      expect(scenes[0].assets[0].options).toEqual(["/a1.jpg", "/a2.jpg"]);
+      expect(scenes[1].assets[0].options).toBeUndefined();
+    });
   });
 
   it("edits captionText (not scriptText) when the Caption textarea changes", () => {

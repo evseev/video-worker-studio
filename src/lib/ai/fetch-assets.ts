@@ -5,8 +5,24 @@ import * as path from "path";
 
 const execFileAsync = promisify(execFile);
 
+function parseEnvInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.floor(parsed);
+}
+
 const PINTEREST_DL_BIN = process.env.PINTEREST_DL_BIN;
-const MAX_CONCURRENCY = 4;
+const DEFAULT_BATCH_SIZE = parseEnvInt(process.env.PINTEREST_BATCH_SIZE, 60);
+const DEFAULT_BATCH_PAUSE_MS = parseEnvInt(process.env.PINTEREST_BATCH_PAUSE_MS, 10_000);
+const DEFAULT_CONCURRENCY = parseEnvInt(process.env.PINTEREST_CONCURRENCY, 6);
+
+function getPinterestConfig() {
+  return {
+    batchSize: DEFAULT_BATCH_SIZE,
+    batchPauseMs: DEFAULT_BATCH_PAUSE_MS,
+    concurrency: DEFAULT_CONCURRENCY,
+  };
+}
 
 /** Run tasks in batches with a concurrency limit */
 async function batchedPromiseAll<T>(
@@ -79,21 +95,61 @@ export async function fetchAssets(
   projectId: string,
   count: number = 1
 ): Promise<(string | null)[] | string[][]> {
+  const allResults: Array<string | null | string[]> = [];
+  for await (const batch of fetchAssetsBatched(keywords, projectId, count)) {
+    allResults.push(...batch.results);
+  }
+  return allResults as (string | null)[] | string[][];
+}
+
+export type AssetBatchResult = {
+  batchIndex: number;
+  batchCount: number;
+  startIndex: number;
+  results: Array<string | null | string[]>;
+};
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function* fetchAssetsBatched(
+  keywords: (string | null)[],
+  projectId: string,
+  count: number = 1
+): AsyncGenerator<AssetBatchResult> {
+  const { batchSize, batchPauseMs, concurrency } = getPinterestConfig();
   const assetPath = process.env.TMP_ASSETS_PATH || "public/tmp_assets";
   const baseDir = path.join(process.cwd(), assetPath, "vws-assets", projectId);
   await fs.promises.mkdir(baseDir, { recursive: true });
 
   const batchId = Date.now();
-  const tasks = keywords.map((keyword, i) => {
-    return async () => {
-      if (!keyword) return count > 1 ? [] : null;
-      const sceneDir = path.join(baseDir, `batch-${batchId}-${i}`);
-      const images = await fetchForKeyword(keyword, sceneDir, count, i);
+  const totalBatches = Math.ceil(keywords.length / batchSize);
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const startIndex = batchIndex * batchSize;
+    const batchKeywords = keywords.slice(startIndex, startIndex + batchSize);
+    console.log(`[fetch-assets] batch ${batchIndex + 1}/${totalBatches} (start=${startIndex}, size=${batchKeywords.length}) dispatched @ concurrency=${concurrency}`);
+    const tasks = batchKeywords.map((keyword, localIdx) => {
+      const i = startIndex + localIdx;
+      return async () => {
+        if (!keyword) return count > 1 ? [] : null;
+        const sceneDir = path.join(baseDir, `batch-${batchId}-${i}`);
+        const images = await fetchForKeyword(keyword, sceneDir, count, i);
+        if (count > 1) return images;
+        return images[0] ?? null;
+      };
+    });
 
-      if (count > 1) return images;
-      return images[0] ?? null;
+    const results = await batchedPromiseAll(tasks, concurrency);
+    yield {
+      batchIndex,
+      batchCount: totalBatches,
+      startIndex,
+      results: results as Array<string | null | string[]>,
     };
-  });
 
-  return batchedPromiseAll(tasks, MAX_CONCURRENCY) as Promise<(string | null)[] | string[][]>;
+    if (batchIndex < totalBatches - 1) {
+      await wait(batchPauseMs);
+    }
+  }
 }

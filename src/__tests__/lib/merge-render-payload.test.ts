@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mergeRenderPayload } from "@/lib/merge-render-payload";
 import type { Tables } from "@/lib/supabase/types";
+import { SCENE_DURATION_MAX, SCENE_DURATION_MIN } from "@/lib/video-constraints";
 
 function baseRow(overrides: Partial<Tables<"projects">> = {}): Tables<"projects"> {
   return {
@@ -106,5 +107,26 @@ describe("mergeRenderPayload", () => {
     });
     const merged = mergeRenderPayload({ projectId: "p1" }, row);
     expect(merged.scenes).toBeUndefined();
+  });
+
+  it("clamps out-of-range sceneDuration from request body", () => {
+    const merged = mergeRenderPayload(
+      { projectId: "p1", sceneDuration: 999 },
+      baseRow()
+    );
+    expect(merged.sceneDuration).toBe(SCENE_DURATION_MAX);
+  });
+
+  it("clamps out-of-range sceneCount when persisting draft settings", () => {
+    const merged = mergeRenderPayload(
+      { projectId: "p1", sceneDuration: 1 },
+      baseRow({
+        draft_scenes: {
+          scenes: [],
+          settings: { sceneCount: 999, sceneDuration: 5 },
+        },
+      })
+    );
+    expect(merged.sceneDuration).toBe(SCENE_DURATION_MIN);
   });
 });

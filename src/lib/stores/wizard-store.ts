@@ -8,6 +8,7 @@ import {
   type CaptionStyleId,
   type ComparisonOverlayMode,
 } from "@/lib/comparison-caption-styles";
+import { clampSceneCount, clampSceneDuration } from "@/lib/video-constraints";
 
 export type { Scene };
 export type { TemplateId };
@@ -106,6 +107,12 @@ function buildSettingsFromDraft(project: Project, draft: DraftData): VideoSettin
     comparisonOverlayMode: parseComparisonOverlayMode(
       (s?.comparisonOverlayMode as string | undefined) ?? project.comparison_overlay_mode
     ),
+    sceneCount: clampSceneCount(
+      typeof s?.sceneCount === "number" ? s.sceneCount : DEFAULT_SETTINGS.sceneCount
+    ),
+    sceneDuration: clampSceneDuration(
+      typeof s?.sceneDuration === "number" ? s.sceneDuration : DEFAULT_SETTINGS.sceneDuration
+    ),
   };
 }
 
@@ -170,7 +177,16 @@ export function createWizardStore(project: Project) {
 
     setSettings: (updates) =>
       set((state) => ({
-        settings: { ...state.settings, ...updates },
+        settings: {
+          ...state.settings,
+          ...updates,
+          sceneCount: updates.sceneCount !== undefined
+            ? clampSceneCount(updates.sceneCount)
+            : state.settings.sceneCount,
+          sceneDuration: updates.sceneDuration !== undefined
+            ? clampSceneDuration(updates.sceneDuration)
+            : state.settings.sceneDuration,
+        },
       })),
 
     selectAsset: (sceneIdx, slotIdx, assetIdx) =>

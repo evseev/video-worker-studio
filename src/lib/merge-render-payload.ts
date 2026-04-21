@@ -6,6 +6,7 @@ import {
   type CaptionStyleId,
   type ComparisonOverlayMode,
 } from "@/lib/comparison-caption-styles";
+import { clampSceneCount, clampSceneDuration } from "@/lib/video-constraints";
 
 export type ProjectRow = Tables<"projects">;
 
@@ -85,10 +86,11 @@ export function mergeRenderPayload(
     body.sceneDuration as number | undefined,
     typeof settings.sceneDuration === "number" ? settings.sceneDuration : undefined
   );
-  const sceneDuration =
+  const sceneDuration = clampSceneDuration(
     typeof sceneDurationRaw === "number" && Number.isFinite(sceneDurationRaw)
       ? sceneDurationRaw
-      : 5;
+      : 5
+  );
 
   const backgroundMusic =
     body.backgroundMusic !== undefined
@@ -171,7 +173,7 @@ export function buildPersistedDraft(
     refinedIdea: draft.refinedIdea,
     settings: {
       ...prev,
-      sceneCount: typeof prev.sceneCount === "number" ? prev.sceneCount : 6,
+      sceneCount: clampSceneCount(typeof prev.sceneCount === "number" ? prev.sceneCount : 6),
       sceneDuration: merged.sceneDuration,
       aspectRatio: aspect,
       quality,

@@ -117,71 +117,118 @@ function getTemplateAI(templateId: TemplateId) {
   }
 }
 
-function toScene(templateId: TemplateId, raw: any): Scene {
+function toScene(templateId: TemplateId, raw: Record<string, unknown>): Scene {
   // Fall back to scriptText if the AI didn't emit captionText (should be rare
   // with the updated schema, but keeps legacy behavior safe).
-  const captionText: string = raw.captionText ?? raw.scriptText ?? "";
+  const captionText: string = (raw.captionText as string | undefined) ?? (raw.scriptText as string | undefined) ?? "";
   switch (templateId) {
     case "slideshow":
       return {
         template: "slideshow",
-        scriptText: raw.scriptText,
+        scriptText: raw.scriptText as string,
         captionText,
-        searchKeywords: [raw.searchKeyword],
+        searchKeywords: [raw.searchKeyword as string],
         assets: [{}],
       };
     case "comparison":
       return {
         template: "comparison",
-        scriptText: raw.scriptText,
+        scriptText: raw.scriptText as string,
         captionText,
-        searchKeywords: raw.searchKeywords,
-        leftLabel: raw.leftLabel,
-        rightLabel: raw.rightLabel,
+        searchKeywords: raw.searchKeywords as string[],
+        leftLabel: (raw.leftLabel as string | undefined) ?? "",
+        rightLabel: (raw.rightLabel as string | undefined) ?? "",
         assets: [{}, {}],
       };
     case "fact-card":
       return {
         template: "fact-card",
-        scriptText: raw.scriptText,
+        scriptText: raw.scriptText as string,
         captionText,
-        searchKeywords: raw.searchKeywords,
-        title: raw.title,
-        subtitle: raw.subtitle,
-        facts: raw.facts,
+        searchKeywords: raw.searchKeywords as string[],
+        title: (raw.title as string | undefined) ?? "",
+        subtitle: (raw.subtitle as string | undefined) ?? "",
+        facts: (raw.facts as { label: string; value: string }[] | undefined) ?? [],
         assets: [{}, {}],
       };
   }
 }
 
-export async function generateStructure(
+const CHUNK_THRESHOLD = 24;
+const CHUNK_SIZE = 16;
+
+type StructureOptions = { aspectRatio?: string; sceneCount?: number; sceneDuration?: number };
+
+async function generateStructureChunk(
   idea: string,
   templateId: TemplateId,
-  opts?: { aspectRatio?: string; sceneCount?: number; sceneDuration?: number }
+  opts: { aspectRatio?: string; sceneCount: number; sceneDuration: number; chunkStart: number; chunkSize: number }
 ): Promise<Scene[]> {
-  const sceneCount = opts?.sceneCount ?? 6;
-  const sceneDuration = opts?.sceneDuration ?? 5;
-  const aspectRatio = opts?.aspectRatio;
-
   const ai = getTemplateAI(templateId);
-
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: ai.geminiSchema,
     },
-    systemInstruction: ai.buildPrompt({ sceneCount, sceneDuration, aspectRatio }),
+    systemInstruction: ai.buildPrompt({
+      sceneCount: opts.chunkSize,
+      sceneDuration: opts.sceneDuration,
+      aspectRatio: opts.aspectRatio,
+    }),
   });
 
   const result = await model.generateContent(
-    `Idea: ${idea}\nVideo orientation: ${aspectRatio === "16:9" ? "landscape" : "portrait"}`
+    [
+      `Idea: ${idea}`,
+      `Video orientation: ${opts.aspectRatio === "16:9" ? "landscape" : "portrait"}`,
+      `This is chunk ${Math.floor(opts.chunkStart / CHUNK_SIZE) + 1} of ${Math.ceil(opts.sceneCount / CHUNK_SIZE)}.`,
+      `Generate scenes ${opts.chunkStart + 1} to ${opts.chunkStart + opts.chunkSize} out of ${opts.sceneCount}.`,
+    ].join("\n")
   );
   const text = result.response.text();
   const parsed = ai.zodSchema.parse(JSON.parse(text));
+  return parsed.scenes.map((raw: unknown) => toScene(templateId, raw as Record<string, unknown>));
+}
 
-  // Convert AI output to template-typed Scene[]
-  return parsed.scenes.map((raw: any) => toScene(templateId, raw));
+async function generateStructureChunked(
+  idea: string,
+  templateId: TemplateId,
+  opts: { aspectRatio?: string; sceneCount: number; sceneDuration: number }
+): Promise<Scene[]> {
+  const chunks: Scene[] = [];
+  for (let chunkStart = 0; chunkStart < opts.sceneCount; chunkStart += CHUNK_SIZE) {
+    const chunkSize = Math.min(CHUNK_SIZE, opts.sceneCount - chunkStart);
+    const chunkScenes = await generateStructureChunk(idea, templateId, {
+      ...opts,
+      chunkStart,
+      chunkSize,
+    });
+    chunks.push(...chunkScenes.slice(0, chunkSize));
+  }
+  return chunks.slice(0, opts.sceneCount);
+}
+
+export async function generateStructure(
+  idea: string,
+  templateId: TemplateId,
+  opts?: StructureOptions
+): Promise<Scene[]> {
+  const sceneCount = opts?.sceneCount ?? 6;
+  const sceneDuration = opts?.sceneDuration ?? 5;
+  const aspectRatio = opts?.aspectRatio;
+
+  if (sceneCount > CHUNK_THRESHOLD) {
+    return generateStructureChunked(idea, templateId, { aspectRatio, sceneCount, sceneDuration });
+  }
+
+  return generateStructureChunk(idea, templateId, {
+    aspectRatio,
+    sceneCount,
+    sceneDuration,
+    chunkStart: 0,
+    chunkSize: sceneCount,
+  });
 }
 
 // --- Generate SEO Metadata ---

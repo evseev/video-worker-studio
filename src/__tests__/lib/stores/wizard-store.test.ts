@@ -22,6 +22,22 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 }
 
 describe("wizard-store", () => {
+  it("clamps scene settings from draft and setSettings updates", () => {
+    const project = makeProject({
+      draft_scenes: {
+        scenes: [],
+        settings: { sceneCount: 999, sceneDuration: 1, aspectRatio: "9:16", quality: "1080p" },
+      } as unknown,
+    });
+    const store = createWizardStore(project);
+    expect(store.getState().settings.sceneCount).toBe(120);
+    expect(store.getState().settings.sceneDuration).toBe(3);
+
+    store.getState().setSettings({ sceneCount: -5, sceneDuration: 99 });
+    expect(store.getState().settings.sceneCount).toBe(3);
+    expect(store.getState().settings.sceneDuration).toBe(15);
+  });
+
   describe("Scene type with assets", () => {
     it("accepts assets with options and selectedIndex in draft data", () => {
       const project = makeProject({
