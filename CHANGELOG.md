@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5.0] — 2026-04-21
+
+### Added
+- **Subject de-duplication memory** — generation now tracks a per-scene `subjectKey` and avoids repeated subjects across long chunked scenarios by carrying an exclusion set between chunks.
+- **Cross-video subject memory** — successful renders persist subject keys so future videos can avoid recently used subjects from the same user.
+
+### Changed
+- **Template AI prompts and schemas** (slideshow, comparison, fact-card) now require `subjectKey` and include strict "do not reuse subjects" guidance.
+- **Structure generation** now retries collision-heavy chunks once with an expanded exclusion list.
+
+### For Contributors
+- New migration: `20260421120000_add_video_subjects.sql` adds pgvector-backed `video_subjects` plus `worker_insert_video_subjects` RPC.
+- New env flags: `SUBJECT_MEMORY_ENABLED`, `SUBJECT_MEMORY_LIMIT`, `SUBJECT_MEMORY_MAX`.
+- Type generation note: regenerate `src/lib/supabase/types.ts` from Supabase after applying migration in environments with CLI auth.
+
 ## [0.4.4.1] — 2026-04-20 — Epic 24: Scalable Scene Count & Duration
 
 ### Added
