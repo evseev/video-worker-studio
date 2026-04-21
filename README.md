@@ -108,6 +108,7 @@ You'll also need two RPC functions used by the worker:
 - `worker_update_project_status(p_project_id, p_status, p_video_url)`
 - `worker_insert_scenes(p_project_id, p_scenes)`
 - `worker_update_project_error(p_project_id, p_error_context)`
+- `worker_insert_video_subjects(p_user_id, p_project_id, p_rows)` (subject memory persistence for duplicate avoidance)
 
 Both should be `SECURITY DEFINER` to bypass RLS for background processing.
 
@@ -267,6 +268,7 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Template System Design](docs/designs/2026-03-24-template-system-design.md) — 3 structural archetypes design
 - [Transitions & Effects Design](docs/superpowers/specs/2026-03-27-transitions-and-effects-design.md) — configurable scene transitions and animation effects
 - [Gemini 3 Flash Upgrade ADR](docs/adr/001-gemini-3-flash-upgrade.md) — architecture decision record
+- [Subject De-duplication ADR](docs/adr/002-subject-deduplication.md) — architecture decision record for in-video + cross-video duplicate avoidance
 
 Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
 
