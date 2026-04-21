@@ -272,7 +272,7 @@ draft → processing → rendering → completed
 - **`NEXT_PUBLIC_` env vars are exposed to the browser.** Only put values in `NEXT_PUBLIC_` that are safe to be public (Supabase URL and anon key are intentionally public; service role key must never be `NEXT_PUBLIC_`).
 - **Remotion renders are async and cost-sensitive.** Keep per-user render concurrency constrained in Inngest and apply a global cap to avoid runaway Lambda spend.
 - **Pinterest scraping is rate-limited by `pinterest-dl`.** Scene settings support 3-120 scenes, and asset fetching is batched with env-tunable controls: `PINTEREST_BATCH_SIZE` (default 60), `PINTEREST_BATCH_PAUSE_MS` (default 10000), `PINTEREST_CONCURRENCY` (default 6).
-- **Video files are large.** Remotion output goes to `/tmp` then immediately uploaded to Supabase Storage and deleted. Do not persist render artifacts on disk.
+- **Video files are large.** Lambda renders upload to remote storage, while local backend renders are intentionally stored under `public/local_renders` for local playback and must be cleaned up on project deletion.
 
 ---
 
@@ -304,7 +304,7 @@ draft → processing → rendering → completed
 | `docs/tech_stack.md` | Technology choices and rationale |
 | `docs/workflow_design.md` | Pipeline design, failure modes, retries |
 | `docs/ux_specification.md` | Screen-by-screen layout and interactions |
-| `docs/prd_backlog.md` | Product backlog (23 epics; Epics 1–23 complete) |
+| `docs/prd_backlog.md` | Product backlog (24 epics; Epics 1–24 complete) |
 | `docs/mvp_development_plan.md` | Original development roadmap |
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
 | `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |
