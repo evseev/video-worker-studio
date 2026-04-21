@@ -9,6 +9,11 @@ export const slideshowGeminiSchema: Schema = {
       items: {
         type: SchemaType.OBJECT,
         properties: {
+          subjectKey: {
+            type: SchemaType.STRING,
+            description:
+              "Canonical name/identifier of the subject of this scene (e.g. 'Tom Cruise', 'Tokyo', 'Theory of Relativity'). Short, singular, no adjectives.",
+          },
           scriptText: {
             type: SchemaType.STRING,
             description: "The spoken narration for this scene (for voiceover). 1-2 full sentences, max 25 words.",
@@ -22,7 +27,7 @@ export const slideshowGeminiSchema: Schema = {
             description: "A single Pinterest search keyword phrase to find a background image.",
           },
         },
-        required: ["scriptText", "captionText", "searchKeyword"],
+        required: ["subjectKey", "scriptText", "captionText", "searchKeyword"],
       },
     },
   },
@@ -33,6 +38,7 @@ export const SlideshowResponseSchema = z.object({
   scenes: z
     .array(
       z.object({
+        subjectKey: z.string(),
         scriptText: z.string(),
         captionText: z.string(),
         searchKeyword: z.string(),

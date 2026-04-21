@@ -82,6 +82,9 @@ Required environment variables:
 | `PINTEREST_BATCH_SIZE` | Number of keyword fetches per Pinterest batch before pausing (default: `60`) |
 | `PINTEREST_BATCH_PAUSE_MS` | Pause between Pinterest batches in milliseconds (default: `10000`) |
 | `PINTEREST_CONCURRENCY` | Parallel fetches inside one Pinterest batch (default: `6`) |
+| `SUBJECT_MEMORY_ENABLED` | Enable cross-video subject memory de-duplication (default: `true`) |
+| `SUBJECT_MEMORY_LIMIT` | Number of latest completed user projects used for de-dup context (default: `10`) |
+| `SUBJECT_MEMORY_MAX` | Maximum historical subject keys passed to the LLM as exclusions (default: `200`) |
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
 | `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |
@@ -118,6 +121,8 @@ npm run dev
 
 # Terminal 2 — Inngest Dev Server
 npx inngest-cli@latest dev
+# or
+npm exec --yes --package=inngest-cli@latest -- inngest-cli dev
 ```
 
 The app runs at [http://localhost:3000](http://localhost:3000) and the Inngest dashboard at [http://localhost:8288](http://localhost:8288).

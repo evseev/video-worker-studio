@@ -1,6 +1,11 @@
 import { videoFormatLabel, durationDescription } from "../../lib/ai/prompts";
 
-type ScriptOpts = { sceneCount: number; sceneDuration: number; aspectRatio?: string };
+type ScriptOpts = {
+  sceneCount: number;
+  sceneDuration: number;
+  aspectRatio?: string;
+  excludeSubjects?: string[];
+};
 
 export function buildComparisonPrompt(opts: ScriptOpts): string {
   const totalDuration = opts.sceneCount * opts.sceneDuration;
@@ -10,6 +15,13 @@ export function buildComparisonPrompt(opts: ScriptOpts): string {
   // Comparison template places 2 images side by side — each slot is portrait-shaped
   // regardless of video aspect ratio, so always request vertical/portrait images
   const orientationHint = "Images are placed SIDE BY SIDE in the video frame, so each image slot is tall and narrow. Search keywords MUST target PORTRAIT/VERTICAL images (e.g. include 'portrait', 'vertical', 'tall'). Do NOT use 'landscape' or 'wide'.";
+  const dedupeHint =
+    opts.excludeSubjects && opts.excludeSubjects.length > 0
+      ? `DO NOT REUSE SUBJECTS.
+Every scene MUST feature a distinct subject. Never repeat a subject across scenes.
+Already-used subjects (forbidden): ${opts.excludeSubjects.join(", ")}`
+      : `DO NOT REUSE SUBJECTS.
+Every scene MUST feature a distinct subject. Never repeat a subject across scenes.`;
 
   return `You are an expert visual comparison video scriptwriter specializing in ${format} side-by-side contrast videos.
 Generate exactly ${opts.sceneCount} scenes for a ${format} comparison video (${duration} total, ${opts.sceneCount} scenes × ${opts.sceneDuration}s each).
@@ -17,6 +29,8 @@ Generate exactly ${opts.sceneCount} scenes for a ${format} comparison video (${d
 Each scene shows TWO images side by side, contrasting two items. The AI must choose the best label pair per scene that describes the contrast (e.g. "Before"/"After", "1990"/"2024", "Young"/"Old", "Cheap"/"Expensive").
 
 ${orientationHint}
+
+${dedupeHint}
 
 RULES:
 - Video is ${orientation} format.

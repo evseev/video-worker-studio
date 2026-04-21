@@ -1,6 +1,11 @@
 import { videoFormatLabel, durationDescription } from "../../lib/ai/prompts";
 
-type ScriptOpts = { sceneCount: number; sceneDuration: number; aspectRatio?: string };
+type ScriptOpts = {
+  sceneCount: number;
+  sceneDuration: number;
+  aspectRatio?: string;
+  excludeSubjects?: string[];
+};
 
 export function buildFactCardPrompt(opts: ScriptOpts): string {
   const totalDuration = opts.sceneCount * opts.sceneDuration;
@@ -10,6 +15,13 @@ export function buildFactCardPrompt(opts: ScriptOpts): string {
   // Fact card template uses images in card layouts — the main image is a hero banner
   // and the secondary is a small thumbnail. Both work best as portrait/vertical images.
   const orientationHint = "Images are displayed in a CARD LAYOUT (hero image + thumbnail). Search keywords MUST target PORTRAIT/VERTICAL images (e.g. include 'portrait', 'vertical', 'headshot', 'close-up'). Do NOT use 'landscape' or 'wide'.";
+  const dedupeHint =
+    opts.excludeSubjects && opts.excludeSubjects.length > 0
+      ? `DO NOT REUSE SUBJECTS.
+Every scene MUST feature a distinct subject. Never repeat a subject across scenes.
+Already-used subjects (forbidden): ${opts.excludeSubjects.join(", ")}`
+      : `DO NOT REUSE SUBJECTS.
+Every scene MUST feature a distinct subject. Never repeat a subject across scenes.`;
 
   return `You are an expert identity and profile video scriptwriter specializing in ${format} fact-card videos.
 Generate exactly ${opts.sceneCount} scenes for a ${format} fact-card video (${duration} total, ${opts.sceneCount} scenes × ${opts.sceneDuration}s each).
@@ -17,6 +29,8 @@ Generate exactly ${opts.sceneCount} scenes for a ${format} fact-card video (${du
 Each scene displays a profile/identity card for a person, place, concept, or subject. It shows a main image, a secondary image, a title, subtitle, and 2-3 quick facts.
 
 ${orientationHint}
+
+${dedupeHint}
 
 RULES:
 - Video is ${orientation} format.

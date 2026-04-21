@@ -4,11 +4,13 @@ import { fetchAssets } from "@/lib/ai/fetch-assets";
 import { renderVideo } from "@/lib/render/render-video";
 import { resolveTransitions, resolveImageMotions, resolveTextAnimations } from "@/lib/effects";
 import { parseCaptionStyle, parseComparisonOverlayMode } from "@/lib/comparison-caption-styles";
+import { persistSubjectsForProject } from "@/lib/ai/subject-memory";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 interface VideoGenerateScene {
   template: string;
+  subjectKey?: string;
   scriptText: string;
   /** On-screen caption (Remotion). Falls back to scriptText if missing. */
   captionText?: string;
@@ -107,7 +109,7 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode } = event.data as VideoGenerateEventData;
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode, userId } = event.data as VideoGenerateEventData;
 
 
 
@@ -239,6 +241,23 @@ export const generateVideo = inngest.createFunction(
     });
 
     await updateStatus(db, projectId, "completed", videoUrl);
+
+    await step.run("persist-subject-memory", async () => {
+      if (!userId) {
+        return;
+      }
+      const subjectKeys = (scenesWithAssets as VideoGenerateScene[])
+        .map((scene) => scene.subjectKey ?? "")
+        .filter((value) => value.length > 0);
+      if (subjectKeys.length === 0) {
+        return;
+      }
+      try {
+        await persistSubjectsForProject(projectId, userId, subjectKeys);
+      } catch (error) {
+        console.error("[persist-subject-memory] Failed to persist subjects:", error);
+      }
+    });
 
     return { projectId, videoUrl, sceneCount: scenesWithAssets.length };
   }

@@ -9,6 +9,11 @@ export const comparisonGeminiSchema: Schema = {
       items: {
         type: SchemaType.OBJECT,
         properties: {
+          subjectKey: {
+            type: SchemaType.STRING,
+            description:
+              "Canonical name/identifier of the subject of this scene (e.g. 'Tom Cruise', 'Tokyo', 'Theory of Relativity'). Short, singular, no adjectives.",
+          },
           scriptText: {
             type: SchemaType.STRING,
             description: "The spoken narration describing the comparison (for voiceover). 1-2 full sentences.",
@@ -33,7 +38,7 @@ export const comparisonGeminiSchema: Schema = {
             description: "Short label for the right side (e.g. 'After', '2024', 'Luxury').",
           },
         },
-        required: ["scriptText", "captionText", "searchKeywords", "leftLabel", "rightLabel"],
+        required: ["subjectKey", "scriptText", "captionText", "searchKeywords", "leftLabel", "rightLabel"],
       },
     },
   },
@@ -44,6 +49,7 @@ export const ComparisonResponseSchema = z.object({
   scenes: z
     .array(
       z.object({
+        subjectKey: z.string(),
         scriptText: z.string(),
         captionText: z.string(),
         searchKeywords: z.array(z.string()).length(2),
