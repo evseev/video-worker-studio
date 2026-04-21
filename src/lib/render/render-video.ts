@@ -139,34 +139,9 @@ function normalizeAssetUrlForLocalRender(assetUrl: string | null): string | null
 export async function renderVideo(input: RenderInput): Promise<string> {
   const backend = resolveRenderBackend();
   if (backend === "local") {
-    try {
-      return await renderVideoLocally(input);
-    } catch (error) {
-      // Local renders upload into Supabase Storage. Large files can exceed bucket limits.
-      // When that happens and Lambda is configured, retry on Lambda automatically.
-      if (shouldFallbackToLambda(error) && hasLambdaConfig()) {
-        console.warn("[render] Local upload exceeded storage limit. Falling back to Lambda render.");
-        return renderVideoOnLambda(input);
-      }
-      throw error;
-    }
+    return renderVideoLocally(input);
   }
   return renderVideoOnLambda(input);
-}
-
-function shouldFallbackToLambda(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const msg = error.message.toLowerCase();
-  return msg.includes("storage upload failed") && msg.includes("maximum allowed size");
-}
-
-function hasLambdaConfig(): boolean {
-  const hasRegion = Boolean(process.env.REMOTION_AWS_REGION ?? process.env.AWS_REGION);
-  const hasFunction = Boolean(process.env.REMOTION_LAMBDA_FUNCTION_NAME);
-  const hasServeUrl = Boolean(process.env.REMOTION_SERVE_URL);
-  const hasAccessKey = Boolean(process.env.AWS_ACCESS_KEY_ID ?? process.env.REMOTION_AWS_ACCESS_KEY_ID);
-  const hasSecret = Boolean(process.env.AWS_SECRET_ACCESS_KEY ?? process.env.REMOTION_AWS_SECRET_ACCESS_KEY);
-  return hasRegion && hasFunction && hasServeUrl && hasAccessKey && hasSecret;
 }
 
 async function renderVideoOnLambda(input: RenderInput): Promise<string> {
