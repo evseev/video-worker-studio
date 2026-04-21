@@ -23,7 +23,7 @@ const STEPS: { key: WizardStep; label: string }[] = [
   { key: "render", label: "Render" },
 ];
 
-export function WizardClient({ project }: { project: Project }) {
+export function WizardClient({ project, renderBackend }: { project: Project; renderBackend: "local" | "lambda" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeRef = useRef<WizardStoreApi | null>(null);
@@ -114,7 +114,7 @@ export function WizardClient({ project }: { project: Project }) {
           {currentStep === "refine" && <RefineStep store={store} />}
           {currentStep === "script" && <ScriptStep store={store} />}
           {currentStep === "preview" && <PreviewStep store={store} />}
-          {currentStep === "render" && <RenderStep store={store} />}
+          {currentStep === "render" && <RenderStep store={store} renderBackend={renderBackend} />}
         </div>
       </main>
     </div>

@@ -271,7 +271,7 @@ draft → processing → rendering → completed
 - **Never log or return secrets.** Supabase keys, Gemini API key, Sentry DSN — none of these should appear in client-side code or logs.
 - **`NEXT_PUBLIC_` env vars are exposed to the browser.** Only put values in `NEXT_PUBLIC_` that are safe to be public (Supabase URL and anon key are intentionally public; service role key must never be `NEXT_PUBLIC_`).
 - **Remotion renders are async and cost-sensitive.** Keep per-user render concurrency constrained in Inngest and apply a global cap to avoid runaway Lambda spend.
-- **Pinterest scraping is rate-limited by `pinterest-dl`.** Do not increase the number of scenes beyond 10 without testing scrape reliability.
+- **Pinterest scraping is rate-limited by `pinterest-dl`.** Scene settings support 3-120 scenes, and asset fetching is batched with env-tunable controls: `PINTEREST_BATCH_SIZE` (default 60), `PINTEREST_BATCH_PAUSE_MS` (default 10000), `PINTEREST_CONCURRENCY` (default 6).
 - **Video files are large.** Remotion output goes to `/tmp` then immediately uploaded to Supabase Storage and deleted. Do not persist render artifacts on disk.
 
 ---

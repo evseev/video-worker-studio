@@ -125,6 +125,17 @@ async function removeLocalRenderTemp(projectId: string, warnings: string[]): Pro
   }
 }
 
+async function removeLocalRenderPublic(projectId: string, warnings: string[]): Promise<void> {
+  const file = path.join(process.cwd(), "public", "local_renders", `${projectId}.mp4`);
+  try {
+    await fs.promises.rm(file, { force: true });
+  } catch (err) {
+    warnings.push(
+      `Local render public: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
 async function removeSupabaseRender(projectId: string, warnings: string[]): Promise<void> {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
@@ -227,6 +238,7 @@ export async function deleteProjectAssets(
 
   await removeLocalProjectAssets(projectId, warnings);
   await removeLocalRenderTemp(projectId, warnings);
+  await removeLocalRenderPublic(projectId, warnings);
   await removeSupabaseRender(projectId, warnings);
   await removeLambdaS3Render(projectId, videoUrl, warnings);
 

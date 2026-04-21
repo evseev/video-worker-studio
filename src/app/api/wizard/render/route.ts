@@ -3,6 +3,16 @@ import { withAuth } from "@/lib/api/with-auth";
 import { inngest } from "@/lib/inngest/client";
 import { mergeRenderPayload, buildPersistedDraft } from "@/lib/merge-render-payload";
 import type { Tables } from "@/lib/supabase/types";
+import { z } from "zod";
+import {
+  SCENE_DURATION_MIN,
+  SCENE_DURATION_MAX,
+} from "@/lib/video-constraints";
+
+const RenderRequestSchema = z.object({
+  projectId: z.string().min(1, "Missing projectId"),
+  sceneDuration: z.number().int().min(SCENE_DURATION_MIN).max(SCENE_DURATION_MAX).optional(),
+}).passthrough();
 
 export const POST = withAuth(async (request, { user, supabase }) => {
   let body: Record<string, unknown>;
@@ -12,10 +22,12 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const projectId = body.projectId as string | undefined;
-  if (!projectId) {
-    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+  const parsedReq = RenderRequestSchema.safeParse(body);
+  if (!parsedReq.success) {
+    return NextResponse.json({ error: parsedReq.error.issues[0]?.message ?? "Invalid request body" }, { status: 400 });
   }
+  body = parsedReq.data;
+  const projectId = body.projectId as string;
 
   const { data: row, error: fetchError } = await supabase
     .from("projects")

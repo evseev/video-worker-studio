@@ -351,8 +351,8 @@ Optional:
 - YouTube channel niche.
 
 Validation:
-- scene count must be within system limits (from 2 to 100),
-- scene duration within min/max threshold (from 2 to 60 sec),
+- scene count must be within system limits (from 3 to 120),
+- scene duration within min/max threshold (from 3 to 15 sec),
 - total duration must not exceed render constraints for MVP (120 min).
 
 ---

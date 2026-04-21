@@ -266,3 +266,20 @@
 *   [x] **Story 23.6:** Preview step SceneCards (slideshow, comparison, fact-card) edit `captionText` instead of `scriptText`; `addScene` defaults `captionText` to `""`.
 *   [x] **Story 23.7:** Update affected tests (wizard-store, preview-step, merge-render-payload) and add Remotion `resolveCaption` fallback unit tests.
 *   [x] **Story 23.8:** Update `AGENTS.md` projects row table, `CHANGELOG.md`, and this backlog with Epic 23 entry.
+
+## Epic 24: Scalable Scene Count & Duration
+**Description:** Expand Template step controls and full pipeline support for larger projects: scene count from 3 to 120 and scene duration from 3 to 15 seconds. Replace dropdowns with slider + numeric controls, add total-duration UX warnings, and harden downstream logic (validation, AI chunking, batched Pinterest fetching with pauses and progressive UI updates, and dynamic render timeout budgeting).
+
+**Plan:** `.cursor/plans/epic-24-scene-scale-controls_542f9ea7.plan.md`
+
+*   [x] **Story 24.1:** Create shared video constraints module (`src/lib/video-constraints.ts`) with min/max constants and clamp helpers.
+*   [x] **Story 24.2:** Build reusable `RangeSliderInput` component and replace Template step scene controls with slider + numeric inputs.
+*   [x] **Story 24.3:** Add live total-duration readout and warning thresholds for long videos on Template step.
+*   [x] **Story 24.4:** Clamp scene settings in wizard store hydration and updates (`buildSettingsFromDraft`, `setSettings`).
+*   [x] **Story 24.5:** Add Zod request validation for `sceneCount` / `sceneDuration` in ideas, enhance-idea, generate-structure, and render routes.
+*   [x] **Story 24.6:** Add large-scene AI generation chunking in `generateStructure` with `CHUNK_SIZE`/`CHUNK_THRESHOLD`.
+*   [x] **Story 24.7:** Refactor Pinterest fetching to batched async generator with env-configurable batch size, pause, and concurrency.
+*   [x] **Story 24.8:** Extend fetch-assets API with NDJSON streaming mode and update Preview step to progressively merge each completed batch into UI/store.
+*   [x] **Story 24.9:** Replace fixed Lambda timeout with duration-based dynamic timeout budget in render pipeline.
+*   [x] **Story 24.10:** Add and update tests for constraints, controls, chunking, batched fetching, progressive preview updates, and payload/store clamping.
+*   [x] **Story 24.11:** Update docs (`AGENTS.md`, `README.md`, `docs/tech_stack.md`, `docs/project_spec.md`, `CHANGELOG.md`, `TODOS.md`) and add `.env.local.example` Pinterest batch env vars.

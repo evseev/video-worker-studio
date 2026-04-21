@@ -14,11 +14,21 @@ import {
   type ImageMotion,
   type TextAnimation,
 } from "@/lib/effects";
+import { RangeSliderInput } from "@/components/wizard/range-slider-input";
+import {
+  SCENE_COUNT_MIN,
+  SCENE_COUNT_MAX,
+  SCENE_DURATION_MIN,
+  SCENE_DURATION_MAX,
+} from "@/lib/video-constraints";
 
 export function TemplateStep({ store }: { store: WizardStoreApi }) {
   const { topic, setTopic, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
   const isLandscape = settings.aspectRatio === "16:9";
   const [effectsExpanded, setEffectsExpanded] = useState(true);
+  const totalDuration = settings.sceneCount * settings.sceneDuration;
+  const totalMinutes = Math.floor(totalDuration / 60);
+  const totalSeconds = totalDuration % 60;
 
   const canContinue = topic.trim().length > 0 && !!selectedTemplate;
 
@@ -74,41 +84,42 @@ export function TemplateStep({ store }: { store: WizardStoreApi }) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          {/* Scene Count */}
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">Number of Scenes</label>
-            <select
-              value={settings.sceneCount}
-              onChange={(e) =>
-                store.getState().setSettings({ sceneCount: parseInt(e.target.value) })
-              }
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
-            >
-              {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                <option key={n} value={n}>
-                  {n} scenes
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <RangeSliderInput
+            label="Number of Scenes"
+            min={SCENE_COUNT_MIN}
+            max={SCENE_COUNT_MAX}
+            value={settings.sceneCount}
+            suffix="scenes"
+            onChange={(sceneCount) => store.getState().setSettings({ sceneCount })}
+          />
+          <RangeSliderInput
+            label="Duration per Scene"
+            min={SCENE_DURATION_MIN}
+            max={SCENE_DURATION_MAX}
+            value={settings.sceneDuration}
+            suffix="sec"
+            onChange={(sceneDuration) => store.getState().setSettings({ sceneDuration })}
+          />
+        </div>
 
-          {/* Scene Duration */}
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">Duration per Scene</label>
-            <select
-              value={settings.sceneDuration}
-              onChange={(e) =>
-                store.getState().setSettings({ sceneDuration: parseInt(e.target.value) })
-              }
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
-            >
-              <option value={3}>3 seconds</option>
-              <option value={5}>5 seconds</option>
-              <option value={7}>7 seconds</option>
-              <option value={10}>10 seconds</option>
-            </select>
-          </div>
+        <div className="mb-4 rounded-lg border border-white/10 bg-black/30 px-4 py-3">
+          <p className="text-sm text-zinc-300">
+            Total duration: {totalMinutes}m {totalSeconds}s ({settings.sceneCount} scenes × {settings.sceneDuration}s)
+          </p>
+          {totalDuration > 1200 ? (
+            <p className="mt-1 text-xs text-red-300">
+              This is close to the pipeline&apos;s practical limit - consider lowering scene count or duration.
+            </p>
+          ) : null}
+          {totalDuration > 600 && totalDuration <= 1200 ? (
+            <p className="mt-1 text-xs text-amber-300">
+              Longer videos take proportionally longer to generate and render. Expect 5-20 min processing for very long videos.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
 
           {/* Aspect Ratio */}
           <div>

@@ -79,6 +79,9 @@ Required environment variables:
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for local storage uploads) |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `PINTEREST_DL_BIN` | Absolute path to the `pinterest-dl` binary (e.g. `/path/to/.venv/bin/pinterest-dl`) |
+| `PINTEREST_BATCH_SIZE` | Number of keyword fetches per Pinterest batch before pausing (default: `60`) |
+| `PINTEREST_BATCH_PAUSE_MS` | Pause between Pinterest batches in milliseconds (default: `10000`) |
+| `PINTEREST_CONCURRENCY` | Parallel fetches inside one Pinterest batch (default: `6`) |
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
 | `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |

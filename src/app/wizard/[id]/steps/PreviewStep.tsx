@@ -19,9 +19,11 @@ export function PreviewStep({ store }: Props) {
   const [fetchingScene, setFetchingScene] = useState<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
 
   const fetchAllAssets = useCallback(async () => {
     setFetchingAll(true);
+    setBatchProgress(null);
     try {
       const currentScenes = store.getState().scenes;
       const res = await fetch("/api/wizard/fetch-assets", {
@@ -33,31 +35,92 @@ export function PreviewStep({ store }: Props) {
           multipleAssets: true,
           aspectRatio: store.getState().settings.aspectRatio,
           template: store.getState().selectedTemplate,
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (data.scenes) {
-        const updatedScenes: typeof currentScenes = data.scenes;
-        const newScenes = currentScenes.map((scene, idx) => {
-          const returnedScene = updatedScenes[idx];
-          if (!returnedScene) return scene;
-          const assets = scene.assets.map((slot, slotIdx) => {
-            const options = returnedScene.assets?.[slotIdx]?.options;
-            if (!options || options.length === 0) return slot;
-            return { ...slot, options, url: options[0], selectedIndex: 0, objectPosition: undefined };
+
+      if (!res.body) {
+        const data = await res.json();
+        if (data.scenes) {
+          const updatedScenes: typeof currentScenes = data.scenes;
+          const newScenes = currentScenes.map((scene, idx) => {
+            const returnedScene = updatedScenes[idx];
+            if (!returnedScene) return scene;
+            const assets = scene.assets.map((slot, slotIdx) => {
+              const options = returnedScene.assets?.[slotIdx]?.options;
+              if (!options || options.length === 0) return slot;
+              return { ...slot, options, url: options[0], selectedIndex: 0, objectPosition: undefined };
+            });
+            return { ...scene, assets };
           });
-          return { ...scene, assets };
-        });
-        store.getState().setScenes(newScenes);
-        const state = store.getState();
-        await state.saveProgress({
-          draft_scenes: { scenes: newScenes, settings: state.settings, refinedIdea: state.refinedIdea },
-        });
+          store.getState().setScenes(newScenes);
+          const state = store.getState();
+          await state.saveProgress({
+            draft_scenes: { scenes: newScenes, settings: state.settings, refinedIdea: state.refinedIdea },
+          });
+        }
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const payload = JSON.parse(line) as {
+            type: "batch" | "done" | "error";
+            message?: string;
+            batchIndex?: number;
+            batchCount?: number;
+            scenes?: Array<{ sceneIdx: number; assets: Array<{ slotIdx: number; options: string[] }> }>;
+          };
+
+          if (payload.type === "error") {
+            throw new Error(payload.message ?? "Failed to fetch assets");
+          }
+          if (payload.type === "done") {
+            continue;
+          }
+          if (payload.type === "batch" && payload.scenes) {
+            setBatchProgress({
+              current: (payload.batchIndex ?? 0) + 1,
+              total: payload.batchCount ?? 1,
+            });
+            const state = store.getState();
+            const newScenes = state.scenes.map((scene, sceneIdx) => {
+              const scenePatch = payload.scenes?.find((s) => s.sceneIdx === sceneIdx);
+              if (!scenePatch) return scene;
+              const assets = scene.assets.map((slot, slotIdx) => {
+                const slotPatch = scenePatch.assets.find((a) => a.slotIdx === slotIdx);
+                if (!slotPatch || slotPatch.options.length === 0) return slot;
+                return {
+                  ...slot,
+                  options: slotPatch.options,
+                  url: slotPatch.options[0],
+                  selectedIndex: 0,
+                  objectPosition: undefined,
+                };
+              });
+              return { ...scene, assets };
+            });
+            store.getState().setScenes(newScenes);
+            const nextState = store.getState();
+            await nextState.saveProgress({
+              draft_scenes: { scenes: newScenes, settings: nextState.settings, refinedIdea: nextState.refinedIdea },
+            });
+          }
+        }
       }
     } catch (e) {
       console.error(e);
     } finally {
       setFetchingAll(false);
+      setBatchProgress(null);
     }
   }, [projectId, store]);
 
@@ -240,6 +303,15 @@ export function PreviewStep({ store }: Props) {
           </button>
         </div>
       </div>
+
+      {batchProgress ? (
+        <div className="mb-4 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3">
+          <div className="flex items-center justify-between text-xs text-zinc-300">
+            <span>Fetching images... batch {batchProgress.current} of {batchProgress.total}</span>
+            <span>{Math.round((batchProgress.current / batchProgress.total) * 100)}%</span>
+          </div>
+        </div>
+      ) : null}
 
       {/* Scene List */}
       <div className="space-y-3 mb-8">

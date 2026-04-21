@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import path from "path";
 import { withAuth } from "@/lib/api/with-auth";
-import { fetchAssets } from "@/lib/ai/fetch-assets";
+import { fetchAssets, fetchAssetsBatched } from "@/lib/ai/fetch-assets";
 
 interface AssetSlot {
   options?: string[];
@@ -36,7 +36,7 @@ function normalizeScene(scene: Scene): SceneNew {
 }
 
 export const POST = withAuth(async (request, { user, supabase }) => {
-  const { projectId, scenes, multipleAssets, aspectRatio, template } = await request.json();
+  const { projectId, scenes, multipleAssets, aspectRatio, template, stream } = await request.json();
 
   if (!projectId || !scenes || !Array.isArray(scenes)) {
     return NextResponse.json(
@@ -82,6 +82,62 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     }
 
     const flatKeywords = flatEntries.map((e) => e.keyword);
+
+    if (stream) {
+      await supabase
+        .from("projects")
+        .update({ wizard_step: "assets" })
+        .eq("id", projectId)
+        .eq("user_id", user.id);
+
+      const encoder = new TextEncoder();
+      const body = new ReadableStream<Uint8Array>({
+        start: async (controller) => {
+          try {
+            for await (const batch of fetchAssetsBatched(flatKeywords, projectId, 3)) {
+              const batchScenes: Array<{ sceneIdx: number; assets: Array<{ slotIdx: number; options: string[] }> }> = [];
+              const sceneMap = new Map<number, Array<{ slotIdx: number; options: string[] }>>();
+              batch.results.forEach((paths, offset) => {
+                const flatIdx = batch.startIndex + offset;
+                const entry = flatEntries[flatIdx];
+                if (!entry) return;
+                const options = (paths as string[]).map((p) => toPublicPath(p));
+                const slots = sceneMap.get(entry.sceneIdx) ?? [];
+                slots.push({ slotIdx: entry.slotIdx, options });
+                sceneMap.set(entry.sceneIdx, slots);
+              });
+              for (const [sceneIdx, assets] of sceneMap.entries()) {
+                batchScenes.push({ sceneIdx, assets });
+              }
+
+              const payload = {
+                type: "batch",
+                batchIndex: batch.batchIndex,
+                batchCount: batch.batchCount,
+                scenes: batchScenes,
+              };
+              controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`));
+            }
+            controller.enqueue(encoder.encode(`${JSON.stringify({ type: "done" })}\n`));
+            controller.close();
+          } catch (error) {
+            controller.enqueue(
+              encoder.encode(`${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "Stream failed" })}\n`)
+            );
+            controller.close();
+          }
+        },
+      });
+
+      return new NextResponse(body, {
+        headers: {
+          "Content-Type": "application/x-ndjson; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
     const allPaths = await fetchAssets(flatKeywords, projectId, 3);
 
     // Map results back into scene.assets[slotIdx].options
