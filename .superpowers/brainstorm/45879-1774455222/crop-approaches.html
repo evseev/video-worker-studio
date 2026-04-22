@@ -1,0 +1,122 @@
+<h2>Image Crop & Pan — Approach Options</h2>
+<p class="subtitle">How should the pan control integrate with the existing SceneCard thumbnails?</p>
+
+<div class="cards">
+  <!-- Approach A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: #111;">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <!-- Thumbnail mockup -->
+        <div style="position: relative; width: 80px; height: 96px; background: #222; border-radius: 8px; overflow: hidden; border: 2px solid #333; flex-shrink: 0;">
+          <!-- Image that's bigger than container (draggable) -->
+          <div style="position: absolute; width: 120px; height: 160px; top: -20px; left: -15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 10px; opacity: 0.7;">↕ ↔</span>
+          </div>
+          <!-- Cursor hint overlay -->
+          <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 9px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">drag to reposition</span>
+          </div>
+        </div>
+        <!-- Description -->
+        <div style="flex: 1;">
+          <div style="color: #aaa; font-size: 11px; line-height: 1.5;">
+            <div style="color: #7c3aed; font-weight: 600; font-size: 12px; margin-bottom: 4px;">On hover:</div>
+            Semi-transparent overlay appears with "drag to reposition" hint.<br>
+            Cursor changes to <code style="background: #333; padding: 1px 4px; border-radius: 3px; font-size: 10px;">grab</code>.<br>
+            <div style="color: #7c3aed; font-weight: 600; font-size: 12px; margin-top: 8px; margin-bottom: 4px;">On drag:</div>
+            Image pans under the fixed window.<br>
+            Cursor changes to <code style="background: #333; padding: 1px 4px; border-radius: 3px; font-size: 10px;">grabbing</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Overlay Hint + Direct Drag</h3>
+      <p>Hover shows a subtle "drag to reposition" overlay on the existing thumbnail. Drag directly on the thumbnail to pan. The refresh button moves to a small icon in the corner instead of being a full overlay.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Zero extra UI — reuses existing thumbnail</li><li>Feels native and immediate</li><li>Works identically across all 3 templates</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Small drag surface (80×96px on slideshow)</li><li>Conflicts with existing hover-to-refresh overlay</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: #111;">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <!-- Expanded preview mockup -->
+        <div style="position: relative; width: 160px; height: 120px; background: #222; border-radius: 8px; overflow: hidden; border: 2px solid #7c3aed; flex-shrink: 0;">
+          <!-- Larger image for dragging -->
+          <div style="position: absolute; width: 200px; height: 160px; top: -10px; left: -15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 10px; opacity: 0.7;">↕ ↔</span>
+          </div>
+          <!-- Crosshair -->
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border: 1px solid rgba(255,255,255,0.4); border-radius: 50%;"></div>
+          <!-- Position indicator -->
+          <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 4px; font-size: 9px; color: #aaa;">42% 35%</div>
+        </div>
+        <div style="flex: 1;">
+          <div style="color: #aaa; font-size: 11px; line-height: 1.5;">
+            <div style="color: #7c3aed; font-weight: 600; font-size: 12px; margin-bottom: 4px;">On click:</div>
+            Thumbnail expands into a larger inline preview (2x size) with violet border.<br>
+            <div style="color: #7c3aed; font-weight: 600; font-size: 12px; margin-top: 8px; margin-bottom: 4px;">On drag:</div>
+            Pan image in the larger preview. Position % shown in corner.<br>
+            <div style="color: #7c3aed; font-weight: 600; font-size: 12px; margin-top: 8px; margin-bottom: 4px;">Click away:</div>
+            Preview collapses back to thumbnail.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Click-to-Expand Inline Preview</h3>
+      <p>Click the thumbnail to expand it inline to ~2x size with a violet border. Drag in the larger preview to pan. Shows position coordinates. Click outside to collapse. Refresh button stays as a small corner icon.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Larger drag surface for precision</li><li>No conflict with refresh overlay</li><li>Position feedback visible</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Extra click to enter/exit crop mode</li><li>Expanding thumbnail may shift layout</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: #111;">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <!-- Thumbnail with button row -->
+        <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+          <div style="position: relative; width: 80px; height: 96px; background: #222; border-radius: 8px; overflow: hidden; border: 2px solid #333; flex-shrink: 0;">
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+          </div>
+          <!-- Button row under thumbnail -->
+          <div style="display: flex; gap: 4px;">
+            <div style="width: 28px; height: 22px; background: #7c3aed; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: white; font-size: 9px;">✥</span>
+            </div>
+            <div style="width: 28px; height: 22px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #aaa; font-size: 9px;">↻</span>
+            </div>
+            <div style="width: 28px; height: 22px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #aaa; font-size: 9px;">⟲</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1;">
+          <div style="color: #aaa; font-size: 11px; line-height: 1.5;">
+            <div style="color: #7c3aed; font-weight: 600; font-size: 12px; margin-bottom: 4px;">Button row:</div>
+            <span style="color: #7c3aed;">✥</span> Crop/pan  ·  <span style="color: #aaa;">↻</span> Refresh  ·  <span style="color: #aaa;">⟲</span> Reset<br>
+            <div style="color: #7c3aed; font-weight: 600; font-size: 12px; margin-top: 8px; margin-bottom: 4px;">Pan button click:</div>
+            Enters drag-to-pan mode on thumbnail.<br>
+            Click button again or press Esc to exit.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Toolbar Buttons Below Thumbnail</h3>
+      <p>Small icon buttons appear below each thumbnail: crop/pan, refresh, and reset. Clicking crop enters pan mode on the thumbnail. Explicit controls, discoverable, but adds vertical space.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Most discoverable — buttons are always visible</li><li>Clear separation of actions</li><li>Reset button for quick undo</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More UI clutter on every scene card</li><li>Still small drag surface</li><li>Most users won't need crop on most images</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

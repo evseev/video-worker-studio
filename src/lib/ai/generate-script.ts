@@ -1,6 +1,7 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
+import { SchemaType, type Schema } from "@google/generative-ai";
 import { z } from "zod";
 import { generateScriptPrompt } from "./prompts";
+import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 
 export interface SceneScript {
   scriptText: string;
@@ -40,25 +41,16 @@ export async function generateScript(
   opts?: { sceneCount?: number; sceneDuration?: number }
 ): Promise<SceneScript[]> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set");
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+  const genAI = createGeminiClient(apiKey);
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema,
     },
     systemInstruction: generateScriptPrompt(opts),
   });
-
-  const result = await model.generateContent(
-    `Create a video script about: ${topic}`
-  );
-
-  const text = result.response.text();
+  const text = await generateTextOrThrow(model, `Create a video script about: ${topic}`);
 
   // Validate LLM output at the trust boundary before anything hits the DB
   const SceneSchema = z.object({

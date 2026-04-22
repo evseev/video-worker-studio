@@ -19,9 +19,13 @@ export type Database = {
           aspect_ratio: string;
           background_music: string | null;
           caption_style: string | null;
+          comparison_overlay_mode: string;
           created_at: string;
           draft_scenes: Json | null;
           id: string;
+          image_motion: string;
+          scene_transition: string;
+          text_animation: string;
           render_error_context: Json | null;
           selected_template: string | null;
           status: string;
@@ -32,6 +36,7 @@ export type Database = {
           video_description: string | null;
           video_quality: string;
           video_tags: string | null;
+          video_title: string | null;
           video_url: string | null;
           voiceover_url: string | null;
           wizard_step: string | null;
@@ -40,12 +45,16 @@ export type Database = {
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
+          comparison_overlay_mode?: string;
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;
+          image_motion?: string;
           render_error_context?: Json | null;
+          scene_transition?: string;
           selected_template?: string | null;
           status?: string;
+          text_animation?: string;
           topic: string;
           trend_validation_data?: Json | null;
           updated_at?: string;
@@ -53,6 +62,7 @@ export type Database = {
           video_description?: string | null;
           video_quality?: string;
           video_tags?: string | null;
+          video_title?: string | null;
           video_url?: string | null;
           voiceover_url?: string | null;
           wizard_step?: string | null;
@@ -61,12 +71,16 @@ export type Database = {
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
+          comparison_overlay_mode?: string;
           created_at?: string;
           draft_scenes?: Json | null;
           id?: string;
+          image_motion?: string;
           render_error_context?: Json | null;
+          scene_transition?: string;
           selected_template?: string | null;
           status?: string;
+          text_animation?: string;
           topic?: string;
           trend_validation_data?: Json | null;
           updated_at?: string;
@@ -74,6 +88,7 @@ export type Database = {
           video_description?: string | null;
           video_quality?: string;
           video_tags?: string | null;
+          video_title?: string | null;
           video_url?: string | null;
           voiceover_url?: string | null;
           wizard_step?: string | null;
@@ -118,6 +133,44 @@ export type Database = {
           },
         ];
       };
+      video_subjects: {
+        Row: {
+          created_at: string;
+          embedding: string | null;
+          id: string;
+          project_id: string;
+          subject_key: string;
+          subject_normalized: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          project_id: string;
+          subject_key: string;
+          subject_normalized: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          project_id?: string;
+          subject_key?: string;
+          subject_normalized?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "video_subjects_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -125,6 +178,14 @@ export type Database = {
     Functions: {
       worker_insert_scenes: {
         Args: { p_project_id: string; p_scenes: Json };
+        Returns: undefined;
+      };
+      worker_insert_video_subjects: {
+        Args: { p_project_id: string; p_rows: Json; p_user_id: string };
+        Returns: undefined;
+      };
+      worker_update_project_error: {
+        Args: { p_error_context: Json; p_project_id: string };
         Returns: undefined;
       };
       worker_update_project_status: {

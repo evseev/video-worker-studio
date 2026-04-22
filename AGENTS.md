@@ -37,7 +37,7 @@ Non-compliance rule:
 | Styling | Tailwind CSS v4 | 4.x |
 | Database | Supabase PostgreSQL | via `@supabase/supabase-js` |
 | Auth | Supabase Auth + SSR | `@supabase/ssr` |
-| AI | Google Gemini | `@google/generative-ai` — model: `gemini-2.5-flash` |
+| AI | Google Gemini | `@google/generative-ai` — default model: `gemini-2.5-flash` (override via `GEMINI_TEXT_MODEL`) |
 | Job Queue | Inngest | v3 |
 | Video | Remotion (Lambda default, local fallback) | 4.x |
 | Monitoring | Sentry | `@sentry/nextjs` v10 |
@@ -58,7 +58,7 @@ src/
       inngest/           # POST /api/inngest — Inngest webhook sink (must stay public)
       projects/          # CRUD for projects table
       wizard/            # Wizard-specific API routes (draft, ideas, enhance-idea, validate-trend,
-                         #   generate-structure, script, fetch-assets, upload-voiceover, render)
+                         #   generate-structure, script, generate-seo, fetch-assets, upload-voiceover, render)
     auth/                # Auth callback route (Supabase magic link)
     login/               # Login page
     projects/[id]/       # Project detail page (video player, download, retry)
@@ -70,7 +70,7 @@ src/
         IdeaStep.tsx     # AI hook suggestions for chosen topic
         RefineStep.tsx   # AI enhance + trend validation
         ScriptStep.tsx   # AI script generation (template-specific prompts)
-        PreviewStep.tsx  # Asset preview + drag-and-drop reorder
+        PreviewStep.tsx  # Asset preview + reorder; Comparison: caption style + overlay mode
         RenderStep.tsx   # Render summary + progress + video player
   components/
     DraggableImage.tsx   # Shared hover-to-reveal drag-to-pan image component (used by all SceneCards)
@@ -85,6 +85,8 @@ src/
       video-config-selector.tsx
       music-selector.tsx
       voiceover-upload.tsx
+      caption-style-selector.tsx
+      comparison-overlay-mode-selector.tsx
     ui/
       toast.tsx           # Toast notification system (Zustand store)
   lib/
@@ -105,6 +107,9 @@ src/
       wizard-store.ts    # Zustand store for wizard state (scenes, settings, refinedIdea)
     projects/
       delete-project-assets.ts # Storage + temp cleanup when deleting a project
+    effects.ts           # Scene transition, image motion, text animation types + random resolver
+    comparison-caption-styles.ts # Comparison caption presets + overlay visibility (used by UI + Remotion)
+    merge-render-payload.ts    # Merge render POST body with DB row + draft_scenes
     music-presets.ts     # 5 royalty-free music track presets
     rate-limit.ts        # In-memory sliding window rate limiter
     supabase/
@@ -124,6 +129,7 @@ src/
   remotion/              # Remotion composition and rendering
     Root.tsx
     VideoComposition.tsx # Template-based scene dispatch
+    animation-utils.ts   # Shared image motion + text animation helpers
     templates/           # Remotion scene components per archetype
       SlideshowScene.tsx
       ComparisonScene.tsx
@@ -158,8 +164,9 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_description`, `video_tags` |
+| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_title`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation`, `caption_style`, `comparison_overlay_mode` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
+| `video_subjects` | `id`, `user_id`, `project_id`, `subject_key`, `subject_normalized`, `embedding`, `created_at` |
 
 ### Project status lifecycle
 ```
@@ -215,7 +222,7 @@ draft → processing → rendering → completed
 | `/api/wizard/fetch-assets` | POST | ✅ | Fetch scene assets from Pinterest (supports multi-asset mode) |
 | `/api/wizard/upload-voiceover` | POST | ✅ | Upload voice-over audio file (MP3/WAV, max 50MB) |
 | `/api/wizard/generate-seo` | POST | ✅ | Generate YouTube SEO metadata (description + tags) |
-| `/api/wizard/render` | POST | ✅ | Dispatch wizard render job (with video config, music, template) |
+| `/api/wizard/render` | POST | ✅ | Merge body + DB + draft; dispatch `video/generate` (full scenes for retries) |
 
 - Route handlers must return `NextResponse.json()` consistently.
 - All authenticated routes must validate the Supabase session and return `401` if missing.
@@ -233,6 +240,7 @@ draft → processing → rendering → completed
 | `worker_insert_scenes` RPC | Bypasses RLS; changing signature breaks the worker |
 | `worker_update_project_status` RPC | Same as above |
 | `worker_update_project_error` RPC | Same as above |
+| `worker_insert_video_subjects` RPC | Same as above |
 | `.env.local` | Never commit; never log env values |
 
 ---
@@ -265,8 +273,8 @@ draft → processing → rendering → completed
 - **Never log or return secrets.** Supabase keys, Gemini API key, Sentry DSN — none of these should appear in client-side code or logs.
 - **`NEXT_PUBLIC_` env vars are exposed to the browser.** Only put values in `NEXT_PUBLIC_` that are safe to be public (Supabase URL and anon key are intentionally public; service role key must never be `NEXT_PUBLIC_`).
 - **Remotion renders are async and cost-sensitive.** Keep per-user render concurrency constrained in Inngest and apply a global cap to avoid runaway Lambda spend.
-- **Pinterest scraping is rate-limited by `pinterest-dl`.** Do not increase the number of scenes beyond 10 without testing scrape reliability.
-- **Video files are large.** Remotion output goes to `/tmp` then immediately uploaded to Supabase Storage and deleted. Do not persist render artifacts on disk.
+- **Pinterest scraping is rate-limited by `pinterest-dl`.** Scene settings support 3-120 scenes, and asset fetching is batched with env-tunable controls: `PINTEREST_BATCH_SIZE` (default 60), `PINTEREST_BATCH_PAUSE_MS` (default 10000), `PINTEREST_CONCURRENCY` (default 6).
+- **Video files are large.** Lambda renders upload to remote storage, while local backend renders are intentionally stored under `public/local_renders` for local playback and must be cleaned up on project deletion.
 
 ---
 
@@ -298,17 +306,19 @@ draft → processing → rendering → completed
 | `docs/tech_stack.md` | Technology choices and rationale |
 | `docs/workflow_design.md` | Pipeline design, failure modes, retries |
 | `docs/ux_specification.md` | Screen-by-screen layout and interactions |
-| `docs/prd_backlog.md` | Product backlog (21 epics; Epics 1–20 complete, Epic 21 planned) |
+| `docs/prd_backlog.md` | Product backlog (24 epics; Epics 1–24 complete) |
 | `docs/mvp_development_plan.md` | Original development roadmap |
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
 | `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |
 | `docs/adr/001-gemini-3-flash-upgrade.md` | Architecture decision record |
+| `docs/adr/002-subject-deduplication.md` | Architecture decision record |
 
 ---
 
 ## 13. gstack Skills
 
 Use `.agents/skills/gstack/browse` for all web browsing.
+If a referenced skill/checklist path under `.claude/skills/...` is missing, immediately fallback to the equivalent path under `.agents/skills/gstack/...` before blocking.
 
 | Skill Path | Your specialist | What they do |
 |-------|----------------|--------------|

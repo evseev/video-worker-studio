@@ -1,9 +1,10 @@
 import { renderMediaOnLambda, getRenderProgress, type AwsRegion } from "@remotion/lambda/client";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { createClient } from "@supabase/supabase-js";
 import { resolveVideoDimensions } from "./dimensions";
 import { getMusicTrack } from "@/lib/music-presets";
+import type { ResolvedTransition, ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
+import type { CaptionStyleId, ComparisonOverlayMode } from "@/lib/comparison-caption-styles";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -26,6 +27,11 @@ type RenderInput = {
   sceneDuration?: number;
   backgroundMusic?: string | null;
   voiceoverUrl?: string | null;
+  sceneTransitions?: ResolvedTransition[];
+  imageMotions?: ResolvedImageMotion[];
+  textAnimations?: ResolvedTextAnimation[];
+  captionStyle?: CaptionStyleId;
+  comparisonOverlayMode?: ComparisonOverlayMode;
 };
 
 const DEFAULT_SCENE_DURATION_SECONDS = 5;
@@ -33,7 +39,8 @@ const FPS = 30;
 const TRANSITION_FRAMES = 15;
 const COMPOSITION_ID = "VideoWorker";
 const DEFAULT_LAMBDA_POLL_MS = 4_000;
-const DEFAULT_LAMBDA_TIMEOUT_MS = 16 * 60 * 1_000;
+const MIN_LAMBDA_TIMEOUT_MS = 8 * 60 * 1_000;
+const MAX_LAMBDA_TIMEOUT_MS = 40 * 60 * 1_000;
 
 type RenderBackend = "lambda" | "local";
 
@@ -90,6 +97,13 @@ function wait(ms: number): Promise<void> {
   });
 }
 
+function resolveLambdaTimeoutMs(totalSeconds: number): number {
+  return Math.min(
+    MAX_LAMBDA_TIMEOUT_MS,
+    Math.max(MIN_LAMBDA_TIMEOUT_MS, totalSeconds * 2_000)
+  );
+}
+
 function getLocalRenderAssetBaseUrl(): string {
   const configured =
     process.env.LOCAL_RENDER_ASSET_BASE_URL ??
@@ -141,6 +155,7 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
   const totalFrames =
     scenes.length * sceneDurationFrames -
     Math.max(0, scenes.length - 1) * TRANSITION_FRAMES;
+  const timeoutMs = resolveLambdaTimeoutMs(totalFrames / FPS);
 
   const inputProps = {
     scenes,
@@ -148,6 +163,11 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
     transitionFrames: TRANSITION_FRAMES,
     musicUrl: musicTrack?.url ?? null,
     voiceoverUrl: input.voiceoverUrl ?? null,
+    sceneTransitions: input.sceneTransitions ?? Array(scenes.length - 1).fill("fade"),
+    imageMotions: input.imageMotions ?? Array(scenes.length).fill("zoom-in"),
+    textAnimations: input.textAnimations ?? Array(scenes.length).fill("slide-up"),
+    captionStyle: input.captionStyle ?? "minimal",
+    comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
   };
 
   console.log(`[render] Starting Lambda render for project ${projectId} (${width}x${height})`);
@@ -188,8 +208,8 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
       return progress.outputFile;
     }
 
-    if (Date.now() - startedAt > DEFAULT_LAMBDA_TIMEOUT_MS) {
-      throw new Error(`Lambda render timed out after ${DEFAULT_LAMBDA_TIMEOUT_MS}ms`);
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error(`Lambda render timed out after ${timeoutMs}ms`);
     }
 
     await wait(DEFAULT_LAMBDA_POLL_MS);
@@ -244,6 +264,11 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     transitionFrames: TRANSITION_FRAMES,
     musicUrl: musicTrack?.url ?? null,
     voiceoverUrl: input.voiceoverUrl ?? null,
+    sceneTransitions: input.sceneTransitions ?? Array(normalizedScenes.length - 1).fill("fade"),
+    imageMotions: input.imageMotions ?? Array(normalizedScenes.length).fill("zoom-in"),
+    textAnimations: input.textAnimations ?? Array(normalizedScenes.length).fill("slide-up"),
+    captionStyle: input.captionStyle ?? "minimal",
+    comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
   };
 
   // Select the composition
@@ -258,7 +283,7 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
   composition.height = height;
   composition.durationInFrames = totalFrames;
 
-  const outputDir = path.join(os.tmpdir(), "vws-renders");
+  const outputDir = path.join(process.cwd(), "public", "local_renders");
   const outputPath = path.join(outputDir, `${projectId}.mp4`);
   await fs.promises.mkdir(outputDir, { recursive: true });
 
@@ -277,32 +302,7 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     },
   });
 
-  const uploadedUrl = await uploadLocalRender(outputPath, projectId);
-  console.log(`[render] Local render complete and uploaded: ${uploadedUrl}`);
-  return uploadedUrl;
-}
-
-async function uploadLocalRender(filePath: string, projectId: string): Promise<string> {
-  const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const supabase = createClient(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    serviceRoleKey
-  );
-
-  const fileBuffer = await fs.promises.readFile(filePath);
-  const storagePath = `videos/${projectId}.mp4`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("renders")
-    .upload(storagePath, fileBuffer, {
-      contentType: "video/mp4",
-      upsert: true,
-    });
-
-  if (uploadError) {
-    throw new Error(`Storage upload failed: ${uploadError.message}`);
-  }
-
-  const { data } = supabase.storage.from("renders").getPublicUrl(storagePath);
-  return data.publicUrl;
+  const localVideoUrl = `${getLocalRenderAssetBaseUrl()}/local_renders/${projectId}.mp4`;
+  console.log(`[render] Local render complete: ${localVideoUrl}`);
+  return localVideoUrl;
 }

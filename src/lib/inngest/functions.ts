@@ -2,12 +2,18 @@ import { inngest } from "./client";
 import { generateScript } from "@/lib/ai/generate-script";
 import { fetchAssets } from "@/lib/ai/fetch-assets";
 import { renderVideo } from "@/lib/render/render-video";
+import { resolveTransitions, resolveImageMotions, resolveTextAnimations } from "@/lib/effects";
+import { parseCaptionStyle, parseComparisonOverlayMode } from "@/lib/comparison-caption-styles";
+import { persistSubjectsForProject } from "@/lib/ai/subject-memory";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 interface VideoGenerateScene {
   template: string;
+  subjectKey?: string;
   scriptText: string;
+  /** On-screen caption (Remotion). Falls back to scriptText if missing. */
+  captionText?: string;
   searchKeywords: string[];
   assets: Array<{ url?: string; options?: string[]; selectedIndex?: number; objectPosition?: string }>;
   // Template-specific optional fields
@@ -28,6 +34,11 @@ interface VideoGenerateEventData {
   sceneDuration?: number;
   backgroundMusic?: string | null;
   voiceoverUrl?: string | null;
+  sceneTransition?: string;
+  imageMotion?: string;
+  textAnimation?: string;
+  captionStyle?: string;
+  comparisonOverlayMode?: string;
   userId?: string;
 }
 
@@ -98,14 +109,16 @@ export const generateVideo = inngest.createFunction(
   },
   { event: "video/generate" },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl } = event.data as VideoGenerateEventData;
+    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode, userId } = event.data as VideoGenerateEventData;
 
 
 
     const db = getWorkerClient();
 
+    const hasPassedScenes = Array.isArray(passedScenes) && passedScenes.length > 0;
+
     // Step 1: Generate script via Gemini (or use passed scenes)
-    const scenes = passedScenes || await step.run("generate-script", async () => {
+    const scenes = hasPassedScenes ? passedScenes : await step.run("generate-script", async () => {
       console.log(`[generate-script] Project: ${projectId}, Topic: ${topic}`);
       try {
         if (!topic) throw new Error("Topic is required if scenes are not provided");
@@ -188,6 +201,8 @@ export const generateVideo = inngest.createFunction(
         const renderScenes = (scenesWithAssets as VideoGenerateScene[]).map((s) => ({
           template: s.template,
           scriptText: s.scriptText,
+          // Fall back to scriptText so legacy scenes still render a caption.
+          captionText: s.captionText ?? s.scriptText,
           assets: s.assets.map((a) => ({ url: a.url ?? null, objectPosition: a.objectPosition })),
           leftLabel: s.leftLabel,
           rightLabel: s.rightLabel,
@@ -195,7 +210,25 @@ export const generateVideo = inngest.createFunction(
           subtitle: s.subtitle,
           facts: s.facts,
         }));
-        return await renderVideo({ projectId, scenes: renderScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl });
+        const sceneCount = renderScenes.length;
+        const resolvedTransitions = resolveTransitions((sceneTransition || "fade") as Parameters<typeof resolveTransitions>[0], sceneCount);
+        const resolvedImageMotions = resolveImageMotions((imageMotion || "zoom-in") as Parameters<typeof resolveImageMotions>[0], sceneCount);
+        const resolvedTextAnimations = resolveTextAnimations((textAnimation || "slide-up") as Parameters<typeof resolveTextAnimations>[0], sceneCount);
+        return await renderVideo({
+          projectId,
+          scenes: renderScenes,
+          template,
+          aspectRatio,
+          videoQuality,
+          sceneDuration,
+          backgroundMusic,
+          voiceoverUrl,
+          sceneTransitions: resolvedTransitions,
+          imageMotions: resolvedImageMotions,
+          textAnimations: resolvedTextAnimations,
+          captionStyle: parseCaptionStyle(captionStyle),
+          comparisonOverlayMode: parseComparisonOverlayMode(comparisonOverlayMode),
+        });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
         await updateRenderError(db, projectId, {
@@ -208,6 +241,23 @@ export const generateVideo = inngest.createFunction(
     });
 
     await updateStatus(db, projectId, "completed", videoUrl);
+
+    await step.run("persist-subject-memory", async () => {
+      if (!userId) {
+        return;
+      }
+      const subjectKeys = (scenesWithAssets as VideoGenerateScene[])
+        .map((scene) => scene.subjectKey ?? "")
+        .filter((value) => value.length > 0);
+      if (subjectKeys.length === 0) {
+        return;
+      }
+      try {
+        await persistSubjectsForProject(projectId, userId, subjectKeys);
+      } catch (error) {
+        console.error("[persist-subject-memory] Failed to persist subjects:", error);
+      }
+    });
 
     return { projectId, videoUrl, sceneCount: scenesWithAssets.length };
   }

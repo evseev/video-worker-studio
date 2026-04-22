@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
+import { SchemaType, type Schema } from "@google/generative-ai";
 import { z } from "zod";
 import {
   enhanceIdeaPrompt,
@@ -10,12 +10,12 @@ import type { Scene, TemplateId } from "@/templates/types";
 import { buildSlideshowPrompt, slideshowGeminiSchema, SlideshowResponseSchema } from "@/templates/slideshow";
 import { buildComparisonPrompt, comparisonGeminiSchema, ComparisonResponseSchema } from "@/templates/comparison";
 import { buildFactCardPrompt, factCardGeminiSchema, FactCardResponseSchema } from "@/templates/fact-card";
+import { normalizeSubject } from "@/lib/ai/dedupe";
+import { getExcludedSubjectsForUser } from "@/lib/ai/subject-memory";
+import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 
 const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  throw new Error("GEMINI_API_KEY is not set");
-}
-const genAI = new GoogleGenerativeAI(apiKey);
+const genAI = createGeminiClient(apiKey);
 
 // --- Enhance Idea ---
 
@@ -32,8 +32,8 @@ const enhanceIdeaSchema: Schema = {
 };
 
 export async function enhanceIdea(rawIdea: string, totalDuration?: number): Promise<string[]> {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: enhanceIdeaSchema,
@@ -41,8 +41,7 @@ export async function enhanceIdea(rawIdea: string, totalDuration?: number): Prom
     systemInstruction: enhanceIdeaPrompt(totalDuration ? { totalDuration } : undefined),
   });
 
-  const result = await model.generateContent(`Raw idea: ${rawIdea}`);
-  const text = result.response.text();
+  const text = await generateTextOrThrow(model, `Raw idea: ${rawIdea}`);
 
   const ResponseSchema = z.object({
     ideas: z.array(z.string()).min(1),
@@ -81,18 +80,17 @@ export interface TrendValidation {
 }
 
 export async function validateTrend(idea: string): Promise<TrendValidation> {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    // In a real app we might use Grounding with Google Search here
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: validateTrendSchema,
     },
+    // In a real app we might use Grounding with Google Search here
     systemInstruction: validateTrendPrompt(),
   });
 
-  const result = await model.generateContent(`Idea: ${idea}`);
-  const text = result.response.text();
+  const text = await generateTextOrThrow(model, `Idea: ${idea}`);
 
   const ResponseSchema = z.object({
     score: z.number().min(0).max(100),
@@ -117,65 +115,175 @@ function getTemplateAI(templateId: TemplateId) {
   }
 }
 
-function toScene(templateId: TemplateId, raw: any): Scene {
+function toScene(templateId: TemplateId, raw: Record<string, unknown>): Scene {
+  // Fall back to scriptText if the AI didn't emit captionText (should be rare
+  // with the updated schema, but keeps legacy behavior safe).
+  const captionText: string = (raw.captionText as string | undefined) ?? (raw.scriptText as string | undefined) ?? "";
   switch (templateId) {
     case "slideshow":
       return {
         template: "slideshow",
-        scriptText: raw.scriptText,
-        searchKeywords: [raw.searchKeyword],
+        subjectKey: raw.subjectKey as string,
+        scriptText: raw.scriptText as string,
+        captionText,
+        searchKeywords: [raw.searchKeyword as string],
         assets: [{}],
       };
     case "comparison":
       return {
         template: "comparison",
-        scriptText: raw.scriptText,
-        searchKeywords: raw.searchKeywords,
-        leftLabel: raw.leftLabel,
-        rightLabel: raw.rightLabel,
+        subjectKey: raw.subjectKey as string,
+        scriptText: raw.scriptText as string,
+        captionText,
+        searchKeywords: raw.searchKeywords as string[],
+        leftLabel: (raw.leftLabel as string | undefined) ?? "",
+        rightLabel: (raw.rightLabel as string | undefined) ?? "",
         assets: [{}, {}],
       };
     case "fact-card":
       return {
         template: "fact-card",
-        scriptText: raw.scriptText,
-        searchKeywords: raw.searchKeywords,
-        title: raw.title,
-        subtitle: raw.subtitle,
-        facts: raw.facts,
+        subjectKey: raw.subjectKey as string,
+        scriptText: raw.scriptText as string,
+        captionText,
+        searchKeywords: raw.searchKeywords as string[],
+        title: (raw.title as string | undefined) ?? "",
+        subtitle: (raw.subtitle as string | undefined) ?? "",
+        facts: (raw.facts as { label: string; value: string }[] | undefined) ?? [],
         assets: [{}, {}],
       };
   }
 }
 
-export async function generateStructure(
+const CHUNK_THRESHOLD = 24;
+const CHUNK_SIZE = 16;
+
+type StructureOptions = {
+  aspectRatio?: string;
+  sceneCount?: number;
+  sceneDuration?: number;
+  userId?: string;
+  crossVideoExcludes?: string[];
+};
+
+async function generateStructureChunk(
   idea: string,
   templateId: TemplateId,
-  opts?: { aspectRatio?: string; sceneCount?: number; sceneDuration?: number }
+  opts: {
+    aspectRatio?: string;
+    sceneCount: number;
+    sceneDuration: number;
+    chunkStart: number;
+    chunkSize: number;
+    excludeSubjects?: string[];
+  }
 ): Promise<Scene[]> {
-  const sceneCount = opts?.sceneCount ?? 6;
-  const sceneDuration = opts?.sceneDuration ?? 5;
-  const aspectRatio = opts?.aspectRatio;
-
   const ai = getTemplateAI(templateId);
-
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: ai.geminiSchema,
     },
-    systemInstruction: ai.buildPrompt({ sceneCount, sceneDuration, aspectRatio }),
+    systemInstruction: ai.buildPrompt({
+      sceneCount: opts.chunkSize,
+      sceneDuration: opts.sceneDuration,
+      aspectRatio: opts.aspectRatio,
+      excludeSubjects: opts.excludeSubjects,
+    }),
   });
 
-  const result = await model.generateContent(
-    `Idea: ${idea}\nVideo orientation: ${aspectRatio === "16:9" ? "landscape" : "portrait"}`
+  const text = await generateTextOrThrow(
+    model,
+    [
+      `Idea: ${idea}`,
+      `Video orientation: ${opts.aspectRatio === "16:9" ? "landscape" : "portrait"}`,
+      `This is chunk ${Math.floor(opts.chunkStart / CHUNK_SIZE) + 1} of ${Math.ceil(opts.sceneCount / CHUNK_SIZE)}.`,
+      `Generate scenes ${opts.chunkStart + 1} to ${opts.chunkStart + opts.chunkSize} out of ${opts.sceneCount}.`,
+    ].join("\n")
   );
-  const text = result.response.text();
   const parsed = ai.zodSchema.parse(JSON.parse(text));
+  return parsed.scenes.map((raw: unknown) => toScene(templateId, raw as Record<string, unknown>));
+}
 
-  // Convert AI output to template-typed Scene[]
-  return parsed.scenes.map((raw: any) => toScene(templateId, raw));
+function filterUniqueScenes(scenes: Scene[], seenSubjects: Set<string>): { uniqueScenes: Scene[]; droppedCount: number } {
+  const workingSeen = new Set(seenSubjects);
+  const uniqueScenes: Scene[] = [];
+  let droppedCount = 0;
+  for (const scene of scenes) {
+    const normalized = normalizeSubject(scene.subjectKey);
+    if (!normalized || workingSeen.has(normalized)) {
+      droppedCount += 1;
+      continue;
+    }
+    workingSeen.add(normalized);
+    uniqueScenes.push(scene);
+  }
+  return { uniqueScenes, droppedCount };
+}
+
+async function generateStructureChunked(
+  idea: string,
+  templateId: TemplateId,
+  opts: { aspectRatio?: string; sceneCount: number; sceneDuration: number; excludeSubjects?: string[] }
+): Promise<Scene[]> {
+  const chunks: Scene[] = [];
+  const seenSubjects = new Set((opts.excludeSubjects ?? []).map(normalizeSubject).filter(Boolean));
+  for (let chunkStart = 0; chunkStart < opts.sceneCount; chunkStart += CHUNK_SIZE) {
+    const chunkSize = Math.min(CHUNK_SIZE, opts.sceneCount - chunkStart);
+    const excludeSubjects = Array.from(seenSubjects);
+    const firstPassScenes = await generateStructureChunk(idea, templateId, {
+      ...opts,
+      chunkStart,
+      chunkSize,
+      excludeSubjects,
+    });
+    let { uniqueScenes, droppedCount } = filterUniqueScenes(firstPassScenes, seenSubjects);
+
+    if (droppedCount > 1) {
+      const retryScenes = await generateStructureChunk(idea, templateId, {
+        ...opts,
+        chunkStart,
+        chunkSize,
+        excludeSubjects: Array.from(seenSubjects),
+      });
+      ({ uniqueScenes } = filterUniqueScenes(retryScenes, seenSubjects));
+    }
+
+    for (const scene of uniqueScenes) {
+      const normalized = normalizeSubject(scene.subjectKey);
+      if (normalized) {
+        seenSubjects.add(normalized);
+      }
+    }
+    chunks.push(...uniqueScenes.slice(0, chunkSize));
+  }
+  return chunks.slice(0, opts.sceneCount);
+}
+
+export async function generateStructure(
+  idea: string,
+  templateId: TemplateId,
+  opts?: StructureOptions
+): Promise<Scene[]> {
+  const sceneCount = opts?.sceneCount ?? 6;
+  const sceneDuration = opts?.sceneDuration ?? 5;
+  const aspectRatio = opts?.aspectRatio;
+  const crossVideoExcludes = opts?.crossVideoExcludes
+    ?? (opts?.userId ? await getExcludedSubjectsForUser(opts.userId, idea) : []);
+
+  if (sceneCount > CHUNK_THRESHOLD) {
+    return generateStructureChunked(idea, templateId, { aspectRatio, sceneCount, sceneDuration, excludeSubjects: crossVideoExcludes });
+  }
+
+  return generateStructureChunk(idea, templateId, {
+    aspectRatio,
+    sceneCount,
+    sceneDuration,
+    chunkStart: 0,
+    chunkSize: sceneCount,
+    excludeSubjects: crossVideoExcludes,
+  });
 }
 
 // --- Generate SEO Metadata ---
@@ -209,8 +317,8 @@ export async function generateSeoMetadata(
   const sceneCount = opts?.sceneCount ?? 6;
   const sceneDuration = opts?.sceneDuration ?? 5;
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: seoMetadataSchema,
@@ -218,10 +326,10 @@ export async function generateSeoMetadata(
     systemInstruction: generateSeoMetadataPrompt({ sceneCount, sceneDuration }),
   });
 
-  const result = await model.generateContent(
+  const text = await generateTextOrThrow(
+    model,
     generateSeoMetadataUserMessage(idea, scenes, opts?.targetKeywords)
   );
-  const text = result.response.text();
 
   const ResponseSchema = z.object({
     description: z.string().min(1),

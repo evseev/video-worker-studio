@@ -1,9 +1,18 @@
 import { create } from "zustand";
 import type { Tables } from "@/lib/supabase/types";
 import type { Scene, TemplateId } from "@/templates/types";
+import type { SceneTransition, ImageMotion, TextAnimation } from "@/lib/effects";
+import {
+  parseCaptionStyle,
+  parseComparisonOverlayMode,
+  type CaptionStyleId,
+  type ComparisonOverlayMode,
+} from "@/lib/comparison-caption-styles";
+import { clampSceneCount, clampSceneDuration } from "@/lib/video-constraints";
 
 export type { Scene };
 export type { TemplateId };
+export type { CaptionStyleId, ComparisonOverlayMode };
 
 type Project = Tables<"projects">;
 
@@ -14,6 +23,11 @@ export type VideoSettings = {
   sceneDuration: number;
   aspectRatio: "16:9" | "9:16";
   quality: "720p" | "1080p" | "4k";
+  sceneTransition: SceneTransition;
+  imageMotion: ImageMotion;
+  textAnimation: TextAnimation;
+  captionStyle: CaptionStyleId;
+  comparisonOverlayMode: ComparisonOverlayMode;
 };
 
 export type RefinedIdea = {
@@ -29,6 +43,7 @@ type DraftData = {
   settings?: VideoSettings;
   refinedIdea?: RefinedIdea;
   targetKeywords?: string;
+  videoTitle?: string;
   videoDescription?: string;
   videoTags?: string[];
 };
@@ -42,6 +57,7 @@ export type WizardState = {
   settings: VideoSettings;
   refinedIdea: RefinedIdea | null;
   targetKeywords: string;
+  videoTitle: string;
   videoDescription: string;
   videoTags: string[];
   projectStatus: string;
@@ -60,6 +76,7 @@ export type WizardState = {
   setSettings: (settings: Partial<VideoSettings>) => void;
   selectAsset: (sceneIdx: number, slotIdx: number, assetIdx: number) => void;
   setTargetKeywords: (keywords: string) => void;
+  setVideoTitle: (title: string) => void;
   setVideoDescription: (desc: string) => void;
   setVideoTags: (tags: string[]) => void;
   setRefinedIdea: (idea: RefinedIdea | null) => void;
@@ -72,7 +89,32 @@ const DEFAULT_SETTINGS: VideoSettings = {
   sceneDuration: 5,
   aspectRatio: "9:16",
   quality: "1080p",
+  sceneTransition: "fade",
+  imageMotion: "zoom-in",
+  textAnimation: "slide-up",
+  captionStyle: "minimal",
+  comparisonOverlayMode: "both",
 };
+
+function buildSettingsFromDraft(project: Project, draft: DraftData): VideoSettings {
+  const s = draft.settings;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...s,
+    captionStyle: parseCaptionStyle(
+      (s?.captionStyle as string | undefined) ?? project.caption_style
+    ),
+    comparisonOverlayMode: parseComparisonOverlayMode(
+      (s?.comparisonOverlayMode as string | undefined) ?? project.comparison_overlay_mode
+    ),
+    sceneCount: clampSceneCount(
+      typeof s?.sceneCount === "number" ? s.sceneCount : DEFAULT_SETTINGS.sceneCount
+    ),
+    sceneDuration: clampSceneDuration(
+      typeof s?.sceneDuration === "number" ? s.sceneDuration : DEFAULT_SETTINGS.sceneDuration
+    ),
+  };
+}
 
 function parseDraftData(project: Project): DraftData {
   if (!project.draft_scenes) return {};
@@ -96,9 +138,10 @@ export function createWizardStore(project: Project) {
     currentStep: (project.wizard_step as WizardStep) || "template",
     scenes: draft.scenes || [],
     selectedTemplate: (project.selected_template as TemplateId) || "slideshow",
-    settings: draft.settings || DEFAULT_SETTINGS,
+    settings: buildSettingsFromDraft(project, draft),
     refinedIdea: draft.refinedIdea || null,
     targetKeywords: draft.targetKeywords || "",
+    videoTitle: draft.videoTitle || project.video_title || "",
     videoDescription: draft.videoDescription || project.video_description || "",
     videoTags: draft.videoTags || (project.video_tags ? project.video_tags.split(", ") : []),
     projectStatus: project.status,
@@ -134,7 +177,16 @@ export function createWizardStore(project: Project) {
 
     setSettings: (updates) =>
       set((state) => ({
-        settings: { ...state.settings, ...updates },
+        settings: {
+          ...state.settings,
+          ...updates,
+          sceneCount: updates.sceneCount !== undefined
+            ? clampSceneCount(updates.sceneCount)
+            : state.settings.sceneCount,
+          sceneDuration: updates.sceneDuration !== undefined
+            ? clampSceneDuration(updates.sceneDuration)
+            : state.settings.sceneDuration,
+        },
       })),
 
     selectAsset: (sceneIdx, slotIdx, assetIdx) =>
@@ -150,6 +202,8 @@ export function createWizardStore(project: Project) {
       })),
 
     setTargetKeywords: (keywords) => set({ targetKeywords: keywords }),
+
+    setVideoTitle: (title) => set({ videoTitle: title }),
 
     setVideoDescription: (desc) => set({ videoDescription: desc }),
 

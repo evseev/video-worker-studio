@@ -15,6 +15,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     wizard_step: "preview",
     video_url: null,
     selected_template: "slideshow",
+    comparison_overlay_mode: "both",
     draft_scenes: {
       scenes: [
         { template: "slideshow", scriptText: "Scene 1 text", searchKeywords: ["sunset beach"], assets: [{}] },
@@ -33,8 +34,17 @@ describe("PreviewStep", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    fetchSpy = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ assetOptions: [] }),
+    fetchSpy = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/wizard/draft") {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(""),
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ assetOptions: [] }),
+      });
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     global.fetch = fetchSpy as any;
@@ -103,6 +113,72 @@ describe("PreviewStep", () => {
 
     // SceneCard asset picker thumbnails should be rendered (the main assertion)
     expect(screen.getAllByRole("button", { name: /Option \d/ })).toHaveLength(3);
+  });
+
+  it("merges streamed batches progressively", async () => {
+    const store = createWizardStore(makeProject());
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `${JSON.stringify({
+              type: "batch",
+              batchIndex: 0,
+              batchCount: 2,
+              scenes: [{ sceneIdx: 0, assets: [{ slotIdx: 0, options: ["/a1.jpg", "/a2.jpg"] }] }],
+            })}\n`
+          )
+        );
+        controller.enqueue(new TextEncoder().encode(`${JSON.stringify({ type: "done" })}\n`));
+        controller.close();
+      },
+    });
+
+    fetchSpy.mockImplementation((url: string) => {
+      if (url === "/api/wizard/draft") {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(""),
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      return Promise.resolve({ body: stream });
+    });
+    render(<PreviewStep store={store} />);
+    fireEvent.click(screen.getByText("Fetch All Images"));
+
+    await waitFor(() => {
+      const scenes = store.getState().scenes;
+      expect(scenes[0].assets[0].options).toEqual(["/a1.jpg", "/a2.jpg"]);
+      expect(scenes[1].assets[0].options).toBeUndefined();
+    });
+  });
+
+  it("edits captionText (not scriptText) when the Caption textarea changes", () => {
+    const store = createWizardStore(makeProject({
+      draft_scenes: {
+        scenes: [
+          {
+            template: "slideshow",
+            scriptText: "Full narration goes here.",
+            captionText: "Old caption",
+            searchKeywords: ["sunset"],
+            assets: [{ url: "/a.jpg" }],
+          },
+        ],
+        settings: { sceneCount: 6, sceneDuration: 5, aspectRatio: "9:16", quality: "1080p" },
+      } as unknown,
+    }));
+
+    render(<PreviewStep store={store} />);
+
+    const captionInput = screen.getByPlaceholderText(/Short on-screen caption/i) as HTMLTextAreaElement;
+    expect(captionInput.value).toBe("Old caption");
+    fireEvent.change(captionInput, { target: { value: "New caption" } });
+
+    const state = store.getState();
+    expect(state.scenes[0].captionText).toBe("New caption");
+    expect(state.scenes[0].scriptText).toBe("Full narration goes here.");
   });
 
   it("sends multipleAssets: true when refreshing single scene", async () => {

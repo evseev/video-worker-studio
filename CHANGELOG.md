@@ -5,6 +5,106 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6.0] — 2026-04-22
+
+### Added
+- **Centralized Gemini helper module** — introduced `src/lib/ai/gemini.ts` to keep text/embedding model selection and Gemini error wrapping in one shared place.
+- **Gemini helper unit coverage** — added `src/__tests__/lib/ai/gemini.test.ts` to lock down missing-key, invalid-model, and provider-error paths.
+
+### Changed
+- **Wizard AI route helpers** now read model names from env-backed helpers instead of duplicating model setup and error handling logic.
+- **Contributor runbook fallback** — AGENTS guidance now explicitly falls back to `.agents/skills/gstack/...` when `.claude/skills/...` references are missing.
+
+## [0.4.5.0] — 2026-04-21
+
+### Added
+- **Subject de-duplication memory** — generation now tracks a per-scene `subjectKey` and avoids repeated subjects across long chunked scenarios by carrying an exclusion set between chunks.
+- **Cross-video subject memory** — successful renders persist subject keys so future videos can avoid recently used subjects from the same user.
+
+### Changed
+- **Template AI prompts and schemas** (slideshow, comparison, fact-card) now require `subjectKey` and include strict "do not reuse subjects" guidance.
+- **Structure generation** now retries collision-heavy chunks once with an expanded exclusion list.
+
+### For Contributors
+- New migration: `20260421120000_add_video_subjects.sql` adds pgvector-backed `video_subjects` plus `worker_insert_video_subjects` RPC.
+- New env flags: `SUBJECT_MEMORY_ENABLED`, `SUBJECT_MEMORY_LIMIT`, `SUBJECT_MEMORY_MAX`.
+- Type generation note: regenerate `src/lib/supabase/types.ts` from Supabase after applying migration in environments with CLI auth.
+
+## [0.4.4.1] — 2026-04-20 — Epic 24: Scalable Scene Count & Duration
+
+### Added
+- **Expanded scene controls** — Template step now supports 3-120 scenes and 3-15 seconds per scene with slider + numeric inputs, plus a live total-duration readout.
+- **Large-project guardrails** — UI warning bands now appear for long durations (>10 min and >20 min) to help users avoid expensive configurations accidentally.
+- **Batched Pinterest fetching** — asset downloads are now processed in env-configurable batches (`PINTEREST_BATCH_SIZE`, `PINTEREST_BATCH_PAUSE_MS`, `PINTEREST_CONCURRENCY`) with inter-batch pauses to reduce provider throttling risk.
+- **Progressive asset loading** — Preview step consumes streamed NDJSON batches and updates scene thumbnails incrementally as each batch completes.
+
+### Changed
+- **Render timeout budgeting** — Lambda render timeout now scales with total video duration (floor 8m, cap 40m) instead of a fixed timeout.
+- **AI structure generation at scale** — large scene counts switch to chunked structure generation for better output reliability.
+- **Request validation** — wizard routes now validate scene settings against shared min/max constraints.
+- **Local backend output behavior** — when `RENDER_BACKEND=local`, final MP4 stays in `public/local_renders` and is served directly to the UI instead of uploading to Supabase Storage.
+
+### For Contributors
+- New helper module: `src/lib/video-constraints.ts`.
+- New UI component: `src/components/wizard/range-slider-input.tsx`.
+- New tests for constraints and large-project pipeline behavior, including `fetch-assets-batched.test.ts` and `template-step.test.tsx`.
+
+## [0.4.4.0] — 2026-04-20 — Epic 23: Video Title & Scene Caption Field
+
+### Added
+- **Dedicated video title** — the catchy title generated at the Idea step now sticks around instead of getting discarded. It persists to a new `projects.video_title` column, is editable on the Script step ("Video Title" input in the YouTube Metadata section), and is used as the published title on the project page (with the long topic as a fallback for existing projects).
+- **Separate on-screen caption field** — every scene now has a dedicated `captionText` for what's shown on screen, distinct from `scriptText` (reserved for voiceover narration). The Preview step now edits Caption instead of Script. For comparison videos, captions are short and specific (e.g. "Tom Cruise") rather than the full narration sentence.
+
+### Changed
+- **Preview step scene cards** (slideshow, comparison, fact-card) — the on-screen caption textarea is now labeled "Caption (on-screen)" and is bound to `captionText`. `scriptText` is still editable on the Script step so the voiceover flow stays wired.
+- **Gemini prompts + schemas** for all three templates now emit both `scriptText` (1-2 sentences of narration) and `captionText` (3-8 word on-screen caption) with template-specific guidance.
+
+### Fixed
+- **YouTube publish title** — no longer shows the long topic/description sentence when a short idea title is available.
+
+### Backward Compatibility
+- Existing projects without `video_title` automatically fall back to `topic` for YouTube export.
+- Existing scenes without `captionText` fall back to `scriptText` at render time, so legacy drafts render identically.
+
+### For Contributors
+- New migration: `20260420120000_add_video_title.sql` adds `projects.video_title text`. Regenerate `src/lib/supabase/types.ts` from the database after applying (Row/Insert/Update already updated).
+- New helper: `src/remotion/caption-fallback.ts` exports `resolveCaption(captionText, scriptText)` — used by all three Remotion scene components so the fallback rule lives in one place.
+- Draft JSON now carries `videoTitle` and per-scene `captionText`; both flow through `wizard-store`, `/api/wizard/draft`, and the Inngest `video/generate` event payload.
+- New tests: `src/__tests__/remotion/caption-fallback.test.ts`; plus expanded coverage in `wizard-store.test.ts` (videoTitle + captionText) and `preview-step.test.tsx` (Caption edit binding).
+
+## [0.4.3.0] — 2026-04-07
+
+### Added
+- **Comparison caption styles** — choose how the bottom line and side labels look: Minimal, Bold viral, Bottom strip, Split labels, or Glowing neon, each with a mini-preview on the Preview step.
+- **Comparison overlay mode** — show only the side labels, only the bottom caption, or both, without leaving the wizard.
+- **Reliable render retries** — starting a render from the dashboard with only `projectId` still works: the server merges your saved project row and draft with the request so Inngest always receives full scenes and settings.
+
+### Changed
+- **Glowing style** — larger caption and label type plus more padding under the bottom caption bar so the line reads clearly in the final video.
+
+### Fixed
+- **Render API errors** — failed updates or Inngest queue errors now return a readable `error` string instead of an empty JSON body.
+- **Fetch assets (single-slot)** — keywords are derived from normalized scenes so TypeScript and PostgREST agree on types.
+
+### For Contributors
+- New migrations: `20260404115959_ensure_caption_style_column.sql`, `20260404120000_glowing_caption_comparison_overlay.sql` — extend `caption_style` with `glowing`, add `comparison_overlay_mode`. Regenerate `src/lib/supabase/types.ts` from the database after applying.
+- New modules: `src/lib/merge-render-payload.ts`, `src/lib/comparison-caption-styles.ts`; tests under `src/__tests__/lib/merge-render-payload.test.ts` and `src/__tests__/components/wizard/caption-style-selector.test.tsx`.
+
+## [0.4.2.0] — 2026-03-27
+
+### Added
+- **Configurable scene transitions** — choose from Fade, Slide, Wipe, Flip, or Clock Wipe between scenes, or pick Random for a different transition at each cut. Settings live in a new collapsible "Effects & Animations" section on the Template step.
+- **Image motion effects** — select how images move during each scene: Zoom In, Zoom Out, Pan Left/Right/Up/Down, Horizontal Sway, Vertical Sway, or None. Random picks a different motion per scene.
+- **Text animations** — control how captions appear: Slide Up, Slide Left, Typewriter, Pop, Fade In, or Random. Replaces the old hardcoded slide-up on every template.
+
+### For Contributors
+- New `src/lib/effects.ts` — type definitions, option arrays, and random resolver functions for all three effect categories.
+- New `src/remotion/animation-utils.ts` — shared `getImageTransform()` and `getTextStyle()` utilities replace per-component animation code.
+- New `src/components/wizard/effect-selector.tsx` — reusable grid selector component used 3x on TemplateStep.
+- DB migration adds `scene_transition`, `image_motion`, `text_animation` columns to `projects` (with CHECK constraints).
+- "Random" values resolve to concrete per-scene arrays in Inngest before reaching Remotion (deterministic Lambda rendering).
+- 38 new tests across effects, animation-utils, and EffectSelector.
+
 ## [0.4.1.0] — 2026-03-25
 
 ### Added

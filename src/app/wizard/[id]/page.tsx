@@ -24,5 +24,6 @@ export default async function WizardPage(props: { params: Promise<{ id: string }
     notFound();
   }
 
-  return <WizardClient project={project} />;
+  const renderBackend = process.env.RENDER_BACKEND === "local" ? "local" : "lambda";
+  return <WizardClient project={project} renderBackend={renderBackend} />;
 }

@@ -24,8 +24,8 @@ This document details the layout, state requirements, and primary user interacti
     *   Delete → confirm modal → `DELETE /api/projects/[id]`; optional warnings if storage/temp cleanup partially fails.
 
 ## 3. Interactive Wizard (`/wizard/[id]`)
-**Purpose:** A 5-step guided flow to refine a topic, enhance the idea, generate a template-aware script, preview/edit scenes, and render the final video.
-*   **Layout:** Full-width layout with sticky header (back to home, topic title, step progress: **Idea** → **Refine** → **Script** → **Preview** → **Render**). URL query `?step=` tracks the active step. State is managed via a Zustand store initialized from the project's `draft_scenes` JSONB.
+**Purpose:** A 6-step guided flow: choose template and settings, then refine a topic, enhance the idea, generate a template-aware script, preview/edit scenes, and render the final video.
+*   **Layout:** Full-width layout with sticky header (back to home, topic title, step progress: **Template** → **Idea** → **Refine** → **Script** → **Preview** → **Render**). URL query `?step=` tracks the active step. State is managed via a Zustand store initialized from the project's `draft_scenes` JSONB.
 
 ### Step: Idea
 *   **Components:** Topic input; video settings (scene count, duration, aspect ratio, quality); optional **Generate Hooks** (AI-suggested angles) from `/api/wizard/ideas`.
@@ -40,7 +40,7 @@ This document details the layout, state requirements, and primary user interacti
 *   **Interactions:** Continue saves `draft_scenes`, `selected_template`, `video_description`, and `video_tags` and advances to Preview.
 
 ### Step: Preview
-*   **Components:** Scene list with drag-and-drop reorder, per-scene image thumbnails (sized to match aspect ratio: portrait `w-20 h-28` or landscape `w-28 h-20`), editable script text and search keywords, per-scene **Re-fetch** button, scene delete, **Fetch All Images** bulk action (`/api/wizard/fetch-assets` with orientation hints), collapsible global settings panel (read-only: template, aspect ratio, quality, duration).
+*   **Components:** Scene list with drag-and-drop reorder, per-scene image thumbnails (sized to match aspect ratio: portrait `w-20 h-28` or landscape `w-28 h-20`), editable script text and search keywords, per-scene **Re-fetch** button, scene delete, **Fetch All Images** bulk action (`/api/wizard/fetch-assets` with orientation hints), collapsible global settings panel (read-only: template, aspect ratio, quality, duration). For the **Comparison** template only: **Caption style** (five presets with mini-previews, including glowing neon) and **Overlay mode** (show side labels, bottom caption, or both).
 *   **Interactions:** Continue advances to Render.
 
 ### Step: Render

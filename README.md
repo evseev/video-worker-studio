@@ -16,7 +16,7 @@ Triggered via `/api/generate` and powered entirely by a 5-step Inngest backgroun
 ```text
 Template (archetype + settings) → Idea (AI hooks) → Refine (AI enhance + trend score) → Script (template-specific scenes) → Preview (assets + reorder) → Render (progress + player)
 ```
-A six-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. The first step selects one of 3 structural template archetypes (Slideshow, Comparison, Fact Card) that drives the entire pipeline. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, generate-seo, fetch-assets, render).
+A six-step interactive flow at `/wizard/[id]`, powered by a Zustand state store. The first step selects one of 3 structural template archetypes (Slideshow, Comparison, Fact Card) that drives the entire pipeline. Draft progress is saved via `/api/wizard/draft`. The wizard uses `/api/wizard/*` endpoints (ideas, enhance-idea, validate-trend, generate-structure, script, generate-seo, fetch-assets, upload-voiceover, render). On the **Preview** step, **Comparison** projects can pick **caption styles** (including a glowing neon look) and whether to show **side labels**, the **bottom caption**, or **both**. **`POST /api/wizard/render`** merges the request with the saved project row and draft so retries (for example from the dashboard with only `projectId`) still send full scenes and settings to Inngest.
 
 The core rendering pipeline (whether triggered immediately or after the wizard) relies on these components:
 
@@ -76,9 +76,17 @@ Required environment variables:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for local storage uploads) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for server-side project/storage operations) |
 | `GEMINI_API_KEY` | Google Gemini API key |
+| `GEMINI_TEXT_MODEL` | Optional Gemini text generation model override (default: `gemini-2.5-flash`) |
+| `GEMINI_EMBEDDING_MODEL` | Optional Gemini embedding model override (default: `text-embedding-004`) |
 | `PINTEREST_DL_BIN` | Absolute path to the `pinterest-dl` binary (e.g. `/path/to/.venv/bin/pinterest-dl`) |
+| `PINTEREST_BATCH_SIZE` | Number of keyword fetches per Pinterest batch before pausing (default: `60`) |
+| `PINTEREST_BATCH_PAUSE_MS` | Pause between Pinterest batches in milliseconds (default: `10000`) |
+| `PINTEREST_CONCURRENCY` | Parallel fetches inside one Pinterest batch (default: `6`) |
+| `SUBJECT_MEMORY_ENABLED` | Enable cross-video subject memory de-duplication (default: `true`) |
+| `SUBJECT_MEMORY_LIMIT` | Number of latest completed user projects used for de-dup context (default: `10`) |
+| `SUBJECT_MEMORY_MAX` | Maximum historical subject keys passed to the LLM as exclusions (default: `200`) |
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
 | `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |
@@ -102,10 +110,11 @@ You'll also need two RPC functions used by the worker:
 - `worker_update_project_status(p_project_id, p_status, p_video_url)`
 - `worker_insert_scenes(p_project_id, p_scenes)`
 - `worker_update_project_error(p_project_id, p_error_context)`
+- `worker_insert_video_subjects(p_user_id, p_project_id, p_rows)` (subject memory persistence for duplicate avoidance)
 
 Both should be `SECURITY DEFINER` to bypass RLS for background processing.
 
-If you use the local render fallback (`RENDER_BACKEND=local`), ensure your worker can upload the generated MP4 to Supabase Storage by setting `SUPABASE_SERVICE_ROLE_KEY` and keeping storage policies restricted to `renders/videos/*`.
+If you use the local render fallback (`RENDER_BACKEND=local`), final MP4 files are written to `public/local_renders` and served directly from your app (for example `/local_renders/<projectId>.mp4`) instead of being uploaded to Supabase Storage.
 
 ### 5. Run the dev server
 
@@ -115,6 +124,8 @@ npm run dev
 
 # Terminal 2 — Inngest Dev Server
 npx inngest-cli@latest dev
+# or
+npm exec --yes --package=inngest-cli@latest -- inngest-cli dev
 ```
 
 The app runs at [http://localhost:3000](http://localhost:3000) and the Inngest dashboard at [http://localhost:8288](http://localhost:8288).
@@ -141,13 +152,13 @@ src/
 │   │   ├── generate/       # POST endpoint to trigger one-click video generation
 │   │   ├── inngest/        # Inngest webhook endpoint
 │   │   ├── projects/[id]/  # Delete endpoint for a project
-│   │   └── wizard/         # Wizard endpoints (draft, ideas, enhance-idea, structure, script, assets, render)
+│   │   └── wizard/         # Wizard endpoints (draft, ideas, enhance-idea, structure, script, generate-seo, fetch-assets, upload-voiceover, render)
 │   ├── auth/               # Supabase auth callback handler
 │   ├── login/              # Login page
 │   ├── wizard/[id]/        # Interactive video generation wizard
 │   │   ├── client.tsx      # Wizard orchestrator (Zustand store init + step routing)
 │   │   ├── page.tsx        # Server component (auth + project fetch)
-│   │   └── steps/          # 6 step components (TemplateStep, IdeaStep, RefineStep, ScriptStep, PreviewStep, RenderStep)
+│   │   └── steps/          # 6 steps: Template, Idea, Refine, Script, Preview (comparison caption/overlay on Comparison), Render
 │   ├── page.tsx            # Dashboard (server component, auth-gated)
 │   └── layout.tsx          # Root layout
 ├── components/
@@ -156,9 +167,13 @@ src/
 ├── lib/
 │   ├── ai/
 │   │   ├── prompts.ts           # Centralized LLM prompt templates (dynamic scene count, duration, aspect ratio)
+│   │   ├── gemini.ts            # Centralized Gemini client/model helpers + guarded error handling
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
 │   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure, generateSeoMetadata)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
+│   ├── comparison-caption-styles.ts  # Comparison caption presets + overlay helpers (shared with Remotion)
+│   ├── merge-render-payload.ts  # Merge JSON body with DB row + draft for /api/wizard/render
+│   ├── effects.ts               # Scene transition, image motion, text animation types + random resolver
 │   ├── stores/
 │   │   └── wizard-store.ts      # Zustand store for wizard state management
 │   ├── projects/
@@ -180,6 +195,7 @@ src/
 │   ├── index.ts                 # Remotion entry point
 │   ├── Root.tsx                 # Remotion root component
 │   ├── VideoComposition.tsx     # Template-based scene dispatch
+│   ├── animation-utils.ts      # Shared image motion + text animation helpers
 │   └── templates/               # Remotion scene components per archetype
 │       ├── SlideshowScene.tsx
 │       ├── ComparisonScene.tsx
@@ -193,7 +209,7 @@ docs/
 ├── tech_stack.md                # Tech stack rationale
 ├── workflow_design.md           # Pipeline design
 ├── ux_specification.md          # UX spec
-├── prd_backlog.md               # Product backlog (21 epics)
+├── prd_backlog.md               # Product backlog (23 epics)
 ├── mvp_development_plan.md      # Original development roadmap
 └── designs/remotion-lambda-migration.md # Render architecture design
 ```
@@ -249,11 +265,13 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Tech Stack](docs/tech_stack.md) — technology choices and rationale
 - [Workflow Design](docs/workflow_design.md) — pipeline design and failure modes
 - [UX Specification](docs/ux_specification.md) — screen-by-screen layout and interactions
-- [Product Backlog](docs/prd_backlog.md) — epics and stories (21 epics; Epics 1-21 complete)
+- [Product Backlog](docs/prd_backlog.md) — epics and stories (24 epics; Epics 1-24 complete)
 - [MVP Development Plan](docs/mvp_development_plan.md) — original development roadmap
 - [Remotion Lambda Migration](docs/designs/remotion-lambda-migration.md) — render architecture design
 - [Template System Design](docs/designs/2026-03-24-template-system-design.md) — 3 structural archetypes design
+- [Transitions & Effects Design](docs/superpowers/specs/2026-03-27-transitions-and-effects-design.md) — configurable scene transitions and animation effects
 - [Gemini 3 Flash Upgrade ADR](docs/adr/001-gemini-3-flash-upgrade.md) — architecture decision record
+- [Subject De-duplication ADR](docs/adr/002-subject-deduplication.md) — architecture decision record for in-video + cross-video duplicate avoidance
 
 Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
 

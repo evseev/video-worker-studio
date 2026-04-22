@@ -1,15 +1,24 @@
 import {
   AbsoluteFill,
   Img,
-  interpolate,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { getImageTransform, getTextStyle } from "@/remotion/animation-utils";
+import { resolveCaption } from "@/remotion/caption-fallback";
+import type { ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 
 type SlideshowSceneProps = {
   scriptText: string;
+  /**
+   * Short on-screen caption. When omitted or empty, falls back to `scriptText`
+   * so legacy scenes without a caption still render correctly.
+   */
+  captionText?: string;
   assetUrl: string | null;
   assetObjectPosition?: string;
+  imageMotion?: ResolvedImageMotion;
+  textAnimation?: ResolvedTextAnimation;
 };
 
 const FALLBACK_GRADIENT =
@@ -17,37 +26,25 @@ const FALLBACK_GRADIENT =
 
 export const SlideshowScene: React.FC<SlideshowSceneProps> = ({
   scriptText,
+  captionText,
   assetUrl,
   assetObjectPosition,
+  imageMotion,
+  textAnimation,
 }) => {
+  const displayCaption = resolveCaption(captionText, scriptText);
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
 
-  const scale = interpolate(frame, [0, durationInFrames], [1, 1.1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const captionDuration = Math.min(fps * 0.5, durationInFrames);
-
-  const captionOpacity = interpolate(frame, [0, captionDuration], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const captionY = interpolate(frame, [0, captionDuration], [30, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const progress = frame / durationInFrames;
+  const imageStyle = getImageTransform(imageMotion ?? "zoom-in", progress);
+  const textStyle = getTextStyle(textAnimation ?? "slide-up", frame, 0, fps);
 
   return (
     <AbsoluteFill>
-      {/* Background — Ken Burns zoom */}
+      {/* Background — configurable image motion */}
       <AbsoluteFill
-        style={{
-          transform: `scale(${scale})`,
-          transformOrigin: "center center",
-        }}
+        style={{ ...imageStyle }}
       >
         {assetUrl ? (
           <Img
@@ -83,8 +80,7 @@ export const SlideshowScene: React.FC<SlideshowSceneProps> = ({
       >
         <div
           style={{
-            opacity: captionOpacity,
-            transform: `translateY(${captionY}px)`,
+            ...textStyle,
             textAlign: "center",
           }}
         >
@@ -100,7 +96,7 @@ export const SlideshowScene: React.FC<SlideshowSceneProps> = ({
               margin: 0,
             }}
           >
-            {scriptText}
+            {displayCaption}
           </p>
         </div>
       </AbsoluteFill>

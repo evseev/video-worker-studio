@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies before imports
 vi.mock("@/lib/api/with-auth", () => ({
-  withAuth: (handler: Function) => handler,
+  withAuth: <T>(handler: T) => handler,
 }));
 
 vi.mock("@/lib/ai/fetch-assets", () => ({
@@ -17,6 +17,10 @@ import { POST } from "@/app/api/wizard/fetch-assets/route";
 import { fetchAssets } from "@/lib/ai/fetch-assets";
 
 const mockFetchAssets = vi.mocked(fetchAssets);
+const postHandler = POST as (
+  req: Request,
+  ctx: { user: { id: string }; supabase: typeof mockSupabase }
+) => Promise<Response>;
 
 function createMockRequest(body: unknown): Request {
   return new Request("http://localhost/api/wizard/fetch-assets", {
@@ -55,7 +59,7 @@ describe("fetch-assets API route", () => {
     });
 
     // withAuth is mocked to pass through, so we call with (req, { user, supabase })
-    const response = await (POST as Function)(req, { user: mockUser, supabase: mockSupabase });
+    const response = await postHandler(req, { user: mockUser, supabase: mockSupabase });
     const data = await response.json();
 
     expect(data.scenes).toBeDefined();
@@ -74,7 +78,7 @@ describe("fetch-assets API route", () => {
       aspectRatio: "9:16",
     });
 
-    const response = await (POST as Function)(req, { user: mockUser, supabase: mockSupabase });
+    const response = await postHandler(req, { user: mockUser, supabase: mockSupabase });
     const data = await response.json();
 
     expect(data.assets).toBeDefined();
@@ -93,7 +97,7 @@ describe("fetch-assets API route", () => {
       aspectRatio: "9:16",
     });
 
-    await (POST as Function)(req, { user: mockUser, supabase: mockSupabase });
+    await postHandler(req, { user: mockUser, supabase: mockSupabase });
 
     expect(mockFetchAssets).toHaveBeenCalledWith(
       expect.any(Array),
@@ -111,7 +115,7 @@ describe("fetch-assets API route", () => {
       aspectRatio: "9:16",
     });
 
-    await (POST as Function)(req, { user: mockUser, supabase: mockSupabase });
+    await postHandler(req, { user: mockUser, supabase: mockSupabase });
 
     expect(mockFetchAssets).toHaveBeenCalledWith(
       expect.any(Array),
@@ -128,7 +132,7 @@ describe("fetch-assets API route", () => {
       aspectRatio: "16:9",
     });
 
-    await (POST as Function)(req, { user: mockUser, supabase: mockSupabase });
+    await postHandler(req, { user: mockUser, supabase: mockSupabase });
 
     expect(mockFetchAssets).toHaveBeenCalledWith(
       ["sunset landscape"],
@@ -139,7 +143,7 @@ describe("fetch-assets API route", () => {
   it("returns 400 when projectId or scenes are missing", async () => {
     const req = createMockRequest({ projectId: "proj-1" });
 
-    const response = await (POST as Function)(req, { user: mockUser, supabase: mockSupabase });
+    const response = await postHandler(req, { user: mockUser, supabase: mockSupabase });
 
     expect(response.status).toBe(400);
   });

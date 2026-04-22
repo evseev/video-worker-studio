@@ -104,12 +104,15 @@ export function SlideshowSceneCard({
           </div>
         </div>
 
-        <textarea
-          value={scene.scriptText}
-          onChange={(e) => onUpdate({ scriptText: e.target.value })}
-          className="w-full flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-base focus:outline-none focus:border-violet-500/50 min-h-[60px] resize-y"
-          placeholder="Script text"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Caption (on-screen)</label>
+          <textarea
+            value={scene.captionText ?? ""}
+            onChange={(e) => onUpdate({ captionText: e.target.value })}
+            className="w-full flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white text-base focus:outline-none focus:border-violet-500/50 min-h-[60px] resize-y"
+            placeholder="Short on-screen caption — 3-8 words"
+          />
+        </div>
 
         {/* Asset options picker */}
         {hasOptions && (

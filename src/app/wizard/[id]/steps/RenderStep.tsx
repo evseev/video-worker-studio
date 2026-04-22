@@ -8,12 +8,12 @@ import { useStore } from "zustand";
 import { MusicSelector } from "@/components/wizard/music-selector";
 import { VoiceoverUpload } from "@/components/wizard/voiceover-upload";
 
-type Props = { store: StoreApi<WizardState> };
+type Props = { store: StoreApi<WizardState>; renderBackend: "local" | "lambda" };
 
 const QUALITY_LABELS: Record<string, string> = { hd: "HD (720p)", fullhd: "Full HD (1080p)", "4k": "4K (2160p)" };
 
-export function RenderStep({ store }: Props) {
-  const { projectId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, saveProgress, setStep } = useStore(store);
+export function RenderStep({ store, renderBackend }: Props) {
+  const { projectId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, setStep } = useStore(store);
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [backgroundMusic, setBackgroundMusic] = useState<string | null>(null);
@@ -32,6 +32,7 @@ export function RenderStep({ store }: Props) {
   }, [isProcessing, isCompleted, isFailed]);
 
   const totalDuration = scenes.length * settings.sceneDuration;
+  const isLocalBackend = renderBackend === "local";
 
   async function startRender() {
     setIsRendering(true);
@@ -40,7 +41,21 @@ export function RenderStep({ store }: Props) {
       const res = await fetch("/api/wizard/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, scenes, template: selectedTemplate, aspectRatio: settings.aspectRatio, videoQuality: settings.quality, sceneDuration: settings.sceneDuration, backgroundMusic, voiceoverUrl }),
+        body: JSON.stringify({
+          projectId,
+          scenes,
+          template: selectedTemplate,
+          aspectRatio: settings.aspectRatio,
+          videoQuality: settings.quality,
+          sceneDuration: settings.sceneDuration,
+          backgroundMusic,
+          voiceoverUrl,
+          sceneTransition: settings.sceneTransition,
+          imageMotion: settings.imageMotion,
+          textAnimation: settings.textAnimation,
+          captionStyle: settings.captionStyle,
+          comparisonOverlayMode: settings.comparisonOverlayMode,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -95,6 +110,11 @@ export function RenderStep({ store }: Props) {
               <span className="text-zinc-200">~{totalDuration}s</span>
             </div>
           </div>
+          {isLocalBackend ? (
+            <p className="mt-4 text-xs text-amber-300">
+              Stored locally at <span className="font-mono text-amber-200">/local_renders/{projectId}.mp4</span> (not uploaded to Supabase).
+            </p>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-3 justify-end">
@@ -222,6 +242,11 @@ export function RenderStep({ store }: Props) {
             <span className="text-lg text-white font-medium">~{totalDuration}s</span>
           </div>
         </div>
+        {isLocalBackend ? (
+          <p className="mt-4 text-xs text-amber-300">
+            Stored locally at <span className="font-mono text-amber-200">/local_renders/{projectId}.mp4</span> (not uploaded to Supabase).
+          </p>
+        ) : null}
       </div>
 
       {/* Background Music */}

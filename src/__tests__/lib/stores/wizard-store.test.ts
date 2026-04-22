@@ -14,6 +14,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     video_url: null,
     selected_template: "slideshow",
     draft_scenes: null,
+    comparison_overlay_mode: "both",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...overrides,
@@ -21,6 +22,22 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 }
 
 describe("wizard-store", () => {
+  it("clamps scene settings from draft and setSettings updates", () => {
+    const project = makeProject({
+      draft_scenes: {
+        scenes: [],
+        settings: { sceneCount: 999, sceneDuration: 1, aspectRatio: "9:16", quality: "1080p" },
+      } as unknown,
+    });
+    const store = createWizardStore(project);
+    expect(store.getState().settings.sceneCount).toBe(120);
+    expect(store.getState().settings.sceneDuration).toBe(3);
+
+    store.getState().setSettings({ sceneCount: -5, sceneDuration: 99 });
+    expect(store.getState().settings.sceneCount).toBe(3);
+    expect(store.getState().settings.sceneDuration).toBe(15);
+  });
+
   describe("Scene type with assets", () => {
     it("accepts assets with options and selectedIndex in draft data", () => {
       const project = makeProject({
@@ -334,6 +351,82 @@ describe("wizard-store", () => {
       const store = createWizardStore(makeProject());
       store.getState().setVideoTags(["a", "b", "c"]);
       expect(store.getState().videoTags).toEqual(["a", "b", "c"]);
+    });
+  });
+
+  describe("videoTitle field (Epic 23)", () => {
+    it("initializes videoTitle from draft_scenes.videoTitle", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [],
+          videoTitle: "Draft Title Wins",
+        } as unknown,
+        video_title: "DB Title",
+      });
+      const store = createWizardStore(project);
+      expect(store.getState().videoTitle).toBe("Draft Title Wins");
+    });
+
+    it("falls back to project.video_title column when draft missing", () => {
+      const project = makeProject({
+        draft_scenes: null,
+        video_title: "Column Title",
+      });
+      const store = createWizardStore(project);
+      expect(store.getState().videoTitle).toBe("Column Title");
+    });
+
+    it("defaults to empty string when neither draft nor column has a title", () => {
+      const project = makeProject({ draft_scenes: null, video_title: null });
+      const store = createWizardStore(project);
+      expect(store.getState().videoTitle).toBe("");
+    });
+
+    it("setVideoTitle updates state", () => {
+      const store = createWizardStore(makeProject());
+      store.getState().setVideoTitle("My New Title");
+      expect(store.getState().videoTitle).toBe("My New Title");
+    });
+  });
+
+  describe("captionText field (Epic 23)", () => {
+    it("hydrates captionText from draft_scenes", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [
+            {
+              template: "slideshow",
+              scriptText: "Full narration sentence.",
+              captionText: "Short caption",
+              searchKeywords: ["kw"],
+              assets: [{}],
+            },
+          ],
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+      expect(store.getState().scenes[0].captionText).toBe("Short caption");
+    });
+
+    it("updateScene can edit captionText independently of scriptText", () => {
+      const project = makeProject({
+        draft_scenes: {
+          scenes: [
+            {
+              template: "slideshow",
+              scriptText: "Narration",
+              captionText: "Old",
+              searchKeywords: ["kw"],
+              assets: [{}],
+            },
+          ],
+        } as unknown,
+      });
+      const store = createWizardStore(project);
+      store.getState().updateScene(0, { captionText: "New" });
+      const scene = store.getState().scenes[0];
+      expect(scene.captionText).toBe("New");
+      expect(scene.scriptText).toBe("Narration");
     });
   });
 });

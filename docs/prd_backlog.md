@@ -232,3 +232,54 @@
 *   [x] **Story 21.5:** Integrate `DraggableImage` into all 3 SceneCard types (slideshow, comparison, fact-card).
 *   [x] **Story 21.6:** Thread `objectPosition` through render pipeline — `VideoGenerateScene`, `RenderInput`, `VideoCompositionProps`, and all 3 Remotion scene components.
 *   [x] **Story 21.7:** E2E verification — full test suite, TypeScript check, manual verification across all templates.
+
+## Epic 22: Scene Transitions & Animation Effects
+**Description:** Add user-configurable transitions between scenes and animation effects within scenes. Three granular selectors (transition type, image motion, text animation) with a "random" option that varies per scene. Settings live on the Template step in a collapsible "Effects & Animations" section.
+
+**Spec:** `docs/superpowers/specs/2026-03-27-transitions-and-effects-design.md`
+**Plan:** `docs/superpowers/plans/2026-03-27-transitions-and-effects.md`
+
+*   [x] **Story 22.1:** Create `src/lib/effects.ts` — types, option arrays, resolver function + tests.
+*   [x] **Story 22.2:** DB migration — 3 new columns (`scene_transition`, `image_motion`, `text_animation`) with CHECK constraints + update `types.ts`.
+*   [x] **Story 22.3:** Create `src/remotion/animation-utils.ts` — shared `getImageTransform()` and `getTextStyle()` + tests.
+*   [x] **Story 22.4:** Build `EffectSelector` component (`src/components/wizard/effect-selector.tsx`) + tests.
+*   [x] **Story 22.5:** Update wizard store — add 3 effect fields to `VideoSettings` and `DEFAULT_SETTINGS`.
+*   [x] **Story 22.6:** Add collapsible Effects & Animations section to TemplateStep with 3 `EffectSelector` instances.
+*   [x] **Story 22.7:** Thread effects through render pipeline — render route, Inngest function (with random resolution), `RenderInput`.
+*   [x] **Story 22.8:** Update `VideoComposition.tsx` — per-scene transition presentation mapping, pass motion/animation to scenes.
+*   [x] **Story 22.9:** Update `SlideshowScene.tsx` — replace hardcoded Ken Burns with configurable `imageMotion` + `textAnimation`.
+*   [x] **Story 22.10:** Update `ComparisonScene.tsx` — replace hardcoded slide-in with configurable effects.
+*   [x] **Story 22.11:** Update `FactCardScene.tsx` — replace hardcoded pop-in with configurable effects.
+*   [x] **Story 22.12:** Update `Root.tsx` default props + `RenderStep.tsx` submission.
+*   [x] **Story 22.13:** Final verification — tests, lint, build, update backlog and TODOS.
+
+## Epic 23: Video Title & Scene Caption Field
+**Description:** Two small but critical fixes. (1) The catchy video title generated at the Idea step is now persisted to a new `projects.video_title` column, editable on the Script step, and used as the YouTube publish title on the project page (with `topic` as fallback). (2) Separate on-screen captions from voiceover narration: every scene gains a new `captionText` field (rendered by Remotion, edited on the Preview step) while `scriptText` stays reserved for voiceover. Example: for a "most famous Hollywood stars of the 1990s" comparison, each scene's `captionText` is just the actor's name (e.g. "Tom Cruise"), not the full narration sentence.
+
+**Plan:** `.cursor/plans/epic-23-title-captions_b8566a39.plan.md`
+
+*   [x] **Story 23.1:** DB migration `20260420120000_add_video_title.sql` adds `projects.video_title` column + regenerate `src/lib/supabase/types.ts`.
+*   [x] **Story 23.2:** Wire `video_title` through wizard store, `/api/wizard/draft`, IdeaStep (capture `idea.title`), and ScriptStep (editable title input).
+*   [x] **Story 23.3:** Use `project.video_title ?? project.topic` in `YouTubeMetadataExport` on `/projects/[id]`.
+*   [x] **Story 23.4:** Add `captionText` to `BaseScene`, all three Gemini/Zod schemas, and all three template prompts with per-template guidance (short names for comparison, headlines for fact-card, punchy summaries for slideshow).
+*   [x] **Story 23.5:** Include `captionText` in `toScene()` and thread it through Inngest (`VideoGenerateScene`, `renderScenes` mapping) and `VideoComposition.tsx` to every Remotion scene component, with `scriptText` fallback via shared `resolveCaption` helper.
+*   [x] **Story 23.6:** Preview step SceneCards (slideshow, comparison, fact-card) edit `captionText` instead of `scriptText`; `addScene` defaults `captionText` to `""`.
+*   [x] **Story 23.7:** Update affected tests (wizard-store, preview-step, merge-render-payload) and add Remotion `resolveCaption` fallback unit tests.
+*   [x] **Story 23.8:** Update `AGENTS.md` projects row table, `CHANGELOG.md`, and this backlog with Epic 23 entry.
+
+## Epic 24: Scalable Scene Count & Duration
+**Description:** Expand Template step controls and full pipeline support for larger projects: scene count from 3 to 120 and scene duration from 3 to 15 seconds. Replace dropdowns with slider + numeric controls, add total-duration UX warnings, and harden downstream logic (validation, AI chunking, batched Pinterest fetching with pauses and progressive UI updates, and dynamic render timeout budgeting).
+
+**Plan:** `.cursor/plans/epic-24-scene-scale-controls_542f9ea7.plan.md`
+
+*   [x] **Story 24.1:** Create shared video constraints module (`src/lib/video-constraints.ts`) with min/max constants and clamp helpers.
+*   [x] **Story 24.2:** Build reusable `RangeSliderInput` component and replace Template step scene controls with slider + numeric inputs.
+*   [x] **Story 24.3:** Add live total-duration readout and warning thresholds for long videos on Template step.
+*   [x] **Story 24.4:** Clamp scene settings in wizard store hydration and updates (`buildSettingsFromDraft`, `setSettings`).
+*   [x] **Story 24.5:** Add Zod request validation for `sceneCount` / `sceneDuration` in ideas, enhance-idea, generate-structure, and render routes.
+*   [x] **Story 24.6:** Add large-scene AI generation chunking in `generateStructure` with `CHUNK_SIZE`/`CHUNK_THRESHOLD`.
+*   [x] **Story 24.7:** Refactor Pinterest fetching to batched async generator with env-configurable batch size, pause, and concurrency.
+*   [x] **Story 24.8:** Extend fetch-assets API with NDJSON streaming mode and update Preview step to progressively merge each completed batch into UI/store.
+*   [x] **Story 24.9:** Replace fixed Lambda timeout with duration-based dynamic timeout budget in render pipeline.
+*   [x] **Story 24.10:** Add and update tests for constraints, controls, chunking, batched fetching, progressive preview updates, and payload/store clamping.
+*   [x] **Story 24.11:** Update docs (`AGENTS.md`, `README.md`, `docs/tech_stack.md`, `docs/project_spec.md`, `CHANGELOG.md`, `TODOS.md`) and add `.env.local.example` Pinterest batch env vars.
