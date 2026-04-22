@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
 import { normalizeSubject } from "@/lib/ai/dedupe";
+import { embedTextOrThrow, getEmbeddingModel } from "@/lib/ai/gemini";
 
 const apiKey = process.env.GEMINI_API_KEY;
 const subjectMemoryEnabled = (process.env.SUBJECT_MEMORY_ENABLED ?? "true").toLowerCase() !== "false";
@@ -60,9 +61,8 @@ async function embedText(text: string): Promise<number[] | null> {
     return null;
   }
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-  const result = await model.embedContent(text);
-  return result.embedding.values ?? null;
+  const model = getEmbeddingModel(genAI);
+  return embedTextOrThrow(model, text);
 }
 
 export async function getExcludedSubjectsForUser(
