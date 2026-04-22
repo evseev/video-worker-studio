@@ -78,6 +78,8 @@ Required environment variables:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for server-side project/storage operations) |
 | `GEMINI_API_KEY` | Google Gemini API key |
+| `GEMINI_TEXT_MODEL` | Optional Gemini text generation model override (default: `gemini-2.5-flash`) |
+| `GEMINI_EMBEDDING_MODEL` | Optional Gemini embedding model override (default: `text-embedding-004`) |
 | `PINTEREST_DL_BIN` | Absolute path to the `pinterest-dl` binary (e.g. `/path/to/.venv/bin/pinterest-dl`) |
 | `PINTEREST_BATCH_SIZE` | Number of keyword fetches per Pinterest batch before pausing (default: `60`) |
 | `PINTEREST_BATCH_PAUSE_MS` | Pause between Pinterest batches in milliseconds (default: `10000`) |

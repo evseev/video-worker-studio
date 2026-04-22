@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
+import { SchemaType, type Schema } from "@google/generative-ai";
 import { z } from "zod";
 import {
   enhanceIdeaPrompt,
@@ -12,12 +12,10 @@ import { buildComparisonPrompt, comparisonGeminiSchema, ComparisonResponseSchema
 import { buildFactCardPrompt, factCardGeminiSchema, FactCardResponseSchema } from "@/templates/fact-card";
 import { normalizeSubject } from "@/lib/ai/dedupe";
 import { getExcludedSubjectsForUser } from "@/lib/ai/subject-memory";
+import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 
 const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  throw new Error("GEMINI_API_KEY is not set");
-}
-const genAI = new GoogleGenerativeAI(apiKey);
+const genAI = createGeminiClient(apiKey);
 
 // --- Enhance Idea ---
 
@@ -34,8 +32,8 @@ const enhanceIdeaSchema: Schema = {
 };
 
 export async function enhanceIdea(rawIdea: string, totalDuration?: number): Promise<string[]> {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: enhanceIdeaSchema,
@@ -43,8 +41,7 @@ export async function enhanceIdea(rawIdea: string, totalDuration?: number): Prom
     systemInstruction: enhanceIdeaPrompt(totalDuration ? { totalDuration } : undefined),
   });
 
-  const result = await model.generateContent(`Raw idea: ${rawIdea}`);
-  const text = result.response.text();
+  const text = await generateTextOrThrow(model, `Raw idea: ${rawIdea}`);
 
   const ResponseSchema = z.object({
     ideas: z.array(z.string()).min(1),
@@ -83,18 +80,17 @@ export interface TrendValidation {
 }
 
 export async function validateTrend(idea: string): Promise<TrendValidation> {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    // In a real app we might use Grounding with Google Search here
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: validateTrendSchema,
     },
+    // In a real app we might use Grounding with Google Search here
     systemInstruction: validateTrendPrompt(),
   });
 
-  const result = await model.generateContent(`Idea: ${idea}`);
-  const text = result.response.text();
+  const text = await generateTextOrThrow(model, `Idea: ${idea}`);
 
   const ResponseSchema = z.object({
     score: z.number().min(0).max(100),
@@ -183,8 +179,8 @@ async function generateStructureChunk(
   }
 ): Promise<Scene[]> {
   const ai = getTemplateAI(templateId);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: ai.geminiSchema,
@@ -197,7 +193,8 @@ async function generateStructureChunk(
     }),
   });
 
-  const result = await model.generateContent(
+  const text = await generateTextOrThrow(
+    model,
     [
       `Idea: ${idea}`,
       `Video orientation: ${opts.aspectRatio === "16:9" ? "landscape" : "portrait"}`,
@@ -205,7 +202,6 @@ async function generateStructureChunk(
       `Generate scenes ${opts.chunkStart + 1} to ${opts.chunkStart + opts.chunkSize} out of ${opts.sceneCount}.`,
     ].join("\n")
   );
-  const text = result.response.text();
   const parsed = ai.zodSchema.parse(JSON.parse(text));
   return parsed.scenes.map((raw: unknown) => toScene(templateId, raw as Record<string, unknown>));
 }
@@ -321,8 +317,8 @@ export async function generateSeoMetadata(
   const sceneCount = opts?.sceneCount ?? 6;
   const sceneDuration = opts?.sceneDuration ?? 5;
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+  const model = getTextModel({
+    genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: seoMetadataSchema,
@@ -330,10 +326,10 @@ export async function generateSeoMetadata(
     systemInstruction: generateSeoMetadataPrompt({ sceneCount, sceneDuration }),
   });
 
-  const result = await model.generateContent(
+  const text = await generateTextOrThrow(
+    model,
     generateSeoMetadataUserMessage(idea, scenes, opts?.targetKeywords)
   );
-  const text = result.response.text();
 
   const ResponseSchema = z.object({
     description: z.string().min(1),

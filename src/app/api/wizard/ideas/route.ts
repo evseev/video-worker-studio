@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { generateIdeasPrompt } from "@/lib/ai/prompts";
+import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 import {
   SCENE_COUNT_MIN,
   SCENE_COUNT_MAX,
@@ -10,7 +10,7 @@ import {
   SCENE_DURATION_MAX,
 } from "@/lib/video-constraints";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const genAI = createGeminiClient(process.env.GEMINI_API_KEY);
 
 const IdeaSchema = z.object({
   title: z.string(),
@@ -39,8 +39,8 @@ export const POST = withAuth(
 
     const totalDuration = (sceneCount ?? 6) * (sceneDuration ?? 5);
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    const model = getTextModel({
+      genAI,
       generationConfig: {
         responseMimeType: "application/json",
       },
@@ -48,8 +48,7 @@ export const POST = withAuth(
 
     const prompt = generateIdeasPrompt({ topic, totalDuration });
 
-    const { response } = await model.generateContent(prompt);
-    const jsonStr = response.text();
+    const jsonStr = await generateTextOrThrow(model, prompt);
     const parsed = IdeasResponseSchema.parse(JSON.parse(jsonStr));
 
     return NextResponse.json(parsed.ideas);
