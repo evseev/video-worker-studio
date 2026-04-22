@@ -167,6 +167,7 @@ src/
 ├── lib/
 │   ├── ai/
 │   │   ├── prompts.ts           # Centralized LLM prompt templates (dynamic scene count, duration, aspect ratio)
+│   │   ├── gemini.ts            # Centralized Gemini client/model helpers + guarded error handling
 │   │   ├── generate-script.ts   # Gemini script generation + Zod validation
 │   │   ├── wizard.ts            # AI helpers (enhanceIdea, validateTrend, generateStructure, generateSeoMetadata)
 │   │   └── fetch-assets.ts      # pinterest-dl asset downloader
