@@ -318,6 +318,7 @@ draft → processing → rendering → completed
 ## 13. gstack Skills
 
 Use `.agents/skills/gstack/browse` for all web browsing.
+If a referenced skill/checklist path under `.claude/skills/...` is missing, immediately fallback to the equivalent path under `.agents/skills/gstack/...` before blocking.
 
 | Skill Path | Your specialist | What they do |
 |-------|----------------|--------------|

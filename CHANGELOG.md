@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6.0] — 2026-04-22
+
+### Added
+- **Centralized Gemini helper module** — introduced `src/lib/ai/gemini.ts` to keep text/embedding model selection and Gemini error wrapping in one shared place.
+- **Gemini helper unit coverage** — added `src/__tests__/lib/ai/gemini.test.ts` to lock down missing-key, invalid-model, and provider-error paths.
+
+### Changed
+- **Wizard AI route helpers** now read model names from env-backed helpers instead of duplicating model setup and error handling logic.
+- **Contributor runbook fallback** — AGENTS guidance now explicitly falls back to `.agents/skills/gstack/...` when `.claude/skills/...` references are missing.
+
 ## [0.4.5.0] — 2026-04-21
 
 ### Added
