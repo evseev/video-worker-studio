@@ -1,17 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { isYoutubeMetaFresh, TWENTY_FOUR_H_MS } from "@/lib/youtube/types";
+import {
+  isYoutubeMetaFresh,
+  parseStoredYoutubeMeta,
+  TWENTY_FOUR_H_MS,
+} from "@/lib/youtube/types";
 
-describe("lib/youtube/types", () => {
-  it("isYoutubeMetaFresh returns true within 24h", () => {
-    const now = Date.parse("2026-05-13T12:00:00.000Z");
-    const meta = { fetched_at: "2026-05-13T11:00:00.000Z" };
-    expect(isYoutubeMetaFresh(meta, now)).toBe(true);
+describe("YouTube meta cache helpers", () => {
+  it("parseStoredYoutubeMeta rejects malformed payloads", () => {
+    expect(parseStoredYoutubeMeta(null)).toBeNull();
+    expect(parseStoredYoutubeMeta({ fetched_at: "x", top_videos: "bad" })).toBeNull();
   });
 
-  it("isYoutubeMetaFresh returns false after 24h", () => {
-    const now = Date.parse("2026-05-15T12:00:00.000Z");
-    const meta = { fetched_at: "2026-05-13T12:00:00.000Z" };
-    expect(isYoutubeMetaFresh(meta, now)).toBe(false);
-    expect(now - Date.parse("2026-05-13T12:00:00.000Z")).toBeGreaterThan(TWENTY_FOUR_H_MS);
+  it("isYoutubeMetaFresh is false outside 24h window", () => {
+    const old = new Date(Date.now() - TWENTY_FOUR_H_MS - 60_000).toISOString();
+    expect(
+      isYoutubeMetaFresh({ fetched_at: old, top_videos: [] }, Date.now())
+    ).toBe(false);
+  });
+
+  it("isYoutubeMetaFresh is true inside 24h window", () => {
+    const recent = new Date(Date.now() - 60_000).toISOString();
+    expect(
+      isYoutubeMetaFresh({ fetched_at: recent, top_videos: [] }, Date.now())
+    ).toBe(true);
   });
 });

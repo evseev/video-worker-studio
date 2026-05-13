@@ -1,3 +1,8 @@
+/**
+ * Active channel contract (Epic 25): list from GET /api/channels; selection priority is
+ * URL search param `channel` then localStorage key `vws.activeChannelId`; setActiveChannelId
+ * mirrors to both via router.replace (see `src/lib/hooks/use-active-channel.ts`).
+ */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { useActiveChannel } from "@/lib/hooks/use-active-channel";

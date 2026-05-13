@@ -1,5 +1,7 @@
 # ADR 002: Subject De-duplication for Long Scenarios
 
+> **Scope update (Epic 25):** ADR-002’s *cross-video* memory was originally described per **user**. The product now scopes that memory per **channel**; see [ADR 003 — Channel-scoped subject memory](./003-channel-scoped-subject-memory.md). In-video dedupe in this ADR remains authoritative.
+
 ## Status
 
 Accepted
