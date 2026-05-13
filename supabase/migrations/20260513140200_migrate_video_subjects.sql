@@ -28,6 +28,10 @@ ALTER TABLE public.video_subjects
   ADD CONSTRAINT video_subjects_channel_id_fkey
   FOREIGN KEY (channel_id) REFERENCES public.channels (id) ON DELETE CASCADE;
 
+-- Same (uuid, uuid, jsonb) signature as the old RPC, but first param renamed p_user_id → p_channel_id.
+-- Postgres forbids that via CREATE OR REPLACE alone (42P13); drop first.
+DROP FUNCTION IF EXISTS public.worker_insert_video_subjects(uuid, uuid, jsonb);
+
 CREATE OR REPLACE FUNCTION public.worker_insert_video_subjects(
   p_channel_id uuid,
   p_project_id uuid,
