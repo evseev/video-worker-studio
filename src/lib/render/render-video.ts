@@ -177,7 +177,6 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
     captionStyle: input.captionStyle ?? "minimal",
     comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
     channelId: input.channelId,
-    // TODO(Epic 25 Phase D / 25.18): Watermark.tsx — consume `watermark` + preload logo at composition root.
     watermark: input.watermark ?? {
       logoUrl: null,
       position: "none" as const,
@@ -285,7 +284,6 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     captionStyle: input.captionStyle ?? "minimal",
     comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
     channelId: input.channelId,
-    // TODO(Epic 25 Phase D / 25.18): Watermark.tsx — consume `watermark` + preload logo at composition root.
     watermark: input.watermark ?? {
       logoUrl: null,
       position: "none" as const,

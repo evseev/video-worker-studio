@@ -8,7 +8,7 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({ rpc: mockRpc })),
 }));
 
-import { getExcludedSubjectsForChannel, persistSubjectsForProject } from "@/lib/ai/subject-memory";
+import { getExcludedSubjectsForChannel, listRecentSubjectKeysForChannel, persistSubjectsForProject } from "@/lib/ai/subject-memory";
 
 describe("getExcludedSubjectsForChannel", () => {
   beforeEach(() => {
@@ -90,6 +90,34 @@ describe("getExcludedSubjectsForChannel", () => {
       maxSubjects: 50,
     });
     expect(keys).toEqual(["alpha", "beta"]);
+  });
+});
+
+describe("listRecentSubjectKeysForChannel", () => {
+  it("dedupes and caps subject keys", async () => {
+    const channelId = "11111111-1111-4111-8111-111111111111";
+    const supabase = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() =>
+                Promise.resolve({
+                  data: [
+                    { subject_key: "a", created_at: "1" },
+                    { subject_key: "a", created_at: "2" },
+                    { subject_key: "b", created_at: "3" },
+                  ],
+                  error: null,
+                })
+              ),
+            })),
+          })),
+        })),
+      })),
+    };
+    const keys = await listRecentSubjectKeysForChannel(supabase as never, channelId, 50);
+    expect(keys).toEqual(["a", "b"]);
   });
 });
 

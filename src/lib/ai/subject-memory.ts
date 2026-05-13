@@ -150,6 +150,38 @@ export async function getExcludedSubjectsForChannel(
 }
 
 /**
+ * Recent subject keys on a channel (newest first), capped for bounded prompts (Epic 25 topic suggestions).
+ */
+export async function listRecentSubjectKeysForChannel(
+  supabase: SupabaseClient<Database>,
+  channelId: string,
+  limit = 50
+): Promise<string[]> {
+  const cap = Math.min(Math.max(limit, 1), 100);
+  const { data, error } = await supabase
+    .from("video_subjects")
+    .select("subject_key, created_at")
+    .eq("channel_id", channelId)
+    .order("created_at", { ascending: false })
+    .limit(cap * 2);
+
+  if (error || !data?.length) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const row of data) {
+    const k = row.subject_key?.trim();
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+
+/**
  * Persists normalized subject keys for ADR-002-style dedupe. Rows are written with `channel_id`
  * via `worker_insert_video_subjects` (no `user_id`; ownership is the channel).
  */

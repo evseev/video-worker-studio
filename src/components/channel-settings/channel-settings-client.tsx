@@ -72,12 +72,12 @@ export function ChannelSettingsClient({
         <section className="min-w-0 flex-1">
           {tab === "identity" ? <IdentityTab channel={channel} onSaved={setChannel} /> : null}
           {tab === "ai" ? <AiContextTab channel={channel} onSaved={setChannel} /> : null}
-          {tab === "youtube" ? <YoutubeTab /> : null}
+          {tab === "youtube" ? <YoutubeTab channel={channel} onSaved={setChannel} /> : null}
           {tab === "defaults" ? <DefaultsTab /> : null}
           {tab === "watermark" ? <WatermarkTab channel={channel} onSaved={setChannel} /> : null}
           {tab === "memory" ? <SubjectMemoryTab channel={channel} onSaved={setChannel} /> : null}
-          {tab === "presets" ? <ScenePresetsTab /> : null}
-          {tab === "topics" ? <TopicBacklogTab /> : null}
+          {tab === "presets" ? <ScenePresetsTab channelId={channel.id} /> : null}
+          {tab === "topics" ? <TopicBacklogTab channelId={channel.id} /> : null}
           {tab === "danger" ? <DangerZoneTab channel={channel} projectCount={projectCount} /> : null}
         </section>
       </div>

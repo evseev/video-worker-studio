@@ -1,8 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { TemplateStep } from "@/app/wizard/[id]/steps/TemplateStep";
 import { createWizardStore } from "@/lib/stores/wizard-store";
 import type { Tables } from "@/lib/supabase/types";
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({ presets: [], ideas: [], channel: {} }),
+      })
+    )
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 type Project = Tables<"projects">;
 

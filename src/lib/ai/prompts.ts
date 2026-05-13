@@ -185,3 +185,46 @@ Format your response as a JSON object with this shape:
 }`;
   return withChannelSystemPrompt(base, opts.channelContext);
 }
+
+export function channelTopicSuggestionsPrompt(opts: {
+  channelContext: ChannelContext;
+  topVideos: { id: string; title: string; view_count: number }[];
+  exclusions: string[];
+  count: number;
+}): string {
+  const preamble = buildChannelContextPreamble(opts.channelContext);
+  const videoLines =
+    opts.topVideos.length === 0
+      ? "(No cached YouTube performance data — infer from channel identity only.)"
+      : opts.topVideos
+          .map((v, i) => `${i + 1}. [${v.id}] ${v.title} — views: ${v.view_count}`)
+          .join("\n");
+  const exclusionBlock =
+    opts.exclusions.length === 0
+      ? "(None)"
+      : opts.exclusions.map((s, i) => `${i + 1}. ${s}`).join("\n");
+
+  const base = `You are a YouTube strategist for this channel.
+
+${preamble ? `${preamble}\n` : ""}
+Top-performing videos on this channel (by views, max 10):
+${videoLines}
+
+Excluded subjects (do NOT suggest videos overlapping these themes or titles):
+${exclusionBlock}
+
+Generate exactly ${opts.count} new distinct video topic ideas that fit this channel's audience and identity.
+Each idea should be a specific, clickable video concept (not generic).
+
+Respond with JSON only, shape:
+{
+  "ideas": [
+    {
+      "idea_text": "string",
+      "ai_reasoning": "string",
+      "inspired_by_video_id": "optional youtube video id from the top list, or omit"
+    }
+  ]
+}`;
+  return base;
+}

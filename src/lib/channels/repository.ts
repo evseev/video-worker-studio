@@ -101,6 +101,8 @@ export type ChannelPatch = Pick<
   | "target_audience"
   | "tone"
   | "youtube_handle"
+  | "youtube_channel_id"
+  | "youtube_meta"
   | "default_settings"
   | "watermark_position"
   | "watermark_opacity"
