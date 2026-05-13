@@ -69,8 +69,8 @@ export function WizardClient({ project, renderBackend }: { project: Project; ren
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
       {/* Top Navigation */}
       <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl shrink-0">
-        <div className="mx-auto max-w-6xl flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="mx-auto max-w-6xl flex items-center justify-between gap-4 px-6 py-4">
+          <div className="flex min-w-0 items-center gap-4">
             <button
               onClick={() => router.push("/")}
               className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
@@ -79,7 +79,10 @@ export function WizardClient({ project, renderBackend }: { project: Project; ren
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <span className="text-base font-medium text-white tracking-tight">
+            <span
+              className="block max-w-[min(55vw,32rem)] truncate text-base font-medium tracking-tight text-white"
+              title={topic || "New Video"}
+            >
               {topic || "New Video"}
             </span>
           </div>

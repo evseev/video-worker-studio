@@ -87,8 +87,9 @@ Required environment variables:
 | `SUBJECT_MEMORY_ENABLED` | Enable cross-video subject memory de-duplication (default: `true`) |
 | `SUBJECT_MEMORY_LIMIT` | Number of latest completed user projects used for de-dup context (default: `10`) |
 | `SUBJECT_MEMORY_MAX` | Maximum historical subject keys passed to the LLM as exclusions (default: `200`) |
+| `INNGEST_DEV` | Set to `1` when using the Inngest Dev Server so `/api/inngest` skips cloud signing-key checks |
 | `INNGEST_EVENT_KEY` | Inngest event key (`local` for dev) |
-| `INNGEST_SIGNING_KEY` | Inngest signing key (empty for local dev) |
+| `INNGEST_SIGNING_KEY` | Inngest signing key (`INNGEST_DEV=1` for local CLI; cloud key for production) |
 | `INNGEST_BASE_URL` | Base URL where Inngest can reach your app |
 | `TMP_ASSETS_PATH` | Directory for downloaded assets, **relative to the app root** (default: `public/tmp_assets`). Avoid absolute paths or `..` segments so cleanup stays scoped. |
 | `LOCAL_RENDER_ASSET_BASE_URL` | Base URL for local renders (e.g. `http://localhost:3000`) |

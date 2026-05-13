@@ -106,8 +106,8 @@ export const generateVideo = inngest.createFunction(
       limit: 3,
       key: "event.data.userId",
     },
+    triggers: [{ event: "video/generate" }],
   },
-  { event: "video/generate" },
   async ({ event, step }) => {
     const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode, userId } = event.data as VideoGenerateEventData;
 

@@ -38,7 +38,7 @@ Non-compliance rule:
 | Database | Supabase PostgreSQL | via `@supabase/supabase-js` |
 | Auth | Supabase Auth + SSR | `@supabase/ssr` |
 | AI | Google Gemini | `@google/generative-ai` — default model: `gemini-2.5-flash` (override via `GEMINI_TEXT_MODEL`) |
-| Job Queue | Inngest | v3 |
+| Job Queue | Inngest | v4 |
 | Video | Remotion (Lambda default, local fallback) | 4.x |
 | Monitoring | Sentry | `@sentry/nextjs` v10 |
 | State | Zustand | v5 |
