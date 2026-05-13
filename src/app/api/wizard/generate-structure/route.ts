@@ -36,11 +36,24 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   }
 
   const templateId = template as TemplateId;
+
+  let channelId: string | undefined;
+  if (parsedReq.data.projectId) {
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("channel_id")
+      .eq("id", parsedReq.data.projectId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    channelId = proj?.channel_id ?? undefined;
+  }
+
   const scenes = await generateStructure(idea, templateId, {
     aspectRatio,
     sceneCount,
     sceneDuration,
-    userId: user.id,
+    supabase,
+    channelId,
   });
 
   if (projectId) {

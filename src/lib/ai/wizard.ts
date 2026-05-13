@@ -10,8 +10,10 @@ import type { Scene, TemplateId } from "@/templates/types";
 import { buildSlideshowPrompt, slideshowGeminiSchema, SlideshowResponseSchema } from "@/templates/slideshow";
 import { buildComparisonPrompt, comparisonGeminiSchema, ComparisonResponseSchema } from "@/templates/comparison";
 import { buildFactCardPrompt, factCardGeminiSchema, FactCardResponseSchema } from "@/templates/fact-card";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import { normalizeSubject } from "@/lib/ai/dedupe";
-import { getExcludedSubjectsForUser } from "@/lib/ai/subject-memory";
+import { getExcludedSubjectsForChannel } from "@/lib/ai/subject-memory";
 import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -162,7 +164,9 @@ type StructureOptions = {
   aspectRatio?: string;
   sceneCount?: number;
   sceneDuration?: number;
-  userId?: string;
+  /** When set with `channelId`, loads channel-scoped subject exclusions. */
+  supabase?: SupabaseClient<Database>;
+  channelId?: string;
   crossVideoExcludes?: string[];
 };
 
@@ -238,7 +242,9 @@ async function generateStructureChunked(
       chunkSize,
       excludeSubjects,
     });
-    let { uniqueScenes, droppedCount } = filterUniqueScenes(firstPassScenes, seenSubjects);
+    const firstPass = filterUniqueScenes(firstPassScenes, seenSubjects);
+    let { uniqueScenes } = firstPass;
+    const { droppedCount } = firstPass;
 
     if (droppedCount > 1) {
       const retryScenes = await generateStructureChunk(idea, templateId, {
@@ -269,8 +275,11 @@ export async function generateStructure(
   const sceneCount = opts?.sceneCount ?? 6;
   const sceneDuration = opts?.sceneDuration ?? 5;
   const aspectRatio = opts?.aspectRatio;
-  const crossVideoExcludes = opts?.crossVideoExcludes
-    ?? (opts?.userId ? await getExcludedSubjectsForUser(opts.userId, idea) : []);
+  const crossVideoExcludes =
+    opts?.crossVideoExcludes ??
+    (opts?.supabase && opts?.channelId
+      ? await getExcludedSubjectsForChannel(opts.supabase, opts.channelId, idea)
+      : []);
 
   if (sceneCount > CHUNK_THRESHOLD) {
     return generateStructureChunked(idea, templateId, { aspectRatio, sceneCount, sceneDuration, excludeSubjects: crossVideoExcludes });

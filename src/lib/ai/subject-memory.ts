@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
 import { normalizeSubject } from "@/lib/ai/dedupe";
@@ -29,7 +30,6 @@ function parseVectorString(value: string | null): number[] | null {
     return null;
   }
 }
-
 
 function getWorkerDbClient() {
   return createClient<Database>(
@@ -65,8 +65,9 @@ async function embedText(text: string): Promise<number[] | null> {
   return embedTextOrThrow(model, text);
 }
 
-export async function getExcludedSubjectsForUser(
-  userId: string,
+export async function getExcludedSubjectsForChannel(
+  supabase: SupabaseClient<Database>,
+  channelId: string,
   idea: string,
   opts?: { limit?: number; maxSubjects?: number }
 ): Promise<string[]> {
@@ -74,41 +75,54 @@ export async function getExcludedSubjectsForUser(
     return [];
   }
 
-  const db = getWorkerDbClient();
   const limit = opts?.limit ?? subjectMemoryLimit;
   const maxSubjects = opts?.maxSubjects ?? subjectMemoryMax;
 
-  const { data: projects, error: projectsError } = await db
+  const { data: channelRow, error: channelErr } = await supabase
+    .from("channels")
+    .select("subject_memory_lookback")
+    .eq("id", channelId)
+    .maybeSingle();
+
+  if (channelErr || !channelRow) {
+    return [];
+  }
+
+  const lookback = channelRow.subject_memory_lookback ?? 5;
+
+    const { data: projects, error: projectsError } = await supabase
     .from("projects")
     .select("id")
-    .eq("user_id", userId)
+    .eq("channel_id", channelId)
     .eq("status", "completed")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(Math.min(lookback, limit));
 
   if (projectsError || !projects || projects.length === 0) {
     return [];
   }
 
   const projectIds = projects.map((row) => row.id);
-  const { data: subjects, error: subjectsError } = await db
+  const { data: subjects, error: subjectsError } = await supabase
     .from("video_subjects")
     .select("subject_key, subject_normalized, embedding, created_at")
-    .eq("user_id", userId)
+    .eq("channel_id", channelId)
     .in("project_id", projectIds)
     .order("created_at", { ascending: false })
-    .limit(maxSubjects) as { data: StoredSubjectRow[] | null; error: Error | null };
+    .limit(maxSubjects);
 
   if (subjectsError || !subjects || subjects.length === 0) {
     return [];
   }
 
+  const typedSubjects = subjects as StoredSubjectRow[];
+
   try {
     const ideaEmbedding = await embedText(idea);
     if (!ideaEmbedding) {
-      return subjects.map((row) => row.subject_key);
+      return typedSubjects.map((row) => row.subject_key);
     }
-    return subjects
+    return typedSubjects
       .map((row) => ({
         key: row.subject_key,
         score: (() => {
@@ -120,13 +134,13 @@ export async function getExcludedSubjectsForUser(
       .map((row) => row.key)
       .slice(0, maxSubjects);
   } catch {
-    return subjects.map((row) => row.subject_key);
+    return typedSubjects.map((row) => row.subject_key);
   }
 }
 
 export async function persistSubjectsForProject(
   projectId: string,
-  userId: string,
+  channelId: string,
   subjects: string[]
 ): Promise<void> {
   if (!subjectMemoryEnabled || subjects.length === 0) {
@@ -159,7 +173,7 @@ export async function persistSubjectsForProject(
 
   const db = getWorkerDbClient();
   const { error } = await db.rpc("worker_insert_video_subjects", {
-    p_user_id: userId,
+    p_channel_id: channelId,
     p_project_id: projectId,
     p_rows: rows,
   });

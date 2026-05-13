@@ -26,6 +26,7 @@ interface VideoGenerateScene {
 
 interface VideoGenerateEventData {
   projectId: string;
+  channelId: string;
   topic?: string;
   scenes?: VideoGenerateScene[];
   template?: string;
@@ -109,7 +110,7 @@ export const generateVideo = inngest.createFunction(
     triggers: [{ event: "video/generate" }],
   },
   async ({ event, step }) => {
-    const { projectId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode, userId } = event.data as VideoGenerateEventData;
+    const { projectId, channelId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode } = event.data as VideoGenerateEventData;
 
 
 
@@ -243,7 +244,7 @@ export const generateVideo = inngest.createFunction(
     await updateStatus(db, projectId, "completed", videoUrl);
 
     await step.run("persist-subject-memory", async () => {
-      if (!userId) {
+      if (!channelId) {
         return;
       }
       const subjectKeys = (scenesWithAssets as VideoGenerateScene[])
@@ -253,7 +254,7 @@ export const generateVideo = inngest.createFunction(
         return;
       }
       try {
-        await persistSubjectsForProject(projectId, userId, subjectKeys);
+        await persistSubjectsForProject(projectId, channelId, subjectKeys);
       } catch (error) {
         console.error("[persist-subject-memory] Failed to persist subjects:", error);
       }

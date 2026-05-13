@@ -88,6 +88,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   try {
     const eventData: Record<string, unknown> = {
       projectId: merged.projectId,
+      channelId: project.channel_id,
       topic: project.topic,
       template: merged.template,
       aspectRatio: merged.aspectRatio,

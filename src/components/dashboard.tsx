@@ -69,11 +69,35 @@ export function Dashboard({
   const handleCreate = useCallback(async () => {
     setCreating(true);
 
+    let channelId: string | undefined;
+    const { data: existingChannel } = await supabase
+      .from("channels")
+      .select("id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingChannel?.id) {
+      channelId = existingChannel.id;
+    } else {
+      const { data: createdId, error: channelErr } = await supabase.rpc("worker_create_default_channel_for_user", {
+        p_user_id: user.id,
+      });
+      if (channelErr || !createdId) {
+        console.error("Failed to ensure default channel:", channelErr);
+        setCreating(false);
+        return;
+      }
+      channelId = createdId as string;
+    }
+
     const { data: project, error } = await supabase
       .from("projects")
       .insert({
         topic: "",
         user_id: user.id,
+        channel_id: channelId,
         status: "draft",
         wizard_step: "template",
       })

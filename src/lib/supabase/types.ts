@@ -14,11 +14,164 @@ export type Database = {
   };
   public: {
     Tables: {
+      channel_scene_presets: {
+        Row: {
+          channel_id: string;
+          created_at: string;
+          id: string;
+          name: string;
+          settings_json: Json;
+          template_id: string;
+        };
+        Insert: {
+          channel_id: string;
+          created_at?: string;
+          id?: string;
+          name: string;
+          settings_json?: Json;
+          template_id: string;
+        };
+        Update: {
+          channel_id?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          settings_json?: Json;
+          template_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "channel_scene_presets_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      channel_topic_ideas: {
+        Row: {
+          ai_reasoning: string | null;
+          channel_id: string;
+          created_at: string;
+          id: string;
+          idea_text: string;
+          source: string;
+          status: string;
+          used_in_project_id: string | null;
+          youtube_seed_video_id: string | null;
+        };
+        Insert: {
+          ai_reasoning?: string | null;
+          channel_id: string;
+          created_at?: string;
+          id?: string;
+          idea_text: string;
+          source: string;
+          status?: string;
+          used_in_project_id?: string | null;
+          youtube_seed_video_id?: string | null;
+        };
+        Update: {
+          ai_reasoning?: string | null;
+          channel_id?: string;
+          created_at?: string;
+          id?: string;
+          idea_text?: string;
+          source?: string;
+          status?: string;
+          used_in_project_id?: string | null;
+          youtube_seed_video_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "channel_topic_ideas_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "channel_topic_ideas_used_in_project_id_fkey";
+            columns: ["used_in_project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      channels: {
+        Row: {
+          created_at: string;
+          default_settings: Json;
+          id: string;
+          logo_url: string | null;
+          name: string;
+          niche: string | null;
+          slug: string;
+          subject_memory_lookback: number;
+          target_audience: string | null;
+          target_language: string | null;
+          thumbnail_template_url: string | null;
+          tone: string | null;
+          updated_at: string;
+          user_id: string;
+          watermark_opacity: number;
+          watermark_position: string;
+          youtube_channel_id: string | null;
+          youtube_handle: string | null;
+          youtube_meta: Json;
+        };
+        Insert: {
+          created_at?: string;
+          default_settings?: Json;
+          id?: string;
+          logo_url?: string | null;
+          name: string;
+          niche?: string | null;
+          slug: string;
+          subject_memory_lookback?: number;
+          target_audience?: string | null;
+          target_language?: string | null;
+          thumbnail_template_url?: string | null;
+          tone?: string | null;
+          updated_at?: string;
+          user_id: string;
+          watermark_opacity?: number;
+          watermark_position?: string;
+          youtube_channel_id?: string | null;
+          youtube_handle?: string | null;
+          youtube_meta?: Json;
+        };
+        Update: {
+          created_at?: string;
+          default_settings?: Json;
+          id?: string;
+          logo_url?: string | null;
+          name?: string;
+          niche?: string | null;
+          slug?: string;
+          subject_memory_lookback?: number;
+          target_audience?: string | null;
+          target_language?: string | null;
+          thumbnail_template_url?: string | null;
+          tone?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          watermark_opacity?: number;
+          watermark_position?: string;
+          youtube_channel_id?: string | null;
+          youtube_handle?: string | null;
+          youtube_meta?: Json;
+        };
+        Relationships: [];
+      };
       projects: {
         Row: {
           aspect_ratio: string;
           background_music: string | null;
           caption_style: string | null;
+          channel_id: string;
           comparison_overlay_mode: string;
           created_at: string;
           draft_scenes: Json | null;
@@ -45,6 +198,7 @@ export type Database = {
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
+          channel_id: string;
           comparison_overlay_mode?: string;
           created_at?: string;
           draft_scenes?: Json | null;
@@ -71,6 +225,7 @@ export type Database = {
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
+          channel_id?: string;
           comparison_overlay_mode?: string;
           created_at?: string;
           draft_scenes?: Json | null;
@@ -93,7 +248,15 @@ export type Database = {
           voiceover_url?: string | null;
           wizard_step?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "projects_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       scenes: {
         Row: {
@@ -135,33 +298,40 @@ export type Database = {
       };
       video_subjects: {
         Row: {
+          channel_id: string;
           created_at: string;
           embedding: string | null;
           id: string;
           project_id: string;
           subject_key: string;
           subject_normalized: string;
-          user_id: string;
         };
         Insert: {
+          channel_id: string;
           created_at?: string;
           embedding?: string | null;
           id?: string;
           project_id: string;
           subject_key: string;
           subject_normalized: string;
-          user_id: string;
         };
         Update: {
+          channel_id?: string;
           created_at?: string;
           embedding?: string | null;
           id?: string;
           project_id?: string;
           subject_key?: string;
           subject_normalized?: string;
-          user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "video_subjects_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: false;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "video_subjects_project_id_fkey";
             columns: ["project_id"];
@@ -176,12 +346,24 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      worker_create_default_channel_for_user: {
+        Args: { p_user_id: string };
+        Returns: string;
+      };
       worker_insert_scenes: {
         Args: { p_project_id: string; p_scenes: Json };
         Returns: undefined;
       };
       worker_insert_video_subjects: {
-        Args: { p_project_id: string; p_rows: Json; p_user_id: string };
+        Args: { p_channel_id: string; p_project_id: string; p_rows: Json };
+        Returns: undefined;
+      };
+      worker_persist_topic_suggestions: {
+        Args: { p_channel_id: string; p_rows: Json };
+        Returns: undefined;
+      };
+      worker_update_channel_youtube_meta: {
+        Args: { p_channel_id: string; p_meta: Json };
         Returns: undefined;
       };
       worker_update_project_error: {
