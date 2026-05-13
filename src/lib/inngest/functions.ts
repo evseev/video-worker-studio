@@ -7,6 +7,7 @@ import { parseCaptionStyle, parseComparisonOverlayMode } from "@/lib/comparison-
 import { persistSubjectsForProject } from "@/lib/ai/subject-memory";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { parseWorkerChannelRpcJson, workerBundleToChannelContext } from "@/lib/inngest/worker-channel-bundle";
 
 interface VideoGenerateScene {
   template: string;
@@ -26,7 +27,8 @@ interface VideoGenerateScene {
 
 interface VideoGenerateEventData {
   projectId: string;
-  channelId: string;
+  /** Legacy: superseded by `fetch-channel` step; kept for older queued events. */
+  channelId?: string;
   topic?: string;
   scenes?: VideoGenerateScene[];
   template?: string;
@@ -110,27 +112,69 @@ export const generateVideo = inngest.createFunction(
     triggers: [{ event: "video/generate" }],
   },
   async ({ event, step }) => {
-    const { projectId, channelId, topic, scenes: passedScenes, template, aspectRatio, videoQuality, sceneDuration, backgroundMusic, voiceoverUrl, sceneTransition, imageMotion, textAnimation, captionStyle, comparisonOverlayMode } = event.data as VideoGenerateEventData;
-
-
+    const {
+      projectId,
+      topic,
+      scenes: passedScenes,
+      template,
+      aspectRatio,
+      videoQuality,
+      sceneDuration,
+      backgroundMusic,
+      voiceoverUrl,
+      sceneTransition,
+      imageMotion,
+      textAnimation,
+      captionStyle,
+      comparisonOverlayMode,
+    } = event.data as VideoGenerateEventData;
 
     const db = getWorkerClient();
+
+    const channelBundle = await step.run("fetch-channel", async () => {
+      const { data, error } = await db.rpc("worker_fetch_channel_for_project", {
+        p_project_id: projectId,
+      });
+      if (error) {
+        console.error("[fetch-channel] RPC error:", error);
+        throw new Error(`fetch-channel failed: ${error.message}`);
+      }
+      if (data == null) {
+        throw new Error("fetch-channel: no channel row for project");
+      }
+      return parseWorkerChannelRpcJson(data);
+    });
+
+    const channelId = channelBundle.channelId;
+    const channelContext = workerBundleToChannelContext(channelBundle);
 
     const hasPassedScenes = Array.isArray(passedScenes) && passedScenes.length > 0;
 
     // Step 1: Generate script via Gemini (or use passed scenes)
-    const scenes = hasPassedScenes ? passedScenes : await step.run("generate-script", async () => {
-      console.log(`[generate-script] Project: ${projectId}, Topic: ${topic}`);
-      try {
-        if (!topic) throw new Error("Topic is required if scenes are not provided");
-        const result = await generateScript(topic, { sceneDuration });
-        console.log(`[generate-script] Generated ${result.length} scenes`);
-        return result;
-      } catch (err) {
-        await updateStatus(db, projectId, "failed_ai");
-        throw err;
-      }
-    });
+    const scenes = hasPassedScenes
+      ? passedScenes
+      : await step.run("generate-script", async () => {
+          console.log(`[generate-script] Project: ${projectId}, Topic: ${topic}`);
+          try {
+            if (!topic) throw new Error("Topic is required if scenes are not provided");
+            const result = await generateScript(topic, {
+              sceneDuration,
+              channelContext,
+            });
+            const templateId = template ?? "slideshow";
+            const asWorkerScenes: VideoGenerateScene[] = result.map((s) => ({
+              template: templateId,
+              scriptText: s.scriptText,
+              searchKeywords: [s.searchKeyword],
+              assets: [{}],
+            }));
+            console.log(`[generate-script] Generated ${asWorkerScenes.length} scenes`);
+            return asWorkerScenes;
+          } catch (err) {
+            await updateStatus(db, projectId, "failed_ai");
+            throw err;
+          }
+        });
 
     // Step 2: Fetch assets from Pinterest for each scene
     const scenesWithAssets = await step.run("fetch-assets", async () => {
@@ -217,6 +261,7 @@ export const generateVideo = inngest.createFunction(
         const resolvedTextAnimations = resolveTextAnimations((textAnimation || "slide-up") as Parameters<typeof resolveTextAnimations>[0], sceneCount);
         return await renderVideo({
           projectId,
+          channelId,
           scenes: renderScenes,
           template,
           aspectRatio,
@@ -229,6 +274,7 @@ export const generateVideo = inngest.createFunction(
           textAnimations: resolvedTextAnimations,
           captionStyle: parseCaptionStyle(captionStyle),
           comparisonOverlayMode: parseComparisonOverlayMode(comparisonOverlayMode),
+          watermark: channelBundle.watermark,
         });
       } catch (err) {
         await updateStatus(db, projectId, "failed_render");
@@ -244,9 +290,6 @@ export const generateVideo = inngest.createFunction(
     await updateStatus(db, projectId, "completed", videoUrl);
 
     await step.run("persist-subject-memory", async () => {
-      if (!channelId) {
-        return;
-      }
       const subjectKeys = (scenesWithAssets as VideoGenerateScene[])
         .map((scene) => scene.subjectKey ?? "")
         .filter((value) => value.length > 0);

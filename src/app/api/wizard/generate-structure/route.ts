@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { generateStructure } from "@/lib/ai/wizard";
+import { getChannelContextForProject } from "@/lib/channels/context";
+import type { ChannelContext } from "@/lib/ai/prompts";
 import { TEMPLATE_IDS } from "@/templates";
 import type { TemplateId } from "@/templates/types";
 import { z } from "zod";
@@ -38,14 +40,17 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   const templateId = template as TemplateId;
 
   let channelId: string | undefined;
+  let channelContext: ChannelContext = {};
   if (parsedReq.data.projectId) {
+    const pid = parsedReq.data.projectId;
     const { data: proj } = await supabase
       .from("projects")
       .select("channel_id")
-      .eq("id", parsedReq.data.projectId)
+      .eq("id", pid)
       .eq("user_id", user.id)
       .maybeSingle();
     channelId = proj?.channel_id ?? undefined;
+    channelContext = await getChannelContextForProject(supabase, pid);
   }
 
   const scenes = await generateStructure(idea, templateId, {
@@ -54,6 +59,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     sceneDuration,
     supabase,
     channelId,
+    channelContext,
   });
 
   if (projectId) {

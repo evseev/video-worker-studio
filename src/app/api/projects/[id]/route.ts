@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import { deleteProjectAssets } from "@/lib/projects/delete-project-assets";
+import { deleteProjectByOwner } from "@/lib/projects/delete-project-by-owner";
 
 export async function DELETE(
   _request: Request,
@@ -23,41 +23,19 @@ export async function DELETE(
       return NextResponse.json({ error: "Project ID missing" }, { status: 400 });
     }
 
-    const { data: project, error: fetchError } = await supabase
-      .from("projects")
-      .select("id, video_url")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (fetchError) {
-      throw fetchError;
+    const result = await deleteProjectByOwner(supabase, user.id, id);
+    if (!result.ok) {
+      if (result.error === "not_found") {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+      throw new Error(result.error);
     }
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    const { data: deletedRows, error: deleteError } = await supabase
-      .from("projects")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .select("id");
-
-    if (deleteError) {
-      throw deleteError;
-    }
-
-    if (!deletedRows?.length) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    const { warnings } = await deleteProjectAssets(project.id, project.video_url);
+    const { warnings } = result;
     if (warnings.length > 0) {
       Sentry.captureMessage("Project delete cleanup warnings", {
         level: "warning",
-        extra: { projectId: project.id, warnings },
+        extra: { projectId: id, warnings },
       });
     }
 

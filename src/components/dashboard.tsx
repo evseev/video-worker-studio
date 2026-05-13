@@ -8,10 +8,15 @@ import type { Tables } from "@/lib/supabase/types";
 import { ProjectCard } from "./dashboard/project-card";
 import { EmptyState } from "./dashboard/empty-state";
 import { DeleteModal, type DeleteState } from "./dashboard/delete-modal";
+import { ChannelSwitcher } from "@/components/channel-switcher";
+import { CreateModal } from "@/components/dashboard/create-modal";
+import { useActiveChannel } from "@/lib/hooks/use-active-channel";
 
-type Project = Tables<"projects">;
+type Project = Tables<"projects"> & {
+  channels?: { id: string; name: string; logo_url: string | null } | null;
+};
 
-export function Dashboard({
+function DashboardInner({
   user,
   projects: initialProjects,
 }: {
@@ -20,18 +25,19 @@ export function Dashboard({
 }) {
   const [projects, setProjects] = useState(initialProjects);
   const [creating, setCreating] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createTopic, setCreateTopic] = useState("");
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  const { activeChannelId, setActiveChannelId, channels, isLoading } = useActiveChannel();
 
-  // Sync with server data when it changes (e.g. after navigation)
   useEffect(() => {
     setProjects(initialProjects);
   }, [initialProjects]);
 
-  // Supabase Realtime: subscribe to project status changes
   useEffect(() => {
     const channel = supabase
       .channel("projects-realtime")
@@ -46,9 +52,7 @@ export function Dashboard({
         (payload) => {
           if (payload.eventType === "UPDATE") {
             const updated = payload.new as Project;
-            setProjects((prev) =>
-              prev.map((p) => (p.id === updated.id ? updated : p))
-            );
+            setProjects((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
           } else if (payload.eventType === "DELETE") {
             const deleted = payload.old as { id: string };
             setProjects((prev) => prev.filter((p) => p.id !== deleted.id));
@@ -66,52 +70,53 @@ export function Dashboard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
 
-  const handleCreate = useCallback(async () => {
-    setCreating(true);
+  const filteredProjects = activeChannelId
+    ? projects.filter((p) => p.channel_id === activeChannelId)
+    : projects;
 
-    let channelId: string | undefined;
-    const { data: existingChannel } = await supabase
-      .from("channels")
-      .select("id")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+  const activeChannelName =
+    channels.find((c) => c.id === activeChannelId)?.name ??
+    channels[0]?.name ??
+    null;
 
-    if (existingChannel?.id) {
-      channelId = existingChannel.id;
-    } else {
-      const { data: createdId, error: channelErr } = await supabase.rpc("worker_create_default_channel_for_user", {
-        p_user_id: user.id,
-      });
-      if (channelErr || !createdId) {
-        console.error("Failed to ensure default channel:", channelErr);
+  const openCreateModal = useCallback(() => {
+    setCreateTopic("");
+    setCreateOpen(true);
+  }, []);
+
+  const handleCreateSubmit = useCallback(
+    async (_e: React.FormEvent, { copyLastSettings }: { copyLastSettings: boolean }) => {
+      setCreating(true);
+      const targetChannelId = activeChannelId ?? channels[0]?.id;
+      if (!targetChannelId) {
         setCreating(false);
         return;
       }
-      channelId = createdId as string;
-    }
 
-    const { data: project, error } = await supabase
-      .from("projects")
-      .insert({
-        topic: "",
-        user_id: user.id,
-        channel_id: channelId,
-        status: "draft",
-        wizard_step: "template",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Failed to create project:", error);
-      setCreating(false);
-      return;
-    }
-
-    router.push(`/wizard/${project.id}?step=template`);
-  }, [supabase, user.id, router]);
+      try {
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channelId: targetChannelId,
+            copyLastSettings,
+            topic: createTopic.trim(),
+          }),
+        });
+        const body = (await res.json().catch(() => ({}))) as { project?: Project; error?: string };
+        if (!res.ok || !body.project) {
+          return;
+        }
+        setCreateOpen(false);
+        router.push(`/wizard/${body.project.id}?step=template`);
+      } catch {
+        /* network */
+      } finally {
+        setCreating(false);
+      }
+    },
+    [activeChannelId, channels, createTopic, router]
+  );
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -148,22 +153,29 @@ export function Dashboard({
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
-      {/* Top Nav */}
       <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-              </svg>
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-linear-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              </div>
+              <span className="text-base font-bold text-white tracking-tight hidden sm:inline">
+                Video Worker
+              </span>
             </div>
-            <span className="text-base font-bold text-white tracking-tight">
-              Video Worker
-            </span>
+            <ChannelSwitcher
+              channels={channels}
+              activeChannelId={activeChannelId}
+              setActiveChannelId={setActiveChannelId}
+              isLoading={isLoading}
+            />
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-400">{user.email}</span>
+          <div className="flex items-center gap-4 shrink-0">
+            <span className="text-sm text-zinc-400 truncate max-w-[160px] sm:max-w-none">{user.email}</span>
             <button
               onClick={handleSignOut}
               className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
@@ -174,28 +186,40 @@ export function Dashboard({
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-white mb-1">My Videos</h1>
             <p className="text-base text-zinc-400">
-              {projects.length} project{projects.length !== 1 ? "s" : ""}
+              {filteredProjects.length} project{filteredProjects.length !== 1 ? "s" : ""}
+              {activeChannelId ? ` on ${activeChannelName ?? "this channel"}` : ""}
             </p>
           </div>
           <button
-            onClick={handleCreate}
-            disabled={creating}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-indigo-500 hover:shadow-violet-500/40 disabled:opacity-50 cursor-pointer"
+            onClick={openCreateModal}
+            disabled={!activeChannelId && channels.length === 0}
+            className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-indigo-500 hover:shadow-violet-500/40 disabled:opacity-50 cursor-pointer"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            {creating ? "Creating…" : "New Video"}
+            New Video
           </button>
         </div>
 
+        {createOpen ? (
+          <CreateModal
+            topic={createTopic}
+            creating={creating}
+            channelName={activeChannelName}
+            onTopicChange={setCreateTopic}
+            onSubmit={handleCreateSubmit}
+            onClose={() => {
+              if (!creating) setCreateOpen(false);
+            }}
+          />
+        ) : null}
 
         {deleteState && (
           <DeleteModal
@@ -207,14 +231,16 @@ export function Dashboard({
           />
         )}
 
-        {projects.length === 0 ? (
-          <EmptyState onCreateClick={handleCreate} />
+        {filteredProjects.length === 0 ? (
+          <EmptyState onCreateClick={openCreateModal} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => (
+            {filteredProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
+                channelName={project.channels?.name ?? null}
+                showChannelPill={!activeChannelId}
                 onRequestDelete={(p) => {
                   setDeleteError(null);
                   setDeleteState({ phase: "confirm", project: p });
@@ -226,4 +252,8 @@ export function Dashboard({
       </main>
     </div>
   );
+}
+
+export function Dashboard(props: { user: User; projects: Project[] }) {
+  return <DashboardInner {...props} />;
 }

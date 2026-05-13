@@ -5,9 +5,13 @@ type Project = Tables<"projects">;
 
 export function ProjectCard({
   project,
+  channelName,
+  showChannelPill,
   onRequestDelete,
 }: {
   project: Project;
+  channelName?: string | null;
+  showChannelPill?: boolean;
   onRequestDelete: (project: Project) => void;
 }) {
   const isDraft = project.status === "draft";
@@ -71,6 +75,13 @@ export function ProjectCard({
         <h3 className="text-sm font-medium text-zinc-200 truncate mb-2">
           {project.topic}
         </h3>
+        {showChannelPill && channelName ? (
+          <div className="mb-2">
+            <span className="inline-flex rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-zinc-400">
+              {channelName}
+            </span>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between">
           <StatusBadge status={project.status} />
           <span className="text-xs text-zinc-500">

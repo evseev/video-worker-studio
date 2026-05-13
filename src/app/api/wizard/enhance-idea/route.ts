@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { enhanceIdea } from "@/lib/ai/wizard";
+import { getChannelContextForProject } from "@/lib/channels/context";
 import { z } from "zod";
 import {
   SCENE_COUNT_MIN,
@@ -25,7 +26,10 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   const { projectId, idea, sceneCount, sceneDuration } = parsedReq.data;
 
   const totalDuration = (sceneCount ?? 6) * (sceneDuration ?? 5);
-  const enhancedIdeas = await enhanceIdea(idea, totalDuration);
+  const channelContext = parsedReq.data.projectId
+    ? await getChannelContextForProject(supabase, parsedReq.data.projectId)
+    : {};
+  const enhancedIdeas = await enhanceIdea(idea, { totalDuration, channelContext });
 
   if (projectId) {
     await supabase

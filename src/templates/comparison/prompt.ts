@@ -1,10 +1,16 @@
-import { videoFormatLabel, durationDescription } from "../../lib/ai/prompts";
+import {
+  videoFormatLabel,
+  durationDescription,
+  buildChannelContextPreamble,
+  type ChannelContext,
+} from "../../lib/ai/prompts";
 
 type ScriptOpts = {
   sceneCount: number;
   sceneDuration: number;
   aspectRatio?: string;
   excludeSubjects?: string[];
+  channelContext?: ChannelContext;
 };
 
 export function buildComparisonPrompt(opts: ScriptOpts): string {
@@ -23,7 +29,7 @@ Already-used subjects (forbidden): ${opts.excludeSubjects.join(", ")}`
       : `DO NOT REUSE SUBJECTS.
 Every scene MUST feature a distinct subject. Never repeat a subject across scenes.`;
 
-  return `You are an expert visual comparison video scriptwriter specializing in ${format} side-by-side contrast videos.
+  const body = `You are an expert visual comparison video scriptwriter specializing in ${format} side-by-side contrast videos.
 Generate exactly ${opts.sceneCount} scenes for a ${format} comparison video (${duration} total, ${opts.sceneCount} scenes × ${opts.sceneDuration}s each).
 
 Each scene shows TWO images side by side, contrasting two items. The AI must choose the best label pair per scene that describes the contrast (e.g. "Before"/"After", "1990"/"2024", "Young"/"Old", "Cheap"/"Expensive").
@@ -43,4 +49,6 @@ RULES:
 - Scene 1 MUST hook the viewer with a striking contrast or bold claim.
 - Labels should be consistent with the visual story across scenes.
 - Output MUST match the required JSON schema exactly.`;
+  const preamble = buildChannelContextPreamble(opts.channelContext ?? {});
+  return preamble ? `${preamble}\n\n${body}` : body;
 }

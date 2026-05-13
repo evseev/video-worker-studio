@@ -13,7 +13,7 @@ type Props = { store: StoreApi<WizardState>; renderBackend: "local" | "lambda" }
 const QUALITY_LABELS: Record<string, string> = { hd: "HD (720p)", fullhd: "Full HD (1080p)", "4k": "4K (2160p)" };
 
 export function RenderStep({ store, renderBackend }: Props) {
-  const { projectId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, setStep } = useStore(store);
+  const { projectId, channelId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, setStep } = useStore(store);
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [backgroundMusic, setBackgroundMusic] = useState<string | null>(null);
@@ -112,7 +112,11 @@ export function RenderStep({ store, renderBackend }: Props) {
           </div>
           {isLocalBackend ? (
             <p className="mt-4 text-xs text-amber-300">
-              Stored locally at <span className="font-mono text-amber-200">/local_renders/{projectId}.mp4</span> (not uploaded to Supabase).
+              Stored locally at{" "}
+              <span className="font-mono text-amber-200">
+                /local_renders/{channelId}/{projectId}.mp4
+              </span>{" "}
+              (not uploaded to Supabase).
             </p>
           ) : null}
         </div>
@@ -244,7 +248,11 @@ export function RenderStep({ store, renderBackend }: Props) {
         </div>
         {isLocalBackend ? (
           <p className="mt-4 text-xs text-amber-300">
-            Stored locally at <span className="font-mono text-amber-200">/local_renders/{projectId}.mp4</span> (not uploaded to Supabase).
+            Stored locally at{" "}
+            <span className="font-mono text-amber-200">
+              /local_renders/{channelId}/{projectId}.mp4
+            </span>{" "}
+            (not uploaded to Supabase).
           </p>
         ) : null}
       </div>

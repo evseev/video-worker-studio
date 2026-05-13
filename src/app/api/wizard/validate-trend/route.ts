@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { validateTrend } from "@/lib/ai/wizard";
+import { getChannelContextForProject } from "@/lib/channels/context";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
   const { projectId, idea } = await request.json();
@@ -9,7 +10,11 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     return NextResponse.json({ error: "Idea is required" }, { status: 400 });
   }
 
-  const trendData = await validateTrend(idea);
+  const channelContext = projectId
+    ? await getChannelContextForProject(supabase, projectId)
+    : {};
+
+  const trendData = await validateTrend(idea, { channelContext });
 
   if (projectId) {
     await supabase

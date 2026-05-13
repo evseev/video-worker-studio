@@ -350,6 +350,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: string;
       };
+      worker_fetch_channel_for_project: {
+        Args: { p_project_id: string };
+        Returns: Json;
+      };
       worker_insert_scenes: {
         Args: { p_project_id: string; p_scenes: Json };
         Returns: undefined;

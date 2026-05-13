@@ -34,6 +34,13 @@ export type VideoCompositionProps = {
   textAnimations?: ResolvedTextAnimation[];
   captionStyle?: CaptionStyleId;
   comparisonOverlayMode?: ComparisonOverlayMode;
+  /** Carried through the render manifest for Epic 25 (Phase D overlays the logo). */
+  channelId?: string;
+  watermark?: {
+    logoUrl: string | null;
+    position: "tl" | "tr" | "bl" | "br" | "none";
+    opacity: number;
+  };
 };
 
 function asPresentation<P extends Record<string, unknown>>(
@@ -95,6 +102,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       {musicUrl && <BackgroundMusic src={musicUrl} />}
       {voiceoverUrl && <Audio src={voiceoverUrl} volume={0.9} />}
+      {/* TODO(Epic 25 Phase D / 25.18): Mount Watermark.tsx above TransitionSeries; preload remote logo and use `watermark` + `channelId` from input props. */}
 
       <TransitionSeries>
         {scenes.flatMap((scene, index) => {

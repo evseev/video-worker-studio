@@ -7,8 +7,10 @@ import { embedTextOrThrow, getEmbeddingModel } from "@/lib/ai/gemini";
 
 const apiKey = process.env.GEMINI_API_KEY;
 const subjectMemoryEnabled = (process.env.SUBJECT_MEMORY_ENABLED ?? "true").toLowerCase() !== "false";
-const subjectMemoryLimit = Number(process.env.SUBJECT_MEMORY_LIMIT ?? "10");
 const subjectMemoryMax = Number(process.env.SUBJECT_MEMORY_MAX ?? "200");
+
+/** Conservative cap: max scenes per video × default lookback headroom for SQL LIMIT. */
+const AVG_SUBJECTS_PER_PROJECT = 30;
 
 type StoredSubjectRow = {
   subject_key: string;
@@ -16,6 +18,7 @@ type StoredSubjectRow = {
   embedding: string | null;
   created_at: string;
 };
+
 function parseVectorString(value: string | null): number[] | null {
   if (!value) {
     return null;
@@ -65,17 +68,24 @@ async function embedText(text: string): Promise<number[] | null> {
   return embedTextOrThrow(model, text);
 }
 
+/**
+ * Returns subject keys from this channel's recent **completed** videos to exclude from new ideas,
+ * ranked by embedding similarity to `idea` (same algorithm as ADR-002; channel-scoped per Epic 25).
+ *
+ * Loads `channels.subject_memory_lookback` (default 5), takes that many latest completed projects on
+ * the channel, then loads up to `lookback × AVG_SUBJECTS_PER_PROJECT` subject rows (newest first)
+ * from those projects before embed-ranking.
+ */
 export async function getExcludedSubjectsForChannel(
   supabase: SupabaseClient<Database>,
   channelId: string,
   idea: string,
-  opts?: { limit?: number; maxSubjects?: number }
+  opts?: { maxSubjects?: number }
 ): Promise<string[]> {
   if (!subjectMemoryEnabled) {
     return [];
   }
 
-  const limit = opts?.limit ?? subjectMemoryLimit;
   const maxSubjects = opts?.maxSubjects ?? subjectMemoryMax;
 
   const { data: channelRow, error: channelErr } = await supabase
@@ -88,15 +98,16 @@ export async function getExcludedSubjectsForChannel(
     return [];
   }
 
-  const lookback = channelRow.subject_memory_lookback ?? 5;
+  const lookback = Math.min(Math.max(channelRow.subject_memory_lookback ?? 5, 1), 50);
+  const subjectSqlLimit = Math.min(lookback * AVG_SUBJECTS_PER_PROJECT, maxSubjects);
 
-    const { data: projects, error: projectsError } = await supabase
+  const { data: projects, error: projectsError } = await supabase
     .from("projects")
     .select("id")
     .eq("channel_id", channelId)
     .eq("status", "completed")
-    .order("created_at", { ascending: false })
-    .limit(Math.min(lookback, limit));
+    .order("updated_at", { ascending: false })
+    .limit(lookback);
 
   if (projectsError || !projects || projects.length === 0) {
     return [];
@@ -109,7 +120,7 @@ export async function getExcludedSubjectsForChannel(
     .eq("channel_id", channelId)
     .in("project_id", projectIds)
     .order("created_at", { ascending: false })
-    .limit(maxSubjects);
+    .limit(subjectSqlLimit);
 
   if (subjectsError || !subjects || subjects.length === 0) {
     return [];
@@ -138,6 +149,10 @@ export async function getExcludedSubjectsForChannel(
   }
 }
 
+/**
+ * Persists normalized subject keys for ADR-002-style dedupe. Rows are written with `channel_id`
+ * via `worker_insert_video_subjects` (no `user_id`; ownership is the channel).
+ */
 export async function persistSubjectsForProject(
   projectId: string,
   channelId: string,

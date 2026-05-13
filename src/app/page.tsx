@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { Dashboard } from "@/components/dashboard";
 
 export default async function HomePage() {
@@ -14,8 +15,12 @@ export default async function HomePage() {
 
   const { data: projects } = await supabase
     .from("projects")
-    .select("*")
+    .select("*, channels(id, name, logo_url)")
     .order("created_at", { ascending: false });
 
-  return <Dashboard user={user} projects={projects ?? []} />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" aria-hidden />}>
+      <Dashboard user={user} projects={projects ?? []} />
+    </Suspense>
+  );
 }

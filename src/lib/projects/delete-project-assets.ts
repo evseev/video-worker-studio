@@ -125,15 +125,52 @@ async function removeLocalRenderTemp(projectId: string, warnings: string[]): Pro
   }
 }
 
-async function removeLocalRenderPublic(projectId: string, warnings: string[]): Promise<void> {
-  const file = path.join(process.cwd(), "public", "local_renders", `${projectId}.mp4`);
-  try {
-    await fs.promises.rm(file, { force: true });
-  } catch (err) {
-    warnings.push(
-      `Local render public: ${err instanceof Error ? err.message : String(err)}`
+export function getLocalRenderRemovalTargets(
+  projectId: string,
+  channelId?: string | null
+): string[] {
+  const targets: string[] = [];
+  if (channelId) {
+    targets.push(
+      path.join(process.cwd(), "public", "local_renders", channelId, `${projectId}.mp4`)
     );
   }
+  targets.push(path.join(process.cwd(), "public", "local_renders", `${projectId}.mp4`));
+  return targets;
+}
+
+/**
+ * Removes local dev MP4 output: prefers `public/local_renders/{channelId}/{projectId}.mp4`,
+ * then best-effort legacy `public/local_renders/{projectId}.mp4`.
+ */
+export async function removeLocalRenderPublic(
+  projectId: string,
+  warnings: string[],
+  channelId?: string | null
+): Promise<void> {
+  const tryRemove = async (label: string, filePath: string) => {
+    try {
+      await fs.promises.rm(filePath, { force: true });
+    } catch (err) {
+      warnings.push(
+        `Local render public (${label}): ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  };
+
+  if (channelId) {
+    const scoped = path.join(
+      process.cwd(),
+      "public",
+      "local_renders",
+      channelId,
+      `${projectId}.mp4`
+    );
+    await tryRemove("channel-scoped", scoped);
+  }
+
+  const legacyFlat = path.join(process.cwd(), "public", "local_renders", `${projectId}.mp4`);
+  await tryRemove("legacy-flat", legacyFlat);
 }
 
 async function removeSupabaseRender(projectId: string, warnings: string[]): Promise<void> {
@@ -232,13 +269,14 @@ async function removeLambdaS3Render(
  */
 export async function deleteProjectAssets(
   projectId: string,
-  videoUrl: string | null
+  videoUrl: string | null,
+  channelId?: string | null
 ): Promise<{ warnings: string[] }> {
   const warnings: string[] = [];
 
   await removeLocalProjectAssets(projectId, warnings);
   await removeLocalRenderTemp(projectId, warnings);
-  await removeLocalRenderPublic(projectId, warnings);
+  await removeLocalRenderPublic(projectId, warnings, channelId);
   await removeSupabaseRender(projectId, warnings);
   await removeLambdaS3Render(projectId, videoUrl, warnings);
 
