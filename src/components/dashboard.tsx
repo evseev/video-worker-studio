@@ -10,6 +10,7 @@ import { EmptyState } from "./dashboard/empty-state";
 import { DeleteModal, type DeleteState } from "./dashboard/delete-modal";
 import { ChannelSwitcher } from "@/components/channel-switcher";
 import { CreateModal } from "@/components/dashboard/create-modal";
+import { useToast } from "@/components/ui/toast";
 import { useActiveChannel } from "@/lib/hooks/use-active-channel";
 
 type Project = Tables<"projects"> & {
@@ -32,6 +33,7 @@ function DashboardInner({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  const addToast = useToast();
   const { activeChannelId, setActiveChannelId, channels, isLoading } = useActiveChannel();
 
   useEffect(() => {
@@ -105,17 +107,20 @@ function DashboardInner({
         });
         const body = (await res.json().catch(() => ({}))) as { project?: Project; error?: string };
         if (!res.ok || !body.project) {
+          const msg =
+            body.error ?? (res.ok ? "Invalid response from server." : `Could not create project (${res.status}).`);
+          addToast(msg, "error");
           return;
         }
         setCreateOpen(false);
         router.push(`/wizard/${body.project.id}?step=template`);
       } catch {
-        /* network */
+        addToast("Network error. Try again.", "error");
       } finally {
         setCreating(false);
       }
     },
-    [activeChannelId, channels, createTopic, router]
+    [activeChannelId, addToast, channels, createTopic, router]
   );
 
   async function handleSignOut() {
@@ -237,7 +242,7 @@ function DashboardInner({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredProjects.map((project) => (
               <ProjectCard
-                key={project.id}
+                key={`${project.id}:${String(project.video_url ?? "")}`}
                 project={project}
                 channelName={project.channels?.name ?? null}
                 showChannelPill={!activeChannelId}
