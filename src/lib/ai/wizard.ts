@@ -14,6 +14,7 @@ import { buildFactCardPrompt, factCardGeminiSchema, FactCardResponseSchema } fro
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { normalizeSubject } from "@/lib/ai/dedupe";
+import { filterScenesAgainstChannelMemory } from "@/lib/ai/wizard-structure-chunk-filter";
 import { getExcludedSubjectsForChannel } from "@/lib/ai/subject-memory";
 import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 
@@ -223,22 +224,6 @@ async function generateStructureChunk(
   return parsed.scenes.map((raw: unknown) => toScene(templateId, raw as Record<string, unknown>));
 }
 
-function filterUniqueScenes(scenes: Scene[], seenSubjects: Set<string>): { uniqueScenes: Scene[]; droppedCount: number } {
-  const workingSeen = new Set(seenSubjects);
-  const uniqueScenes: Scene[] = [];
-  let droppedCount = 0;
-  for (const scene of scenes) {
-    const normalized = normalizeSubject(scene.subjectKey);
-    if (!normalized || workingSeen.has(normalized)) {
-      droppedCount += 1;
-      continue;
-    }
-    workingSeen.add(normalized);
-    uniqueScenes.push(scene);
-  }
-  return { uniqueScenes, droppedCount };
-}
-
 async function generateStructureChunked(
   idea: string,
   templateId: TemplateId,
@@ -251,17 +236,25 @@ async function generateStructureChunked(
   }
 ): Promise<Scene[]> {
   const chunks: Scene[] = [];
-  const seenSubjects = new Set((opts.excludeSubjects ?? []).map(normalizeSubject).filter(Boolean));
+  const channelNormalizedExcludes = new Set((opts.excludeSubjects ?? []).map(normalizeSubject).filter(Boolean));
+
+  /** All subjects the model must avoid (channel memory + previous chunks — prompt only). */
+  const subjectsBannedInPrompt = new Set(opts.excludeSubjects ?? []);
+
   for (let chunkStart = 0; chunkStart < opts.sceneCount; chunkStart += CHUNK_SIZE) {
     const chunkSize = Math.min(CHUNK_SIZE, opts.sceneCount - chunkStart);
-    const excludeSubjects = Array.from(seenSubjects);
+    const excludeSubjects = Array.from(subjectsBannedInPrompt);
     const firstPassScenes = await generateStructureChunk(idea, templateId, {
       ...opts,
       chunkStart,
       chunkSize,
       excludeSubjects,
     });
-    const firstPass = filterUniqueScenes(firstPassScenes, seenSubjects);
+    const firstPass = filterScenesAgainstChannelMemory(
+      firstPassScenes,
+      channelNormalizedExcludes,
+      chunkStart
+    );
     let { uniqueScenes } = firstPass;
     const { droppedCount } = firstPass;
 
@@ -270,18 +263,22 @@ async function generateStructureChunked(
         ...opts,
         chunkStart,
         chunkSize,
-        excludeSubjects: Array.from(seenSubjects),
+        excludeSubjects,
       });
-      ({ uniqueScenes } = filterUniqueScenes(retryScenes, seenSubjects));
+      ({ uniqueScenes } = filterScenesAgainstChannelMemory(
+        retryScenes,
+        channelNormalizedExcludes,
+        chunkStart
+      ));
     }
 
-    for (const scene of uniqueScenes) {
-      const normalized = normalizeSubject(scene.subjectKey);
-      if (normalized) {
-        seenSubjects.add(normalized);
+    const accepted = uniqueScenes.slice(0, chunkSize);
+    for (const scene of accepted) {
+      if (normalizeSubject(scene.subjectKey)) {
+        subjectsBannedInPrompt.add(scene.subjectKey);
       }
     }
-    chunks.push(...uniqueScenes.slice(0, chunkSize));
+    chunks.push(...accepted);
   }
   return chunks.slice(0, opts.sceneCount);
 }
