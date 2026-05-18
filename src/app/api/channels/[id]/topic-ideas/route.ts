@@ -10,27 +10,44 @@ const ManualBodySchema = z
   })
   .strict();
 
-export async function GET(_request: Request, routeCtx: { params: Promise<{ id: string }> }) {
+const TopicIdeaStatusSchema = z.enum(["backlog", "shot", "skipped"]);
+
+export async function GET(request: Request, routeCtx: { params: Promise<{ id: string }> }) {
   const { id: channelId } = await routeCtx.params;
-  const handler = withAuth(async (_req, { supabase }) => {
+  const handler = withAuth(async (req, { supabase }) => {
     const existing = await getChannelById(supabase, channelId);
     if (!existing.data) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    const url = new URL(req.url);
+    const statusRaw = url.searchParams.get("status");
+    let statusFilter: z.infer<typeof TopicIdeaStatusSchema> | null = null;
+    if (statusRaw !== null && statusRaw !== "") {
+      const parsed = TopicIdeaStatusSchema.safeParse(statusRaw);
+      if (!parsed.success) {
+        return NextResponse.json({ error: "Invalid status query" }, { status: 400 });
+      }
+      statusFilter = parsed.data;
+    }
+
+    let query = supabase
       .from("channel_topic_ideas")
       .select("*")
       .eq("channel_id", channelId)
       .order("created_at", { ascending: false })
       .limit(200);
+    if (statusFilter) {
+      query = query.eq("status", statusFilter);
+    }
+    const { data, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json({ ideas: data ?? [] });
   });
-  return handler(_request);
+  return handler(request);
 }
 
 export async function POST(request: Request, routeCtx: { params: Promise<{ id: string }> }) {

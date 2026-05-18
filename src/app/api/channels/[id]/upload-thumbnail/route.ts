@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { getChannelById } from "@/lib/channels/repository";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const BUCKET = "channel-assets";
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -13,11 +14,14 @@ const EXT_BY_MIME: Record<string, string> = {
 
 export async function POST(request: Request, routeCtx: { params: Promise<{ id: string }> }) {
   const { id: channelId } = await routeCtx.params;
-  const inner = withAuth(async (req, { supabase }) => {
+  const inner = withAuth(async (req, { supabase, user }) => {
     const { data: channel } = await getChannelById(supabase, channelId);
-    if (!channel) {
+    if (!channel || channel.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const serviceSupabase = createServiceRoleClient();
+    const storage = serviceSupabase?.storage ?? supabase.storage;
 
     let form: FormData;
     try {
@@ -46,7 +50,7 @@ export async function POST(request: Request, routeCtx: { params: Promise<{ id: s
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const objectPath = `${channelId}/thumbnail.${ext}`;
-    const { error: upErr } = await supabase.storage.from(BUCKET).upload(objectPath, buffer, {
+    const { error: upErr } = await storage.from(BUCKET).upload(objectPath, buffer, {
       contentType: mime,
       upsert: true,
     });
@@ -58,6 +62,14 @@ export async function POST(request: Request, routeCtx: { params: Promise<{ id: s
             error: `Storage bucket "${BUCKET}" is not available. Apply migration 20260513140500_channel_assets_storage_rls.sql and ensure the bucket exists in Supabase.`,
           },
           { status: 503 }
+        );
+      }
+      if (/row-level security|RLS/i.test(upErr.message) && !serviceSupabase) {
+        return NextResponse.json(
+          {
+            error: `${upErr.message} Set SUPABASE_SERVICE_ROLE_KEY in the server environment (recommended for uploads), or apply migration 20260514121500_channel_assets_storage_rls_strip_leading_slash.sql.`,
+          },
+          { status: 500 }
         );
       }
       return NextResponse.json({ error: upErr.message }, { status: 500 });

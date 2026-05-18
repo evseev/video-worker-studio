@@ -8,10 +8,12 @@ import {
   snapshotSettingsToChannel,
 } from "@/lib/channels/defaults";
 import { getChannelById } from "@/lib/channels/repository";
+import { markTopicIdeaShotForProject, validateBacklogTopicIdeaForProject } from "@/lib/channels/topic-backlog";
 
 const PostBodySchema = z.object({
   channelId: z.string().uuid("Invalid channelId"),
   copyLastSettings: z.boolean().optional().default(true),
+  topicIdeaId: z.string().uuid("Invalid topicIdeaId").optional(),
   topic: z
     .string()
     .optional()
@@ -33,7 +35,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const { channelId, copyLastSettings, topic } = parsed.data;
+  const { channelId, copyLastSettings, topic, topicIdeaId } = parsed.data;
 
   const { data: channel, error: chErr } = await getChannelById(supabase, channelId);
   if (chErr) {
@@ -46,13 +48,22 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  let topicForProject = topic;
+  if (topicIdeaId) {
+    const validated = await validateBacklogTopicIdeaForProject(supabase, topicIdeaId, channelId);
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.message }, { status: 400 });
+    }
+    topicForProject = topic || validated.idea.idea_text;
+  }
+
   let lastSettings = null;
   if (copyLastSettings) {
     lastSettings = await getLastProjectSettings(supabase, channelId);
   }
 
   const baseInsert = {
-    topic,
+    topic: topicForProject,
     user_id: user.id,
     channel_id: channelId,
     status: "draft",
@@ -76,5 +87,13 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     }
   }
 
-  return NextResponse.json({ project }, { status: 201 });
+  const warnings: string[] = [];
+  if (topicIdeaId) {
+    const marked = await markTopicIdeaShotForProject(supabase, topicIdeaId, project.id);
+    if (!marked.ok) {
+      warnings.push(`Could not update topic backlog: ${marked.message}`);
+    }
+  }
+
+  return NextResponse.json({ project, ...(warnings.length > 0 ? { warnings } : {}) }, { status: 201 });
 });

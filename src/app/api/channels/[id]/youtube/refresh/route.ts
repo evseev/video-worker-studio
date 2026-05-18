@@ -22,6 +22,7 @@ export async function POST(request: Request, routeCtx: { params: Promise<{ id: s
     }
 
     const signal = AbortSignal.timeout(force ? 12_000 : 12_000);
+    const youtubeApiConfigured = Boolean(process.env.YOUTUBE_API_KEY?.trim());
     const result = await refreshChannelYoutubeIfNeeded(supabase, channelId, {
       force,
       apiKey: process.env.YOUTUBE_API_KEY,
@@ -29,12 +30,16 @@ export async function POST(request: Request, routeCtx: { params: Promise<{ id: s
     });
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
+      return NextResponse.json(
+        { error: result.error, youtubeApiConfigured },
+        { status: result.status }
+      );
     }
 
     return NextResponse.json({
       channel: result.channel,
       refreshed: result.refreshed,
+      youtubeApiConfigured,
     });
   });
   return handler(request);
