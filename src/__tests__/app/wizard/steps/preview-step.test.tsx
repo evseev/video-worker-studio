@@ -10,6 +10,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: "proj-1",
     user_id: "user-1",
+    channel_id: "00000000-0000-0000-0000-0000000000c1",
     topic: "test topic",
     status: "draft",
     wizard_step: "preview",

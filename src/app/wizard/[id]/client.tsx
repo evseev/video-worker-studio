@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "zustand";
 import type { Tables } from "@/lib/supabase/types";
@@ -26,30 +26,28 @@ const STEPS: { key: WizardStep; label: string }[] = [
 export function WizardClient({ project, renderBackend }: { project: Project; renderBackend: "local" | "lambda" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const storeRef = useRef<WizardStoreApi | null>(null);
 
-  if (!storeRef.current) {
-    storeRef.current = createWizardStore(project);
-    // Sync URL step param into store on init
+  const store: WizardStoreApi = useMemo(
+    () => createWizardStore(project),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- wizard store is stable per project id; use syncFromProject for row updates
+    [project.id]
+  );
+
+  useLayoutEffect(() => {
     const urlStep = searchParams.get("step") as WizardStep | null;
     if (urlStep && STEPS.some((s) => s.key === urlStep)) {
-      storeRef.current.setState({ currentStep: urlStep });
+      store.setState({ currentStep: urlStep });
     }
-  }
+  }, [store, searchParams]);
 
-  const store = storeRef.current;
   const { currentStep, topic, saving, projectStatus } = useStore(store);
 
-  // Sync project prop changes (from server refresh) into store
-  // Use status + video_url as deps to ensure effect fires when data changes
-  // (not just when the object reference changes)
   const projectStatus_server = project.status;
   const videoUrl_server = project.video_url;
   useEffect(() => {
     store.getState().syncFromProject(project);
   }, [projectStatus_server, videoUrl_server, project, store]);
 
-  // Update URL when step changes
   useEffect(() => {
     const urlStep = searchParams.get("step");
     if (urlStep !== currentStep) {
@@ -57,7 +55,6 @@ export function WizardClient({ project, renderBackend }: { project: Project; ren
     }
   }, [currentStep, project.id, router, searchParams]);
 
-  // Poll for status updates during rendering
   useEffect(() => {
     if (projectStatus === "processing" || projectStatus === "rendering") {
       const interval = setInterval(() => router.refresh(), 5000);
@@ -67,7 +64,6 @@ export function WizardClient({ project, renderBackend }: { project: Project; ren
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
-      {/* Top Navigation */}
       <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl shrink-0">
         <div className="mx-auto max-w-6xl flex items-center justify-between gap-4 px-6 py-4">
           <div className="flex min-w-0 items-center gap-4">
@@ -109,7 +105,6 @@ export function WizardClient({ project, renderBackend }: { project: Project; ren
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-6xl px-6 py-8">
           {currentStep === "template" && <TemplateStep store={store} />}

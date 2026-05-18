@@ -283,3 +283,15 @@
 *   [x] **Story 24.9:** Replace fixed Lambda timeout with duration-based dynamic timeout budget in render pipeline.
 *   [x] **Story 24.10:** Add and update tests for constraints, controls, chunking, batched fetching, progressive preview updates, and payload/store clamping.
 *   [x] **Story 24.11:** Update docs (`AGENTS.md`, `README.md`, `docs/tech_stack.md`, `docs/project_spec.md`, `CHANGELOG.md`, `TODOS.md`) and add `.env.local.example` Pinterest batch env vars.
+
+## Epic 25: Channels, presets, YouTube context & watermarks
+**Description:** Introduce **channels** as the editorial container per creator: per-channel defaults, subject-memory scope, dashboard switcher, topic backlog + AI suggestions, scene preset library, YouTube public-data cache, watermark in Remotion, channel-scoped local renders, and cascade channel delete with partial-failure semantics.
+
+**Plan:** `docs/designs/2026-05-13-channels-epic-25.md`
+
+*   [x] **Stories 25.1–25.5:** Schema, backfill RPCs, `projects.channel_id`, `video_subjects.channel_id`, topic ideas + scene presets tables, types regen.
+*   [x] **Stories 25.6–25.10:** Channel API routes, uploads + storage RLS, local render namespacing, dashboard switcher + `useActiveChannel`, `/channels` settings hub.
+*   [x] **Stories 25.11–25.14:** Channel-scoped subject memory + `channelContext` in prompts, copy-last-settings, Inngest channel + watermark manifest.
+*   [x] **Stories 25.15–25.18:** YouTube client + cache, suggest-topics, scene presets UI, Remotion watermark fail-soft.
+*   [x] **Story 25.19:** Tests — channel cascade delete, defaults boundary, subject-memory query scope, YouTube public API + sync cache, suggest-topics caps, Watermark preload fail-soft, local render path helpers (see `src/__tests__/lib/channels/`, `lib/youtube/`, `lib/ai/subject-memory-channel.test.ts`, `remotion/Watermark.test.tsx`). Live DB RLS matrix tests deferred (see `TODOS.md`).
+*   [x] **Story 25.20:** Docs — `AGENTS.md`, `docs/database_schema.md`, `docs/project_spec.md`, `docs/prd_backlog.md`, `CHANGELOG.md`, `docs/adr/003-channel-scoped-subject-memory.md`, ADR-002 supersession note, `TODOS.md` follow-up for optional RLS integration tests. Migration transaction / RPC backfill replay remains a **staging verification** item (no deterministic unit seam).

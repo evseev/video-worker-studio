@@ -50,6 +50,7 @@ type DraftData = {
 
 export type WizardState = {
   projectId: string;
+  channelId: string;
   topic: string;
   currentStep: WizardStep;
   scenes: Scene[];
@@ -134,6 +135,7 @@ export function createWizardStore(project: Project) {
 
   return create<WizardState>((set, get) => ({
     projectId: project.id,
+    channelId: project.channel_id,
     topic: project.topic || "",
     currentStep: (project.wizard_step as WizardStep) || "template",
     scenes: draft.scenes || [],
@@ -215,6 +217,7 @@ export function createWizardStore(project: Project) {
       set({
         projectStatus: project.status,
         videoUrl: project.video_url || null,
+        channelId: project.channel_id,
         renderErrorContext: (project as Record<string, unknown>).render_error_context ?? null,
       }),
 

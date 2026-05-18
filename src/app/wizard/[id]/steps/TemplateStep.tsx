@@ -21,6 +21,8 @@ import {
   SCENE_DURATION_MIN,
   SCENE_DURATION_MAX,
 } from "@/lib/video-constraints";
+import { SavePresetButton } from "@/components/wizard/save-preset-button";
+import { ApplyPresetButton } from "@/components/wizard/apply-preset-button";
 
 export function TemplateStep({ store }: { store: WizardStoreApi }) {
   const { topic, setTopic, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
@@ -70,7 +72,13 @@ export function TemplateStep({ store }: { store: WizardStoreApi }) {
 
       {/* Project Settings */}
       <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-6">
-        <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-wider">Project Settings</h3>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Project Settings</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <ApplyPresetButton store={store} />
+            <SavePresetButton store={store} />
+          </div>
+        </div>
 
         {/* Topic */}
         <div className="mb-5">

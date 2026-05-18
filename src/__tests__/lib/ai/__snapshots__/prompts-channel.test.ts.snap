@@ -1,0 +1,27 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildChannelContextPreamble > matches full identity block when all four set 1`] = `
+"You are writing video content for a YouTube channel with the following identity:
+- Niche: Cooking
+- Target language: en
+- Target audience: Home cooks
+- Tone: Warm
+Match this identity in word choice, structure, and pacing."
+`;
+
+exports[`channel preamble prepended to prompt builders > snapshot: enhanceIdeaPrompt before/after channelContext > no-context 1`] = `
+"You are an expert Youtube/Creative Director.
+The user has a rough idea for a medium-length video. Transform it into 3 highly engaging, specific, and viral hooks/concepts. Keep each idea under 2 sentences."
+`;
+
+exports[`channel preamble prepended to prompt builders > snapshot: enhanceIdeaPrompt before/after channelContext > with-context 1`] = `
+"You are writing video content for a YouTube channel with the following identity:
+- Niche: X
+- Target language: en
+- Target audience: Y
+- Tone: Z
+Match this identity in word choice, structure, and pacing.
+
+You are an expert Youtube/Creative Director.
+The user has a rough idea for a medium-length video. Transform it into 3 highly engaging, specific, and viral hooks/concepts. Keep each idea under 2 sentences."
+`;

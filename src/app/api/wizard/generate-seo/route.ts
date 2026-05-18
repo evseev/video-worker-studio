@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { generateSeoMetadata } from "@/lib/ai/wizard";
+import { getChannelContextForProject } from "@/lib/channels/context";
 
 export const POST = withAuth(async (request, { user, supabase }) => {
   const { projectId, idea, scenes, targetKeywords, sceneCount, sceneDuration } =
@@ -13,10 +14,15 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     );
   }
 
+  const channelContext = projectId
+    ? await getChannelContextForProject(supabase, projectId)
+    : {};
+
   const seoMetadata = await generateSeoMetadata(idea, scenes, {
     targetKeywords,
     sceneCount,
     sceneDuration,
+    channelContext,
   });
 
   if (projectId) {

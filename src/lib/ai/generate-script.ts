@@ -1,6 +1,6 @@
 import { SchemaType, type Schema } from "@google/generative-ai";
 import { z } from "zod";
-import { generateScriptPrompt } from "./prompts";
+import { generateScriptPrompt, type ChannelContext } from "./prompts";
 import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 
 export interface SceneScript {
@@ -38,7 +38,7 @@ const responseSchema: Schema = {
  */
 export async function generateScript(
   topic: string,
-  opts?: { sceneCount?: number; sceneDuration?: number }
+  opts?: { sceneCount?: number; sceneDuration?: number; channelContext?: ChannelContext }
 ): Promise<SceneScript[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   const genAI = createGeminiClient(apiKey);

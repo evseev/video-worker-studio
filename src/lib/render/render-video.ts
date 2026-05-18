@@ -2,15 +2,17 @@ import { renderMediaOnLambda, getRenderProgress, type AwsRegion } from "@remotio
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { resolveVideoDimensions } from "./dimensions";
+import { resolveChannelScopedLocalRenderPaths } from "@/lib/render/local-render-paths";
 import { getMusicTrack } from "@/lib/music-presets";
 import type { ResolvedTransition, ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 import type { CaptionStyleId, ComparisonOverlayMode } from "@/lib/comparison-caption-styles";
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 
 type RenderInput = {
   projectId: string;
+  /** Required for local output path namespacing; carried from `projects.channel_id`. */
+  channelId: string;
   scenes: Array<{
     template: string;
     scriptText: string;
@@ -32,6 +34,12 @@ type RenderInput = {
   textAnimations?: ResolvedTextAnimation[];
   captionStyle?: CaptionStyleId;
   comparisonOverlayMode?: ComparisonOverlayMode;
+  /** Channel watermark payload for Remotion (Epic 25 Phase D renders the overlay). */
+  watermark?: {
+    logoUrl: string | null;
+    position: "tl" | "tr" | "bl" | "br" | "none";
+    opacity: number;
+  };
 };
 
 const DEFAULT_SCENE_DURATION_SECONDS = 5;
@@ -145,7 +153,7 @@ export async function renderVideo(input: RenderInput): Promise<string> {
 }
 
 async function renderVideoOnLambda(input: RenderInput): Promise<string> {
-  const { projectId, scenes, template, aspectRatio, videoQuality, backgroundMusic } = input;
+  const { projectId, scenes, aspectRatio, videoQuality, backgroundMusic } = input;
   const { region, functionName, serveUrl } = getLambdaConfig();
   const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
   const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
@@ -168,6 +176,12 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
     textAnimations: input.textAnimations ?? Array(scenes.length).fill("slide-up"),
     captionStyle: input.captionStyle ?? "minimal",
     comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
+    channelId: input.channelId,
+    watermark: input.watermark ?? {
+      logoUrl: null,
+      position: "none" as const,
+      opacity: 0.7,
+    },
   };
 
   console.log(`[render] Starting Lambda render for project ${projectId} (${width}x${height})`);
@@ -217,7 +231,7 @@ async function renderVideoOnLambda(input: RenderInput): Promise<string> {
 }
 
 async function renderVideoLocally(input: RenderInput): Promise<string> {
-  const { projectId, scenes, aspectRatio, videoQuality, backgroundMusic } = input;
+  const { projectId, channelId, scenes, aspectRatio, videoQuality, backgroundMusic } = input;
   const { width, height } = resolveVideoDimensions(aspectRatio, videoQuality);
   const musicTrack = backgroundMusic ? getMusicTrack(backgroundMusic) : null;
   const sceneDurationSeconds = input.sceneDuration ?? DEFAULT_SCENE_DURATION_SECONDS;
@@ -269,6 +283,12 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     textAnimations: input.textAnimations ?? Array(normalizedScenes.length).fill("slide-up"),
     captionStyle: input.captionStyle ?? "minimal",
     comparisonOverlayMode: input.comparisonOverlayMode ?? "both",
+    channelId: input.channelId,
+    watermark: input.watermark ?? {
+      logoUrl: null,
+      position: "none" as const,
+      opacity: 0.7,
+    },
   };
 
   // Select the composition
@@ -283,7 +303,7 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
   composition.height = height;
   composition.durationInFrames = totalFrames;
 
-  const outputDir = path.join(process.cwd(), "public", "local_renders");
+  const outputDir = path.join(process.cwd(), "public", "local_renders", channelId);
   const outputPath = path.join(outputDir, `${projectId}.mp4`);
   await fs.promises.mkdir(outputDir, { recursive: true });
 
@@ -302,7 +322,12 @@ async function renderVideoLocally(input: RenderInput): Promise<string> {
     },
   });
 
-  const localVideoUrl = `${getLocalRenderAssetBaseUrl()}/local_renders/${projectId}.mp4`;
+  const localVideoUrl = resolveChannelScopedLocalRenderPaths({
+    cwd: process.cwd(),
+    baseUrl: getLocalRenderAssetBaseUrl(),
+    channelId,
+    projectId,
+  }).publicUrl;
   console.log(`[render] Local render complete: ${localVideoUrl}`);
   return localVideoUrl;
 }

@@ -1,10 +1,16 @@
-import { videoFormatLabel, durationDescription } from "../../lib/ai/prompts";
+import {
+  videoFormatLabel,
+  durationDescription,
+  buildChannelContextPreamble,
+  type ChannelContext,
+} from "../../lib/ai/prompts";
 
 type ScriptOpts = {
   sceneCount: number;
   sceneDuration: number;
   aspectRatio?: string;
   excludeSubjects?: string[];
+  channelContext?: ChannelContext;
 };
 
 export function buildSlideshowPrompt(opts: ScriptOpts): string {
@@ -24,7 +30,7 @@ Already-used subjects (forbidden): ${opts.excludeSubjects.join(", ")}`
       : `DO NOT REUSE SUBJECTS.
 Every scene MUST feature a distinct subject. Never repeat a subject across scenes.`;
 
-  return `You are an expert storytelling video scriptwriter specializing in ${format} slideshow videos.
+  const body = `You are an expert storytelling video scriptwriter specializing in ${format} slideshow videos.
 Generate exactly ${opts.sceneCount} scenes for a ${format} slideshow video (${duration} total, ${opts.sceneCount} scenes × ${opts.sceneDuration}s each).
 
 Each scene displays ONE image with a caption. Focus on one idea per scene, building a continuous narrative across scenes.
@@ -42,4 +48,6 @@ RULES:
 - Scene 1 MUST hook the viewer with a bold claim or question.
 - Each scene should build on the previous — maintain narrative momentum.
 - Output MUST match the required JSON schema exactly.`;
+  const preamble = buildChannelContextPreamble(opts.channelContext ?? {});
+  return preamble ? `${preamble}\n\n${body}` : body;
 }

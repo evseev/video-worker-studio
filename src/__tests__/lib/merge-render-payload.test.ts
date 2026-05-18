@@ -7,6 +7,7 @@ function baseRow(overrides: Partial<Tables<"projects">> = {}): Tables<"projects"
   return {
     id: "p1",
     user_id: "u1",
+    channel_id: "00000000-0000-0000-0000-0000000000c1",
     topic: "topic",
     status: "draft",
     video_url: null,

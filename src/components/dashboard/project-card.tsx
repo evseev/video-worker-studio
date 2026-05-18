@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Tables } from "@/lib/supabase/types";
 import { StatusBadge } from "./status-badge";
 
@@ -5,11 +8,17 @@ type Project = Tables<"projects">;
 
 export function ProjectCard({
   project,
+  channelName,
+  showChannelPill,
   onRequestDelete,
 }: {
   project: Project;
+  channelName?: string | null;
+  showChannelPill?: boolean;
   onRequestDelete: (project: Project) => void;
 }) {
+  const [videoBroken, setVideoBroken] = useState(false);
+
   const isDraft = project.status === "draft";
   const isCompleted = project.status === "completed";
   const href = isDraft
@@ -38,15 +47,17 @@ export function ProjectCard({
       </button>
       <a href={href} className="block p-5">
         <div className="aspect-video rounded-xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-white/[0.04] flex items-center justify-center mb-4 overflow-hidden relative">
-          {isCompleted && project.video_url ? (
+          {isCompleted && project.video_url && !videoBroken ? (
             <>
-              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <video
                 src={project.video_url}
                 preload="metadata"
                 muted
                 playsInline
                 className="w-full h-full object-cover"
+                onError={() => {
+                  setVideoBroken(true);
+                }}
                 onLoadedData={(e) => {
                   // Seek to 1 second for a better thumbnail frame
                   (e.target as HTMLVideoElement).currentTime = 1;
@@ -71,6 +82,13 @@ export function ProjectCard({
         <h3 className="text-sm font-medium text-zinc-200 truncate mb-2">
           {project.topic}
         </h3>
+        {showChannelPill && channelName ? (
+          <div className="mb-2">
+            <span className="inline-flex rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-zinc-400">
+              {channelName}
+            </span>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between">
           <StatusBadge status={project.status} />
           <span className="text-xs text-zinc-500">

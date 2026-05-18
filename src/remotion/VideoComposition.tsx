@@ -8,6 +8,7 @@ import { clockWipe } from "@remotion/transitions/clock-wipe";
 import { SlideshowScene } from "./templates/SlideshowScene";
 import { ComparisonScene } from "./templates/ComparisonScene";
 import { FactCardScene } from "./templates/FactCardScene";
+import { Watermark, type WatermarkPosition } from "./Watermark";
 import type { ResolvedTransition, ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 import type { CaptionStyleId, ComparisonOverlayMode } from "@/lib/comparison-caption-styles";
 
@@ -34,7 +35,16 @@ export type VideoCompositionProps = {
   textAnimations?: ResolvedTextAnimation[];
   captionStyle?: CaptionStyleId;
   comparisonOverlayMode?: ComparisonOverlayMode;
+  /** Carried through the render manifest for Epic 25 (Phase D overlays the logo). */
+  channelId?: string;
+  watermark?: {
+    logoUrl: string | null;
+    position: WatermarkPosition;
+    opacity: number;
+  };
 };
+
+type WatermarkInput = NonNullable<VideoCompositionProps["watermark"]>;
 
 function asPresentation<P extends Record<string, unknown>>(
   p: TransitionPresentation<P>
@@ -88,8 +98,15 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
   textAnimations = [],
   captionStyle = "minimal",
   comparisonOverlayMode = "both",
+  watermark,
 }) => {
   const { width, height } = useVideoConfig();
+
+  const wm: WatermarkInput = watermark ?? {
+    logoUrl: null,
+    position: "none",
+    opacity: 0.7,
+  };
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -172,6 +189,13 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
           return elements;
         })}
       </TransitionSeries>
+
+      <Watermark
+        key={`${wm.logoUrl ?? "none"}-${wm.position}-${wm.opacity}`}
+        logoUrl={wm.logoUrl}
+        position={wm.position}
+        opacity={wm.opacity}
+      />
     </AbsoluteFill>
   );
 };

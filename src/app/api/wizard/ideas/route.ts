@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api/with-auth";
 import { z } from "zod";
 import { generateIdeasPrompt } from "@/lib/ai/prompts";
 import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
+import { getChannelContextForProject } from "@/lib/channels/context";
 import {
   SCENE_COUNT_MIN,
   SCENE_COUNT_MAX,
@@ -24,20 +25,25 @@ const IdeasResponseSchema = z.object({
 
 const IdeasRequestSchema = z.object({
   topic: z.string().min(1, "Missing topic"),
+  projectId: z.string().uuid().optional(),
   sceneCount: z.number().int().min(SCENE_COUNT_MIN).max(SCENE_COUNT_MAX).optional(),
   sceneDuration: z.number().int().min(SCENE_DURATION_MIN).max(SCENE_DURATION_MAX).optional(),
 });
 
 export const POST = withAuth(
-  async (req) => {
+  async (req, { supabase }) => {
     const payload = await req.json();
     const parsedReq = IdeasRequestSchema.safeParse(payload);
     if (!parsedReq.success) {
       return NextResponse.json({ error: parsedReq.error.issues[0]?.message ?? "Invalid request body" }, { status: 400 });
     }
-    const { topic, sceneCount, sceneDuration } = parsedReq.data;
+    const { topic, projectId, sceneCount, sceneDuration } = parsedReq.data;
 
     const totalDuration = (sceneCount ?? 6) * (sceneDuration ?? 5);
+
+    const channelContext = projectId
+      ? await getChannelContextForProject(supabase, projectId)
+      : {};
 
     const model = getTextModel({
       genAI,
@@ -46,7 +52,7 @@ export const POST = withAuth(
       },
     });
 
-    const prompt = generateIdeasPrompt({ topic, totalDuration });
+    const prompt = generateIdeasPrompt({ topic, totalDuration, channelContext });
 
     const jsonStr = await generateTextOrThrow(model, prompt);
     const parsed = IdeasResponseSchema.parse(JSON.parse(jsonStr));

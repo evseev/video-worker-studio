@@ -57,11 +57,13 @@ src/
       generate/          # POST /api/generate — dispatches Inngest event
       inngest/           # POST /api/inngest — Inngest webhook sink (must stay public)
       projects/          # CRUD for projects table
+      channels/          # GET/POST /api/channels; per-id CRUD, uploads, topic ideas, suggest-topics, scene presets, YouTube refresh
       wizard/            # Wizard-specific API routes (draft, ideas, enhance-idea, validate-trend,
                          #   generate-structure, script, generate-seo, fetch-assets, upload-voiceover, render)
     auth/                # Auth callback route (Supabase magic link)
     login/               # Login page
     projects/[id]/       # Project detail page (video player, download, retry)
+    channels/            # Channel list + new channel; `[id]/settings` hub (tabs)
     wizard/[id]/         # Interactive multi-step wizard UI
       client.tsx         # Wizard orchestrator (Zustand store init + step routing)
       page.tsx           # Server component (auth + project fetch)
@@ -89,34 +91,48 @@ src/
       comparison-overlay-mode-selector.tsx
     ui/
       toast.tsx           # Toast notification system (Zustand store)
-  lib/
-    api/
-      with-auth.ts       # Shared auth + rate limiting wrapper for API routes
-    ai/
-      prompts.ts         # Centralized LLM prompt templates (all AI prompts live here)
-      generate-script.ts # Gemini script generation
-      fetch-assets.ts    # Pinterest asset scraping via pinterest-dl (supports multi-asset)
-      wizard.ts          # Wizard-specific AI helpers (enhanceIdea, validateTrend, generateStructure)
-    inngest/
-      client.ts          # Inngest client singleton
-      functions.ts       # VideoGenerationWorker — the ONLY Inngest function
-    render/
-      render-video.ts    # Remotion render dispatcher (Lambda default, local fallback)
-      dimensions.ts      # Video dimension resolver (aspect ratio × quality → width/height)
-    stores/
-      wizard-store.ts    # Zustand store for wizard state (scenes, settings, refinedIdea)
-    projects/
-      delete-project-assets.ts # Storage + temp cleanup when deleting a project
-    effects.ts           # Scene transition, image motion, text animation types + random resolver
-    comparison-caption-styles.ts # Comparison caption presets + overlay visibility (used by UI + Remotion)
-    merge-render-payload.ts    # Merge render POST body with DB row + draft_scenes
-    music-presets.ts     # 5 royalty-free music track presets
-    rate-limit.ts        # In-memory sliding window rate limiter
-    supabase/
-      client.ts          # Browser client (anon key)
-      server.ts          # Server client (uses cookies)
-      middleware.ts      # Session refresh helper
-      types.ts           # Auto-generated DB types — DO NOT HAND-EDIT
+    lib/
+      api/
+        with-auth.ts       # Shared auth + rate limiting wrapper for API routes
+      channels/            # Channel CRUD helpers, defaults/snapshot, topic suggestions, slug
+        repository.ts      # DB helpers (list/create/update, cascade delete, storage cleanup)
+        defaults.ts        # Copy-last-settings + Zod-validated default_settings snapshots
+        suggest-topics.ts  # Gemini-backed ranked topic ideas + optional backlog persist
+        context.ts         # Shared channelContext assembly for AI routes
+        slug.ts            # URL-safe slug generation
+        scene-preset-settings.ts
+      youtube/             # YouTube Data API v3 client + meta cache helpers (24h TTL)
+        public-api.ts      # fetch + Zod boundaries (injectable fetch for tests)
+        types.ts           # Stored youtube_meta + top video schemas
+        sync-channel-youtube.ts  # refreshChannelYoutubeIfNeeded (fresh vs force)
+      hooks/
+        use-active-channel.ts  # Client: URL `?channel=` + localStorage; server writes send channelId in body
+      ai/
+        prompts.ts         # Centralized LLM prompt templates (all AI prompts live here)
+        generate-script.ts # Gemini script generation
+        fetch-assets.ts    # Pinterest asset scraping via pinterest-dl (supports multi-asset)
+        wizard.ts          # Wizard-specific AI helpers (enhanceIdea, validateTrend, generateStructure)
+      inngest/
+        client.ts          # Inngest client singleton
+        functions.ts       # VideoGenerationWorker — the ONLY Inngest function
+      render/
+        render-video.ts    # Remotion render dispatcher (Lambda default, local fallback)
+        dimensions.ts      # Video dimension resolver (aspect ratio × quality → width/height)
+        local-render-paths.ts  # Channel-scoped local MP4 path + public URL helpers (unit-tested)
+      stores/
+        wizard-store.ts    # Zustand store for wizard state (scenes, settings, refinedIdea)
+      projects/
+        delete-project-assets.ts # Storage + temp cleanup when deleting a project
+      effects.ts           # Scene transition, image motion, text animation types + random resolver
+      comparison-caption-styles.ts # Comparison caption presets + overlay visibility (used by UI + Remotion)
+      merge-render-payload.ts    # Merge render POST body with DB row + draft_scenes
+      music-presets.ts     # 5 royalty-free music track presets
+      rate-limit.ts        # In-memory sliding window rate limiter
+      supabase/
+        client.ts          # Browser client (anon key)
+        server.ts          # Server client (uses cookies)
+        middleware.ts      # Session refresh helper
+        types.ts           # Auto-generated DB types — DO NOT HAND-EDIT
   templates/             # Template system (3 structural archetypes)
     types.ts             # TemplateId, TemplateConfig, Scene union types
     index.ts             # Template registry and lookup
@@ -152,7 +168,7 @@ supabase/
 
 - **No direct DB access from components.** Components call API routes or Server Actions. Only `lib/supabase/server.ts` and Inngest workers touch the DB directly.
 - **Inngest is the only job runner.** Do not add `setTimeout`, `setInterval`, or other async fire-and-forget patterns in route handlers. All background work goes through Inngest events.
-- **RLS is active.** Row-Level Security is enforced on all tables. The Inngest worker bypasses RLS via SECURITY DEFINER RPC functions (`worker_insert_scenes`, `worker_update_project_status`, `worker_update_project_error`). Do not bypass RLS any other way.
+- **RLS is active.** Row-Level Security is enforced on all tables. The Inngest worker bypasses RLS via SECURITY DEFINER RPC functions (`worker_insert_scenes`, `worker_update_project_status`, `worker_update_project_error`, `worker_insert_video_subjects`). Do not bypass RLS any other way.
 - **The Inngest webhook endpoint (`/api/inngest`) must remain unauthenticated.** The middleware matcher explicitly excludes it. Do not add auth to this route.
 - **Remotion renders on AWS Lambda by default.** The worker dispatches renders via `@remotion/lambda`, while `RENDER_BACKEND=local` remains a fallback for rollback and debugging.
 - **Sentry is the observability layer.** Do not add other error tracking tools. Sentry is initialised in `src/instrumentation.ts` and `src/instrumentation-client.ts`.
@@ -164,9 +180,12 @@ supabase/
 ### Schema (current tables)
 | Table | Key columns |
 |---|---|
-| `projects` | `id`, `user_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_title`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation`, `caption_style`, `comparison_overlay_mode` |
+| `projects` | `id`, `user_id`, `channel_id`, `topic`, `status`, `selected_template`, `wizard_step`, `draft_scenes`, `trend_validation_data`, `video_url`, `render_error_context`, `aspect_ratio`, `video_quality`, `background_music`, `voiceover_url`, `video_title`, `video_description`, `video_tags`, `scene_transition`, `image_motion`, `text_animation`, `caption_style`, `comparison_overlay_mode` |
+| `channels` | `id`, `user_id`, `name`, `slug`, `niche`, `target_language`, `target_audience`, `tone`, `youtube_handle`, `youtube_channel_id`, `youtube_meta`, `default_settings`, `subject_memory_lookback`, `watermark_position`, `watermark_opacity`, `logo_url`, `thumbnail_template_url`, … |
+| `channel_topic_ideas` | Backlog rows keyed by `channel_id` (RLS via channel ownership) |
+| `channel_scene_presets` | Named preset JSON per `channel_id` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
-| `video_subjects` | `id`, `user_id`, `project_id`, `subject_key`, `subject_normalized`, `embedding`, `created_at` |
+| `video_subjects` | `id`, `channel_id`, `project_id`, `subject_key`, `subject_normalized`, `embedding`, `created_at` |
 
 ### Project status lifecycle
 ```
@@ -197,7 +216,7 @@ draft → processing → rendering → completed
 - **Supabase client selection:**
   - Browser / Client Components → `src/lib/supabase/client.ts`
   - Server Components / Route Handlers → `src/lib/supabase/server.ts`
-  - Inngest workers → `createClient()` with anon key for SECURITY DEFINER RPC calls (bypasses RLS)
+  - Inngest workers → `createClient()` with anon key for most SECURITY DEFINER RPC calls (bypasses RLS); `worker_fetch_channel_for_project` uses `SUPABASE_SERVICE_ROLE_KEY` because that RPC is executable only by `service_role` (not exposed to browser anon).
   - Local render storage uploads require `SUPABASE_SERVICE_ROLE_KEY` (service role must not be `NEXT_PUBLIC_`)
 - **Tailwind v4 class syntax.** Use `bg-white/10` not `bg-white/[0.1]`. Use `bg-linear-to-br` not `bg-gradient-to-br`.
 - **No inline styles.** All styling via Tailwind utility classes.
@@ -223,6 +242,15 @@ draft → processing → rendering → completed
 | `/api/wizard/upload-voiceover` | POST | ✅ | Upload voice-over audio file (MP3/WAV, max 50MB) |
 | `/api/wizard/generate-seo` | POST | ✅ | Generate YouTube SEO metadata (description + tags) |
 | `/api/wizard/render` | POST | ✅ | Merge body + DB + draft; dispatch `video/generate` (full scenes for retries) |
+| `/api/channels` | GET, POST | ✅ | List channels (+ project counts); create channel |
+| `/api/channels/[id]` | GET, PATCH, DELETE | ✅ | Channel CRUD; DELETE `?force=true` cascade (207 on partial failure) |
+| `/api/channels/[id]/upload-logo` | POST | ✅ | Logo upload (size/type limits) |
+| `/api/channels/[id]/upload-thumbnail` | POST | ✅ | Thumbnail template upload |
+| `/api/channels/[id]/topic-ideas` | GET, POST | ✅ | Topic backlog |
+| `/api/channels/[id]/suggest-topics` | POST | ✅ | AI-ranked suggestions |
+| `/api/channels/[id]/scene-presets` | GET, POST | ✅ | Preset library |
+| `/api/channels/[id]/scene-presets/[presetId]` | DELETE | ✅ | Remove preset |
+| `/api/channels/[id]/youtube/refresh` | POST | ✅ | Refresh cached YouTube public data |
 
 - Route handlers must return `NextResponse.json()` consistently.
 - All authenticated routes must validate the Supabase session and return `401` if missing.
@@ -306,14 +334,13 @@ draft → processing → rendering → completed
 | `docs/tech_stack.md` | Technology choices and rationale |
 | `docs/workflow_design.md` | Pipeline design, failure modes, retries |
 | `docs/ux_specification.md` | Screen-by-screen layout and interactions |
-| `docs/prd_backlog.md` | Product backlog (24 epics; Epics 1–24 complete) |
+| `docs/prd_backlog.md` | Product backlog (25 epics; Epics 1–25 tracked) |
 | `docs/mvp_development_plan.md` | Original development roadmap |
 | `docs/designs/remotion-lambda-migration.md` | Render architecture design |
 | `docs/designs/2026-03-24-template-system-design.md` | Template system design (3 archetypes) |
 | `docs/adr/001-gemini-3-flash-upgrade.md` | Architecture decision record |
-| `docs/adr/002-subject-deduplication.md` | Architecture decision record |
-
----
+| `docs/adr/002-subject-deduplication.md` | Architecture decision record (in-video dedupe; cross-video scope superseded in ADR-003 for channel scoping) |
+| `docs/adr/003-channel-scoped-subject-memory.md` | Architecture decision record — channel-scoped cross-video subject memory |
 
 ## 13. gstack Skills
 

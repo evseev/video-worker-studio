@@ -69,6 +69,10 @@ Video worker studio productizes this repetitive pipeline and automates it throug
 - Full UGC avatar video generation.
 - Mobile apps.
 
+### 4.4 Channels (post-MVP alignment / V1)
+
+Creators can maintain **multiple channels** under one login (for example separate niches or brands). Each channel owns default template settings, optional YouTube linkage and cached performance metadata, a topic backlog with AI-assisted suggestions, a scene-preset library, watermark branding, and **channel-scoped subject memory** so cross-video exclusions do not bleed across unrelated channels. The dashboard **active channel** is a client contract (`?channel=` + `localStorage`); authenticated mutations send `channelId` explicitly in POST bodies so server state does not depend on implicit session channel.
+
 ---
 
 ## 5. Core user problem solved

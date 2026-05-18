@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8.0] — 2026-05-18 — Epic 25 (YouTube channels)
+
+### Added
+- **Channels** — create and manage YouTube-aligned channels (niche, tone, defaults, watermark, logo/thumbnail uploads) with a channel switcher on the dashboard and settings hub (`/channels`, `/channels/[id]/settings`).
+- **Channel-scoped projects** — every project belongs to a channel; the create modal can start from a topic backlog idea and marks the idea as shot when the project is created.
+- **Topic backlog & AI suggestions** — manual and AI-ranked topic ideas per channel; scene preset library; YouTube public metadata cache with refresh.
+- **Channel-aware wizard & worker** — AI prompts, subject memory, and the Inngest pipeline load channel context (watermark, defaults, exclusions) for generation and Remotion renders.
+- **Epic 25 test coverage** — Vitest suites across channels API, YouTube sync, defaults, cascade delete, subject memory, Watermark, and dashboard flows.
+
+### Security
+- **`worker_fetch_channel_for_project`** — RPC `EXECUTE` restricted to **service_role**; the worker uses `SUPABASE_SERVICE_ROLE_KEY` so channel metadata cannot be fetched with the anon key and a project id.
+- **Channel asset storage RLS** — policies match channel id from object path even when Supabase stores a leading `/` on `name`.
+
+### Changed
+- **Documentation** — `AGENTS.md`, `README.md`, `docs/database_schema.md`, ADR-003, PRD backlog, and Epic 25 design doc aligned with shipped schema and APIs.
+
+## [0.4.7.0] — 2026-05-13 — Epic 25 Phase E (tests & docs)
+
+### Added
+- **Epic 25 automated coverage** — Vitest suites for YouTube public API + 24h cache refresh behavior, channel topic suggestions (caps + exclusions wiring), `channels/defaults` copy-last-settings boundaries, cascade channel delete partial failures, channel-scoped subject listing, Remotion `Watermark` fail-soft preload, and related helpers (`src/__tests__/lib/youtube/`, `lib/channels/`, `lib/ai/subject-memory-channel.test.ts`, `remotion/Watermark.test.tsx`).
+
+### Changed
+- **Documentation** — `AGENTS.md` folder map + API table for channels; `docs/database_schema.md` for `channels`, `channel_id`, topic ideas / scene presets, storage, RPCs, and migration verification note; `docs/project_spec.md` channel alignment; `docs/prd_backlog.md` Epic 25; `docs/adr/003-channel-scoped-subject-memory.md` with ADR-002 supersession note; `TODOS.md` optional live RLS integration test follow-up.
+
 ## [0.4.6.0] — 2026-04-22
 
 ### Added

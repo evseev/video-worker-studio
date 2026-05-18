@@ -8,7 +8,7 @@ import { useStore } from "zustand";
 type Props = { store: StoreApi<WizardState> };
 
 export function IdeaStep({ store }: Props) {
-  const { topic, setTopic, setVideoTitle, selectedTemplate, settings, saveProgress, setStep } = useStore(store);
+  const { topic, setTopic, setVideoTitle, selectedTemplate, settings, saveProgress, setStep, projectId } = useStore(store);
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
   const [ideas, setIdeas] = useState<{ title: string; description: string; trendScore: number }[]>([]);
 
@@ -20,7 +20,12 @@ export function IdeaStep({ store }: Props) {
       const res = await fetch("/api/wizard/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: enrichedTopic, sceneCount: settings.sceneCount, sceneDuration: settings.sceneDuration }),
+        body: JSON.stringify({
+          topic: enrichedTopic,
+          projectId,
+          sceneCount: settings.sceneCount,
+          sceneDuration: settings.sceneDuration,
+        }),
       });
       const data = await res.json();
       if (Array.isArray(data)) setIdeas(data);

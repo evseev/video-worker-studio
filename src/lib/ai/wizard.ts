@@ -5,13 +5,17 @@ import {
   validateTrendPrompt,
   generateSeoMetadataPrompt,
   generateSeoMetadataUserMessage,
+  type ChannelContext,
 } from "./prompts";
 import type { Scene, TemplateId } from "@/templates/types";
 import { buildSlideshowPrompt, slideshowGeminiSchema, SlideshowResponseSchema } from "@/templates/slideshow";
 import { buildComparisonPrompt, comparisonGeminiSchema, ComparisonResponseSchema } from "@/templates/comparison";
 import { buildFactCardPrompt, factCardGeminiSchema, FactCardResponseSchema } from "@/templates/fact-card";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import { normalizeSubject } from "@/lib/ai/dedupe";
-import { getExcludedSubjectsForUser } from "@/lib/ai/subject-memory";
+import { filterScenesAgainstChannelMemory } from "@/lib/ai/wizard-structure-chunk-filter";
+import { getExcludedSubjectsForChannel } from "@/lib/ai/subject-memory";
 import { createGeminiClient, generateTextOrThrow, getTextModel } from "@/lib/ai/gemini";
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -31,14 +35,20 @@ const enhanceIdeaSchema: Schema = {
   required: ["ideas"],
 };
 
-export async function enhanceIdea(rawIdea: string, totalDuration?: number): Promise<string[]> {
+export async function enhanceIdea(
+  rawIdea: string,
+  opts?: { totalDuration?: number; channelContext?: ChannelContext }
+): Promise<string[]> {
   const model = getTextModel({
     genAI,
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: enhanceIdeaSchema,
     },
-    systemInstruction: enhanceIdeaPrompt(totalDuration ? { totalDuration } : undefined),
+    systemInstruction: enhanceIdeaPrompt({
+      totalDuration: opts?.totalDuration,
+      channelContext: opts?.channelContext,
+    }),
   });
 
   const text = await generateTextOrThrow(model, `Raw idea: ${rawIdea}`);
@@ -79,7 +89,10 @@ export interface TrendValidation {
   hooks: string[];
 }
 
-export async function validateTrend(idea: string): Promise<TrendValidation> {
+export async function validateTrend(
+  idea: string,
+  opts?: { channelContext?: ChannelContext }
+): Promise<TrendValidation> {
   const model = getTextModel({
     genAI,
     generationConfig: {
@@ -87,7 +100,7 @@ export async function validateTrend(idea: string): Promise<TrendValidation> {
       responseSchema: validateTrendSchema,
     },
     // In a real app we might use Grounding with Google Search here
-    systemInstruction: validateTrendPrompt(),
+    systemInstruction: validateTrendPrompt(opts?.channelContext),
   });
 
   const text = await generateTextOrThrow(model, `Idea: ${idea}`);
@@ -162,8 +175,11 @@ type StructureOptions = {
   aspectRatio?: string;
   sceneCount?: number;
   sceneDuration?: number;
-  userId?: string;
+  /** When set with `channelId`, loads channel-scoped subject exclusions. */
+  supabase?: SupabaseClient<Database>;
+  channelId?: string;
   crossVideoExcludes?: string[];
+  channelContext?: ChannelContext;
 };
 
 async function generateStructureChunk(
@@ -176,6 +192,7 @@ async function generateStructureChunk(
     chunkStart: number;
     chunkSize: number;
     excludeSubjects?: string[];
+    channelContext?: ChannelContext;
   }
 ): Promise<Scene[]> {
   const ai = getTemplateAI(templateId);
@@ -190,6 +207,7 @@ async function generateStructureChunk(
       sceneDuration: opts.sceneDuration,
       aspectRatio: opts.aspectRatio,
       excludeSubjects: opts.excludeSubjects,
+      channelContext: opts.channelContext,
     }),
   });
 
@@ -206,57 +224,61 @@ async function generateStructureChunk(
   return parsed.scenes.map((raw: unknown) => toScene(templateId, raw as Record<string, unknown>));
 }
 
-function filterUniqueScenes(scenes: Scene[], seenSubjects: Set<string>): { uniqueScenes: Scene[]; droppedCount: number } {
-  const workingSeen = new Set(seenSubjects);
-  const uniqueScenes: Scene[] = [];
-  let droppedCount = 0;
-  for (const scene of scenes) {
-    const normalized = normalizeSubject(scene.subjectKey);
-    if (!normalized || workingSeen.has(normalized)) {
-      droppedCount += 1;
-      continue;
-    }
-    workingSeen.add(normalized);
-    uniqueScenes.push(scene);
-  }
-  return { uniqueScenes, droppedCount };
-}
-
 async function generateStructureChunked(
   idea: string,
   templateId: TemplateId,
-  opts: { aspectRatio?: string; sceneCount: number; sceneDuration: number; excludeSubjects?: string[] }
+  opts: {
+    aspectRatio?: string;
+    sceneCount: number;
+    sceneDuration: number;
+    excludeSubjects?: string[];
+    channelContext?: ChannelContext;
+  }
 ): Promise<Scene[]> {
   const chunks: Scene[] = [];
-  const seenSubjects = new Set((opts.excludeSubjects ?? []).map(normalizeSubject).filter(Boolean));
+  const channelNormalizedExcludes = new Set((opts.excludeSubjects ?? []).map(normalizeSubject).filter(Boolean));
+
+  /** All subjects the model must avoid (channel memory + previous chunks — prompt only). */
+  const subjectsBannedInPrompt = new Set(opts.excludeSubjects ?? []);
+
   for (let chunkStart = 0; chunkStart < opts.sceneCount; chunkStart += CHUNK_SIZE) {
     const chunkSize = Math.min(CHUNK_SIZE, opts.sceneCount - chunkStart);
-    const excludeSubjects = Array.from(seenSubjects);
+    const excludeSubjects = Array.from(subjectsBannedInPrompt);
     const firstPassScenes = await generateStructureChunk(idea, templateId, {
       ...opts,
       chunkStart,
       chunkSize,
       excludeSubjects,
     });
-    let { uniqueScenes, droppedCount } = filterUniqueScenes(firstPassScenes, seenSubjects);
+    const firstPass = filterScenesAgainstChannelMemory(
+      firstPassScenes,
+      channelNormalizedExcludes,
+      chunkStart
+    );
+    let { uniqueScenes } = firstPass;
+    const { droppedCount } = firstPass;
 
     if (droppedCount > 1) {
       const retryScenes = await generateStructureChunk(idea, templateId, {
         ...opts,
         chunkStart,
         chunkSize,
-        excludeSubjects: Array.from(seenSubjects),
+        excludeSubjects,
       });
-      ({ uniqueScenes } = filterUniqueScenes(retryScenes, seenSubjects));
+      ({ uniqueScenes } = filterScenesAgainstChannelMemory(
+        retryScenes,
+        channelNormalizedExcludes,
+        chunkStart
+      ));
     }
 
-    for (const scene of uniqueScenes) {
-      const normalized = normalizeSubject(scene.subjectKey);
-      if (normalized) {
-        seenSubjects.add(normalized);
+    const accepted = uniqueScenes.slice(0, chunkSize);
+    for (const scene of accepted) {
+      if (normalizeSubject(scene.subjectKey)) {
+        subjectsBannedInPrompt.add(scene.subjectKey);
       }
     }
-    chunks.push(...uniqueScenes.slice(0, chunkSize));
+    chunks.push(...accepted);
   }
   return chunks.slice(0, opts.sceneCount);
 }
@@ -269,11 +291,20 @@ export async function generateStructure(
   const sceneCount = opts?.sceneCount ?? 6;
   const sceneDuration = opts?.sceneDuration ?? 5;
   const aspectRatio = opts?.aspectRatio;
-  const crossVideoExcludes = opts?.crossVideoExcludes
-    ?? (opts?.userId ? await getExcludedSubjectsForUser(opts.userId, idea) : []);
+  const crossVideoExcludes =
+    opts?.crossVideoExcludes ??
+    (opts?.supabase && opts?.channelId
+      ? await getExcludedSubjectsForChannel(opts.supabase, opts.channelId, idea)
+      : []);
 
   if (sceneCount > CHUNK_THRESHOLD) {
-    return generateStructureChunked(idea, templateId, { aspectRatio, sceneCount, sceneDuration, excludeSubjects: crossVideoExcludes });
+    return generateStructureChunked(idea, templateId, {
+      aspectRatio,
+      sceneCount,
+      sceneDuration,
+      excludeSubjects: crossVideoExcludes,
+      channelContext: opts?.channelContext,
+    });
   }
 
   return generateStructureChunk(idea, templateId, {
@@ -283,6 +314,7 @@ export async function generateStructure(
     chunkStart: 0,
     chunkSize: sceneCount,
     excludeSubjects: crossVideoExcludes,
+    channelContext: opts?.channelContext,
   });
 }
 
@@ -312,7 +344,12 @@ const seoMetadataSchema: Schema = {
 export async function generateSeoMetadata(
   idea: string,
   scenes: { scriptText: string }[],
-  opts?: { targetKeywords?: string; sceneCount?: number; sceneDuration?: number }
+  opts?: {
+    targetKeywords?: string;
+    sceneCount?: number;
+    sceneDuration?: number;
+    channelContext?: ChannelContext;
+  }
 ): Promise<SeoMetadata> {
   const sceneCount = opts?.sceneCount ?? 6;
   const sceneDuration = opts?.sceneDuration ?? 5;
@@ -323,7 +360,11 @@ export async function generateSeoMetadata(
       responseMimeType: "application/json",
       responseSchema: seoMetadataSchema,
     },
-    systemInstruction: generateSeoMetadataPrompt({ sceneCount, sceneDuration }),
+    systemInstruction: generateSeoMetadataPrompt({
+      sceneCount,
+      sceneDuration,
+      channelContext: opts?.channelContext,
+    }),
   });
 
   const text = await generateTextOrThrow(

@@ -22,10 +22,28 @@ export async function POST(request: Request) {
       );
     }
 
+    const { data: projectRow, error: projectErr } = await supabase
+      .from("projects")
+      .select("channel_id")
+      .eq("id", projectId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (projectErr || !projectRow?.channel_id) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
     // Send event to Inngest which triggers the VideoGenerationWorker
     await inngest.send({
       name: "video/generate",
-      data: { projectId, topic, scenes, template, userId: user.id },
+      data: {
+        projectId,
+        channelId: projectRow.channel_id,
+        topic,
+        scenes,
+        template,
+        userId: user.id,
+      },
     });
 
     return NextResponse.json({ success: true });

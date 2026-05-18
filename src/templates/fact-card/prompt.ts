@@ -1,10 +1,16 @@
-import { videoFormatLabel, durationDescription } from "../../lib/ai/prompts";
+import {
+  videoFormatLabel,
+  durationDescription,
+  buildChannelContextPreamble,
+  type ChannelContext,
+} from "../../lib/ai/prompts";
 
 type ScriptOpts = {
   sceneCount: number;
   sceneDuration: number;
   aspectRatio?: string;
   excludeSubjects?: string[];
+  channelContext?: ChannelContext;
 };
 
 export function buildFactCardPrompt(opts: ScriptOpts): string {
@@ -23,7 +29,7 @@ Already-used subjects (forbidden): ${opts.excludeSubjects.join(", ")}`
       : `DO NOT REUSE SUBJECTS.
 Every scene MUST feature a distinct subject. Never repeat a subject across scenes.`;
 
-  return `You are an expert identity and profile video scriptwriter specializing in ${format} fact-card videos.
+  const body = `You are an expert identity and profile video scriptwriter specializing in ${format} fact-card videos.
 Generate exactly ${opts.sceneCount} scenes for a ${format} fact-card video (${duration} total, ${opts.sceneCount} scenes × ${opts.sceneDuration}s each).
 
 Each scene displays a profile/identity card for a person, place, concept, or subject. It shows a main image, a secondary image, a title, subtitle, and 2-3 quick facts.
@@ -45,4 +51,6 @@ RULES:
 - Scene 1 MUST hook the viewer with the most compelling or surprising subject.
 - Each scene should feature a distinct, interesting subject that fits the overall topic.
 - Output MUST match the required JSON schema exactly.`;
+  const preamble = buildChannelContextPreamble(opts.channelContext ?? {});
+  return preamble ? `${preamble}\n\n${body}` : body;
 }
