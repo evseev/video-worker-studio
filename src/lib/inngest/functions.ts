@@ -46,14 +46,25 @@ interface VideoGenerateEventData {
 }
 
 // Supabase client for background workers — uses anon key intentionally.
-// All DB mutations go through RPC functions defined with SECURITY DEFINER,
-// which bypass RLS. The anon key is acceptable here because the RPCs
-// validate the project_id internally and are not exposed to end users.
+// Most DB mutations go through RPC functions defined with SECURITY DEFINER,
+// which bypass RLS. `worker_fetch_channel_for_project` is granted to service_role
+// only (see migration 20260513160000); use getWorkerServiceRoleClient() for that call.
 function getWorkerClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+}
+
+function getWorkerServiceRoleClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "worker_fetch_channel_for_project requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"
+    );
+  }
+  return createClient(url, key);
 }
 
 /** Helper: update project status via RPC (bypasses RLS). Throws on failure so Inngest retries the step. */
@@ -132,7 +143,8 @@ export const generateVideo = inngest.createFunction(
     const db = getWorkerClient();
 
     const channelBundle = await step.run("fetch-channel", async () => {
-      const { data, error } = await db.rpc("worker_fetch_channel_for_project", {
+      const serviceDb = getWorkerServiceRoleClient();
+      const { data, error } = await serviceDb.rpc("worker_fetch_channel_for_project", {
         p_project_id: projectId,
       });
       if (error) {

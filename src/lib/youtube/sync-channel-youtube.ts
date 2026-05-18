@@ -32,12 +32,17 @@ export async function refreshChannelYoutubeIfNeeded(
     return { ok: false, status: 400, error: "youtube_handle is not set" };
   }
 
-  if (!opts.apiKey) {
-    return {
-      ok: false,
-      status: 503,
-      error: "YOUTUBE_API_KEY is not configured",
-    };
+  const apiKey = opts.apiKey?.trim();
+  if (!apiKey) {
+    if (opts.force) {
+      return {
+        ok: false,
+        status: 503,
+        error:
+          "YouTube Data API is not configured. Set YOUTUBE_API_KEY in the server environment (for example .env.local) to verify or force-refresh.",
+      };
+    }
+    return { ok: true, channel: row, refreshed: false };
   }
 
   const fresh = isYoutubeMetaFresh(row.youtube_meta) && !opts.force;
@@ -46,7 +51,7 @@ export async function refreshChannelYoutubeIfNeeded(
   }
 
   try {
-    const snap = await fetchYoutubeChannelSnapshot(opts.apiKey, handle, {
+    const snap = await fetchYoutubeChannelSnapshot(apiKey, handle, {
       fetchFn: opts.fetchFn,
       signal: opts.signal,
       topVideoCount: 10,
