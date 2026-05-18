@@ -87,7 +87,10 @@ function DashboardInner({
   }, []);
 
   const handleCreateSubmit = useCallback(
-    async (_e: React.FormEvent, { copyLastSettings }: { copyLastSettings: boolean }) => {
+    async (
+      _e: React.FormEvent,
+      { copyLastSettings, topicIdeaId }: { copyLastSettings: boolean; topicIdeaId?: string | null }
+    ) => {
       setCreating(true);
       const targetChannelId = activeChannelId ?? channels[0]?.id;
       if (!targetChannelId) {
@@ -103,6 +106,7 @@ function DashboardInner({
             channelId: targetChannelId,
             copyLastSettings,
             topic: createTopic.trim(),
+            ...(topicIdeaId ? { topicIdeaId } : {}),
           }),
         });
         const body = (await res.json().catch(() => ({}))) as { project?: Project; error?: string };
@@ -215,8 +219,10 @@ function DashboardInner({
 
         {createOpen ? (
           <CreateModal
+            key={activeChannelId ?? channels[0]?.id ?? "no-channel"}
             topic={createTopic}
             creating={creating}
+            channelId={activeChannelId ?? channels[0]?.id ?? null}
             channelName={activeChannelName}
             onTopicChange={setCreateTopic}
             onSubmit={handleCreateSubmit}

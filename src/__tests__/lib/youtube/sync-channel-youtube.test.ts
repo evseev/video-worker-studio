@@ -20,7 +20,7 @@ describe("refreshChannelYoutubeIfNeeded", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 503 when YOUTUBE_API_KEY is missing", async () => {
+  it("returns cached channel when API key is missing and force is false", async () => {
     vi.mocked(getChannelById).mockResolvedValueOnce({
       data: {
         id: "c1",
@@ -31,6 +31,27 @@ describe("refreshChannelYoutubeIfNeeded", () => {
     });
     const out = await refreshChannelYoutubeIfNeeded({} as SupabaseClient, "c1", {
       apiKey: undefined,
+      force: false,
+    });
+    expect(out.ok).toBe(true);
+    if (out.ok) {
+      expect(out.refreshed).toBe(false);
+      expect(out.channel.id).toBe("c1");
+    }
+  });
+
+  it("returns 503 when API key is missing and force is true", async () => {
+    vi.mocked(getChannelById).mockResolvedValueOnce({
+      data: {
+        id: "c1",
+        youtube_handle: "@x",
+        youtube_meta: {},
+      },
+      error: null,
+    });
+    const out = await refreshChannelYoutubeIfNeeded({} as SupabaseClient, "c1", {
+      apiKey: undefined,
+      force: true,
     });
     expect(out.ok).toBe(false);
     if (!out.ok) expect(out.status).toBe(503);

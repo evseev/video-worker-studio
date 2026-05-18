@@ -267,4 +267,247 @@ describe("POST /api/projects", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  const TOPIC_ID = "33333333-3333-4333-8333-333333333333";
+
+  it("201 with topicIdeaId uses trimmed topic and marks backlog shot", async () => {
+    const inserted = { id: "p-backlog", topic: "Pinned", channel_id: CHAN, user_id: "u1" };
+    const maybeSingle = vi.fn(() =>
+      Promise.resolve({
+        data: {
+          id: TOPIC_ID,
+          channel_id: CHAN,
+          idea_text: "Backlog seed",
+          status: "backlog",
+        },
+        error: null,
+      })
+    );
+    let backlogUpdatePayload: unknown;
+    const backlogUpdateEq = vi.fn(() => Promise.resolve({ error: null }));
+
+    const supabase = {
+      from: vi.fn((table: string) => {
+        if (table === "channel_topic_ideas") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle,
+              }),
+            }),
+            update: (patch: unknown) => {
+              backlogUpdatePayload = patch;
+              return {
+                eq: backlogUpdateEq,
+              };
+            },
+          };
+        }
+        if (table === "projects") {
+          return {
+            select: () => ({
+              eq: () => ({
+                neq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: () => Promise.resolve({ data: null, error: null }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+            insert: (payload: unknown) => ({
+              select: () => ({
+                single: () => {
+                  expect((payload as { topic: string }).topic).toBe("Pinned");
+                  return Promise.resolve({ data: inserted, error: null });
+                },
+              }),
+            }),
+          };
+        }
+        if (table === "channels") {
+          return {
+            update: () => ({
+              eq: () => Promise.resolve({ error: null }),
+            }),
+          };
+        }
+        throw new Error(`unexpected ${table}`);
+      }),
+    } as unknown as SupabaseClient;
+
+    setTestSupabase(supabase);
+
+    const res = await POST(
+      new Request("http://localhost/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channelId: CHAN,
+          copyLastSettings: false,
+          topic: "Pinned",
+          topicIdeaId: TOPIC_ID,
+        }),
+      })
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.project.id).toBe("p-backlog");
+    expect(backlogUpdatePayload).toEqual({ status: "shot", used_in_project_id: "p-backlog" });
+    expect(backlogUpdateEq).toHaveBeenCalled();
+  });
+
+  it("201 with topicIdeaId and empty topic uses idea_text", async () => {
+    const inserted = { id: "p-seed", topic: "Seed only", channel_id: CHAN, user_id: "u1" };
+    const maybeSingle = vi.fn(() =>
+      Promise.resolve({
+        data: {
+          id: TOPIC_ID,
+          channel_id: CHAN,
+          idea_text: "Seed only",
+          status: "backlog",
+        },
+        error: null,
+      })
+    );
+
+    const supabase = {
+      from: vi.fn((table: string) => {
+        if (table === "channel_topic_ideas") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle,
+              }),
+            }),
+            update: () => ({
+              eq: () => Promise.resolve({ error: null }),
+            }),
+          };
+        }
+        if (table === "projects") {
+          return {
+            select: () => ({
+              eq: () => ({
+                neq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: () => Promise.resolve({ data: null, error: null }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+            insert: (payload: unknown) => ({
+              select: () => ({
+                single: () => {
+                  expect((payload as { topic: string }).topic).toBe("Seed only");
+                  return Promise.resolve({ data: inserted, error: null });
+                },
+              }),
+            }),
+          };
+        }
+        if (table === "channels") {
+          return {
+            update: () => ({
+              eq: () => Promise.resolve({ error: null }),
+            }),
+          };
+        }
+        throw new Error(`unexpected ${table}`);
+      }),
+    } as unknown as SupabaseClient;
+
+    setTestSupabase(supabase);
+
+    const res = await POST(
+      new Request("http://localhost/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channelId: CHAN,
+          copyLastSettings: false,
+          topicIdeaId: TOPIC_ID,
+        }),
+      })
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("400 when topicIdeaId row is not backlog", async () => {
+    const maybeSingle = vi.fn(() =>
+      Promise.resolve({
+        data: {
+          id: TOPIC_ID,
+          channel_id: CHAN,
+          idea_text: "Old",
+          status: "shot",
+        },
+        error: null,
+      })
+    );
+
+    const supabase = {
+      from: vi.fn((table: string) => {
+        if (table === "channel_topic_ideas") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle,
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected ${table}`);
+      }),
+    } as unknown as SupabaseClient;
+
+    setTestSupabase(supabase);
+
+    const res = await POST(
+      new Request("http://localhost/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId: CHAN, copyLastSettings: false, topicIdeaId: TOPIC_ID }),
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400 when topicIdeaId row belongs to another channel", async () => {
+    const maybeSingle = vi.fn(() =>
+      Promise.resolve({
+        data: {
+          id: TOPIC_ID,
+          channel_id: "99999999-9999-4999-8999-999999999999",
+          idea_text: "Wrong",
+          status: "backlog",
+        },
+        error: null,
+      })
+    );
+
+    const supabase = {
+      from: vi.fn(() => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle,
+          }),
+        }),
+      })),
+    } as unknown as SupabaseClient;
+
+    setTestSupabase(supabase);
+
+    const res = await POST(
+      new Request("http://localhost/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId: CHAN, copyLastSettings: false, topicIdeaId: TOPIC_ID }),
+      })
+    );
+    expect(res.status).toBe(400);
+  });
 });

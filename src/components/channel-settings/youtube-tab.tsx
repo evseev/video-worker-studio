@@ -6,11 +6,33 @@ import { isYoutubeMetaFresh, parseStoredYoutubeMeta } from "@/lib/youtube/types"
 
 type Channel = Tables<"channels">;
 
+const YOUTUBE_API_DISABLED_NOTE =
+  "YouTube Data API is not configured on this server. Add YOUTUBE_API_KEY to .env.local (Google Cloud Console: enable YouTube Data API v3, create an API key) to load or refresh performance data. You can still save your handle.";
+
+type YoutubeRefreshBody = {
+  channel?: Channel;
+  refreshed?: boolean;
+  error?: string;
+  youtubeApiConfigured?: boolean;
+};
+
+function applyYoutubeApiConfiguredFlag(
+  body: YoutubeRefreshBody,
+  setApiNote: (note: string | null) => void
+) {
+  if (body.youtubeApiConfigured === false) {
+    setApiNote(YOUTUBE_API_DISABLED_NOTE);
+  } else {
+    setApiNote(null);
+  }
+}
+
 export function YoutubeTab({ channel, onSaved }: { channel: Channel; onSaved: (c: Channel) => void }) {
   const [handle, setHandle] = useState(channel.youtube_handle ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [bgNote, setBgNote] = useState<string | null>(null);
+  const [apiNote, setApiNote] = useState<string | null>(null);
 
   const meta = parseStoredYoutubeMeta(channel.youtube_meta);
   const fresh = isYoutubeMetaFresh(channel.youtube_meta);
@@ -23,7 +45,8 @@ export function YoutubeTab({ channel, onSaved }: { channel: Channel; onSaved: (c
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ force }),
       });
-      const body = (await res.json()) as { channel?: Channel; refreshed?: boolean; error?: string };
+      const body = (await res.json()) as YoutubeRefreshBody;
+      applyYoutubeApiConfiguredFlag(body, setApiNote);
       if (!res.ok || !body.channel) {
         setErr(body.error ?? "Refresh failed");
         return;
@@ -48,8 +71,9 @@ export function YoutubeTab({ channel, onSaved }: { channel: Channel; onSaved: (c
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ force: false }),
       });
-      const body = (await res.json()) as { channel?: Channel; error?: string };
+      const body = (await res.json()) as YoutubeRefreshBody;
       if (cancelled) return;
+      applyYoutubeApiConfiguredFlag(body, setApiNote);
       if (res.ok && body.channel) {
         onSaved(body.channel);
       }
@@ -112,6 +136,12 @@ export function YoutubeTab({ channel, onSaved }: { channel: Channel; onSaved: (c
         Link your public YouTube handle. Performance data is cached for 24 hours; this tab refreshes in the
         background when you open settings.
       </p>
+
+      {apiNote ? (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100/95">
+          {apiNote}
+        </div>
+      ) : null}
 
       <form onSubmit={saveHandle} className="space-y-3">
         <div>
