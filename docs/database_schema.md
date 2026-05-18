@@ -88,6 +88,7 @@ The background worker updates data through SECURITY DEFINER RPC functions:
 - `worker_update_project_status(p_project_id, p_status, p_video_url)`
 - `worker_update_project_error(p_project_id, p_error_context)`
 - `worker_insert_video_subjects(p_channel_id, p_project_id, p_rows)` — subject rows for channel-scoped memory
+- `worker_fetch_channel_for_project(p_project_id)` — channel + watermark fields for the worker; **EXECUTE is granted only to `service_role`** (Inngest calls it with the service role key, not the browser anon key).
 - `worker_create_default_channel_for_user(p_user_id)` — idempotent `"My Channel"` backfill
 - `worker_update_channel_youtube_meta(p_channel_id, p_meta)` — worker/service updates to cached YouTube JSON
 
@@ -105,7 +106,7 @@ The background worker updates data through SECURITY DEFINER RPC functions:
 All tables must have RLS enabled.
 *   **Projects/Scenes**: Users can only access rows where `user_id = auth.uid()`.
 *   **Channels** and channel-derived rows (`channel_topic_ideas`, `channel_scene_presets`, `video_subjects`): Policies tie access to owning `channels.user_id = auth.uid()` (or equivalent `EXISTS` on `channels`).
-*   Workers (Inngest) use SECURITY DEFINER RPC functions to bypass RLS for background updates (for example setting `video_url`, inserting scenes, inserting `video_subjects`).
+*   Workers (Inngest) use SECURITY DEFINER RPC functions to bypass RLS for background updates (for example setting `video_url`, inserting scenes, inserting `video_subjects`). The channel read RPC `worker_fetch_channel_for_project` is restricted to `service_role` so project UUIDs in URLs cannot be used to scrape another user’s channel metadata via the public anon key.
 
 ## Application deletes
 

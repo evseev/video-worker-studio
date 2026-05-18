@@ -76,7 +76,7 @@ Required environment variables:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for server-side project/storage operations) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for server-side project/storage operations and the Inngest worker’s `worker_fetch_channel_for_project` RPC) |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `GEMINI_TEXT_MODEL` | Optional Gemini text generation model override (default: `gemini-2.5-flash`) |
 | `GEMINI_EMBEDDING_MODEL` | Optional Gemini embedding model override (default: `text-embedding-004`) |
@@ -107,13 +107,13 @@ Apply the schema from [`docs/database_schema.md`](docs/database_schema.md) to yo
 
 - **`projects`** — tracks each video generation request and its status
 - **`scenes`** — stores the individual scene data (script, keywords, asset URL)
-You'll also need two RPC functions used by the worker:
+You'll also need RPC functions used by the worker (all `SECURITY DEFINER` to bypass RLS for background processing):
+
 - `worker_update_project_status(p_project_id, p_status, p_video_url)`
 - `worker_insert_scenes(p_project_id, p_scenes)`
 - `worker_update_project_error(p_project_id, p_error_context)`
 - `worker_insert_video_subjects(p_user_id, p_project_id, p_rows)` (subject memory persistence for duplicate avoidance)
-
-Both should be `SECURITY DEFINER` to bypass RLS for background processing.
+- `worker_fetch_channel_for_project(p_project_id)` — channel + watermark context for renders; **EXECUTE granted to `service_role` only** (the worker calls it with `SUPABASE_SERVICE_ROLE_KEY`).
 
 If you use the local render fallback (`RENDER_BACKEND=local`), final MP4 files are written to `public/local_renders` and served directly from your app (for example `/local_renders/<projectId>.mp4`) instead of being uploaded to Supabase Storage.
 
