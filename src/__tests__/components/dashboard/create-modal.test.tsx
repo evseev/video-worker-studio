@@ -26,6 +26,28 @@ describe("CreateModal", () => {
     expect(onSubmit.mock.calls[0][1]).toEqual({ copyLastSettings: true });
   });
 
+  it("prevents native form navigation on submit", () => {
+    const onSubmit = vi.fn();
+    render(
+      <CreateModal
+        topic="T"
+        creating={false}
+        channelName={null}
+        onTopicChange={vi.fn()}
+        onSubmit={onSubmit}
+        onClose={vi.fn()}
+      />
+    );
+
+    const form = screen.getByRole("button", { name: /Generate Video/i }).closest("form");
+    expect(form).toBeTruthy();
+
+    fireEvent.submit(form!);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].defaultPrevented).toBe(true);
+  });
+
   it("passes copyLastSettings false when toggle turned off", () => {
     const onSubmit = vi.fn();
     render(
