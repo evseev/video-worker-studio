@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9.0] — 2026-05-20
+
+### Added
+- **Planned structure generation** — for high scene counts, the wizard first asks Gemini for a diverse subject list, then generates one scene per assigned subject so long videos no longer collapse to a handful of repeated names.
+- **In-run subject dedup** — structure chunk filtering drops duplicate subjects within the same generation run (with top-up chunk calls to recover shortfalls).
+- **Regression tests** — Vitest coverage for `planSubjects`, `generateStructurePlanned`, and chunked top-up behavior.
+
+### Fixed
+- **Dashboard create modal** — `preventDefault` on submit so creating a project from a topic idea no longer triggers a full page navigation.
+
 ## [0.4.8.0] — 2026-05-18 — Epic 25 (YouTube channels)
 
 ### Added

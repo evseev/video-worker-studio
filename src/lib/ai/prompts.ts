@@ -62,6 +62,63 @@ Provide a brief reasoning and suggest up to 2 hooks.`;
   return withChannelSystemPrompt(base, channelContext);
 }
 
+/**
+ * System prompt for the **subject-planning** call used when generating high-count videos.
+ *
+ * Why a separate planning step? When asked to write 50+ full scenes in one go (or even
+ * across chunks), Gemini converges to a small "obvious" subject set and refuses to surface
+ * additional names — see Issue tied to `08eae155-…` where 64 scenes shipped 19.
+ * Asking for just the names is a much easier task and reliably produces a long, diverse list.
+ *
+ * Callers should issue multiple planning calls with different `angleHint`s if the first
+ * call falls short.
+ */
+export function planSubjectsPrompt(opts: {
+  sceneCount: number;
+  sceneDuration: number;
+  channelContext?: ChannelContext;
+  angleHint?: string;
+}): string {
+  const totalDuration = opts.sceneCount * opts.sceneDuration;
+  const format = videoFormatLabel(totalDuration);
+  const angle = opts.angleHint?.trim();
+  const angleLine = angle
+    ? angle
+    : "Include a comprehensive mix of well-known headline names AND less-obvious, lesser-cited examples. Cover multiple sub-angles of the topic.";
+
+  const base = `You are a content researcher for a ${format} YouTube video.
+
+Your task: produce a LONG, DIVERSE list of distinct SUBJECTS for the given topic. Each subject is a single canonical entity (a person, place, thing, era, or concept) written as a short, 1-5 word canonical name — NO descriptions, NO prose, NO qualifications.
+
+${angleLine}
+
+RULES:
+- Each subject must be a real, recognizable entity that fits the topic.
+- No duplicates and no near-duplicates (e.g. "Tom Cruise" vs "Tom Cruise (actor)").
+- Use canonical names only. No adjectives, eras, or descriptors attached.
+- If the user supplies an "already chosen" exclusion list, none of those (or close variants) may appear in your output.
+- Return AT LEAST as many subjects as requested. More is fine — the caller will trim.
+- Output MUST match the required JSON schema.`;
+  return withChannelSystemPrompt(base, opts.channelContext);
+}
+
+export function planSubjectsUserMessage(opts: {
+  idea: string;
+  askFor: number;
+  excludeSubjects?: string[];
+}): string {
+  const lines = [
+    `Topic: ${opts.idea}`,
+    `Generate at least ${opts.askFor} distinct subjects for this topic.`,
+  ];
+  if (opts.excludeSubjects && opts.excludeSubjects.length > 0) {
+    lines.push("");
+    lines.push("Already chosen — do NOT include any of these (or close variants):");
+    lines.push(...opts.excludeSubjects.map((s, i) => `${i + 1}. ${s}`));
+  }
+  return lines.join("\n");
+}
+
 export function generateStructurePrompt(
   opts: ScriptOpts & { channelContext?: ChannelContext }
 ): string {

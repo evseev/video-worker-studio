@@ -93,6 +93,7 @@ export function CreateModal({
         </p>
         <form
           onSubmit={(e) => {
+            e.preventDefault();
             void onSubmit(e, {
               copyLastSettings,
               ...(selectedTopicIdeaId ? { topicIdeaId: selectedTopicIdeaId } : {}),

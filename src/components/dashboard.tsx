@@ -88,9 +88,10 @@ function DashboardInner({
 
   const handleCreateSubmit = useCallback(
     async (
-      _e: React.FormEvent,
+      e: React.FormEvent,
       { copyLastSettings, topicIdeaId }: { copyLastSettings: boolean; topicIdeaId?: string | null }
     ) => {
+      e.preventDefault();
       setCreating(true);
       const targetChannelId = activeChannelId ?? channels[0]?.id;
       if (!targetChannelId) {

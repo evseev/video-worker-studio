@@ -2,12 +2,21 @@ import { normalizeSubject } from "@/lib/ai/dedupe";
 import type { Scene } from "@/templates/types";
 
 /**
- * Drops only scenes whose subject overlaps **channel cross-video memory** exclusions.
+ * Dedupes a chunk's scenes against two exclusion sets:
  *
- * IMPORTANT: Chunked generation must NOT treat subjects from earlier chunks in the *same*
- * video as forbidden here — otherwise the model's occasional repeated `subjectKey`s across
- * chunks silently shrink the scene list (shortfalls vs `sceneCount`, e.g. 43 vs 62).
- * Prompt-time `excludeSubjects` still pushes the model toward distinct subjects chunk-to-chunk.
+ * 1. `channelNormalizedExcludes` — subjects from this channel's cross-video memory (ADR-003).
+ * 2. `inRunNormalizedAccepted`   — subjects already accepted earlier in *this same run*
+ *    (previous chunks **and** earlier scenes in the current chunk).
+ *
+ * Historical note: an earlier version intentionally skipped (2) to avoid shrinking the total
+ * scene count when Gemini returned overlapping `subjectKey`s across chunks. That hid the
+ * duplicate-scenes bug (the same actor appearing 4× in one video). The caller now compensates
+ * for any shortfall by issuing top-up chunk calls, so it is safe — and required — for this
+ * filter to drop in-run repeats.
+ *
+ * The function is pure: it does NOT mutate `inRunNormalizedAccepted`. The caller decides
+ * which of the returned `uniqueScenes` to actually keep (it may slice off overflow) and is
+ * responsible for adding the accepted subjects to its running set.
  */
 function ensureSceneSubjectKey(scene: Scene, chunkBaseIndex: number, ordinal: number): Scene {
   if (normalizeSubject(scene.subjectKey).length > 0) return scene;
@@ -15,21 +24,49 @@ function ensureSceneSubjectKey(scene: Scene, chunkBaseIndex: number, ordinal: nu
   return { ...scene, subjectKey: label };
 }
 
+export type ChunkFilterResult = {
+  uniqueScenes: Scene[];
+  /** Normalized subject key per uniqueScene (same length, same order). */
+  acceptedNormalized: string[];
+  /** Total scenes dropped (channel memory + in-run duplicates). */
+  droppedCount: number;
+  droppedChannelCount: number;
+  droppedDuplicateCount: number;
+};
+
 export function filterScenesAgainstChannelMemory(
   scenes: Scene[],
-  channelNormalizedExcludes: Set<string>,
-  chunkBaseIndex: number
-): { uniqueScenes: Scene[]; droppedCount: number } {
+  channelNormalizedExcludes: ReadonlySet<string>,
+  chunkBaseIndex: number,
+  inRunNormalizedAccepted: ReadonlySet<string> = new Set()
+): ChunkFilterResult {
   const uniqueScenes: Scene[] = [];
-  let droppedCount = 0;
+  const acceptedNormalized: string[] = [];
+  const localSeen = new Set<string>(inRunNormalizedAccepted);
+  let droppedChannelCount = 0;
+  let droppedDuplicateCount = 0;
+
   scenes.forEach((scene, ordinal) => {
     const enriched = ensureSceneSubjectKey(scene, chunkBaseIndex, ordinal);
     const normalized = normalizeSubject(enriched.subjectKey);
     if (channelNormalizedExcludes.has(normalized)) {
-      droppedCount += 1;
+      droppedChannelCount += 1;
       return;
     }
+    if (localSeen.has(normalized)) {
+      droppedDuplicateCount += 1;
+      return;
+    }
+    localSeen.add(normalized);
     uniqueScenes.push(enriched);
+    acceptedNormalized.push(normalized);
   });
-  return { uniqueScenes, droppedCount };
+
+  return {
+    uniqueScenes,
+    acceptedNormalized,
+    droppedCount: droppedChannelCount + droppedDuplicateCount,
+    droppedChannelCount,
+    droppedDuplicateCount,
+  };
 }
