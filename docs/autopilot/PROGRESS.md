@@ -31,7 +31,7 @@ Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origi
 | 14 | YouTube OAuth + upload code (disabled until audit/keys) | done | `src/lib/youtube/{oauth,upload}.ts`; untested against Google (no keys) |
 | 15 | Wizard bug fixes (step names, bare array, audio nulling) | done | + regression tests; dashboard 'Needs review' badge |
 | 16 | Phase 3 host experiment scaffolding (interfaces, no keys) | done | `src/lib/host/*`, `src/remotion/HostScene.tsx`; disabled without FAL_KEY |
-| 17 | Tests, lint, build green; owner handoff notes | in progress | 276+ tests pass, `next build` passes, RUNBOOK + CONTENT_PLAN written |
+| 17 | Tests, lint, build green; owner handoff notes | done | 276+ tests pass, `next build` passes, RUNBOOK + CONTENT_PLAN written |
 
 | 18 | Shorts stage (3 vertical clips) | done | stacked layout opt-in, re-cropped from stored face boxes |
 | 19 | Narration QA (Soniox STT) | done | re-voices failing lines once, flags in review |
@@ -48,3 +48,4 @@ Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origi
 - `next build` needed turbopackIgnore annotations + runtime fs in static-server (tracing pulled in .venv/out).
 - Full run v1 review: spouse slot showed the partner (Ryan/Ethan Hawke), 2 Getty watermarks, ended partnership labelled PARTNER → fixed; v2 run started.
 - Narration QA on v1: 52/52 lines matched (min similarity 0.944).
+- v2 done 19:40 UTC: 9.2 min, 3 flagged photos, 41/487 watermarked candidates avoided, 52/52 voice check. See HANDOFF.md.
