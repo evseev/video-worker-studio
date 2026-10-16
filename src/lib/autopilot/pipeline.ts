@@ -708,7 +708,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     fs.writeFileSync(
       path.join(shortsDir, "shorts.txt"),
       outputs
-        .map((o, k) => `${path.basename(o.file)}
+        .map((o) => `${path.basename(o.file)}
 TITLE: ${o.title}
 DESCRIPTION: Full video: "${state.packaging!.titles[0]}" on the channel. Link it as the Short's related video in Studio.
 `)
