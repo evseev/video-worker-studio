@@ -39,11 +39,12 @@ export function renderReviewHtml(state: PipelineState, dir: string): string {
       : [img?.left.chosen?.confidence, img?.right.chosen?.confidence].includes("medium")
         ? 1
         : 2;
-    const flagged = worst < 2 || n?.source === "fallback";
+    const vc = state.voice?.qa?.[i + 1];
+    const flagged = worst < 2 || n?.source === "fallback" || vc?.ok === false;
     return { i, flagged, worst, html: `<section class="pair${flagged ? " flagged" : ""}" id="p${i}">
   <h3>#${i + 1} ${esc(pairCaption(vp))} <small>${esc(labels.leftLabel)} / ${esc(labels.rightLabel)} · ${esc(p.relationKind)}${p.relation?.startYear ? ` since ${p.relation.startYear}` : ""}${p.relation?.endYear ? ` until ${p.relation.endYear}` : ""}</small></h3>
   <div class="row">${photo(dir, img?.left.chosen ?? null)}${photo(dir, img?.right.chosen ?? null)}</div>
-  <p class="line"><b>Narration</b> <span class="src">${esc(n?.source)}${n?.tone ? ` · ${esc(n.tone)}` : ""}</span><br>${esc(n?.scriptText)}${n?.problems?.length ? `<br><span class="flags">fact check: ${n.problems.map(esc).join("; ")}</span>` : ""}</p>
+  <p class="line"><b>Narration</b> <span class="src">${esc(n?.source)}${n?.tone ? ` · ${esc(n.tone)}` : ""}</span><br>${esc(n?.scriptText)}${n?.problems?.length ? `<br><span class="flags">fact check: ${n.problems.map(esc).join("; ")}</span>` : ""}${vc ? `<br><span class="${vc.ok ? "src" : "flags"}">voice check ${Math.round(vc.similarity * 100)}%${vc.ok ? "" : `: heard “${esc(vc.transcript)}”`}</span>` : ""}</p>
   <details><summary>Alternatives</summary>
     <div class="alts"><b>Left</b> ${(img?.left.alternatives ?? []).map((a) => photo(dir, a, false)).join("")}</div>
     <div class="alts"><b>Right</b> ${(img?.right.alternatives ?? []).map((a) => photo(dir, a, false)).join("")}</div>
@@ -83,6 +84,7 @@ a{color:#4b6bfb}
 <p>${pairs.length} pairs · format <b>${esc(state.format)}</b> · ${flaggedCount} pair(s) need a look (shown first) · ${state.rejected?.length ?? 0} proposed pair(s) rejected by fact verification</p>
 ${out.video ? `<video controls preload="metadata" src="${rel(dir, out.video)}"></video>` : ""}
 ${out.thumbnails?.length ? `<div class="thumbs">${out.thumbnails.map((t) => `<img src="${rel(dir, t)}" alt="">`).join("")}</div>` : ""}
+${out.shorts?.length ? `<p><b>Shorts:</b> ${out.shorts.map((x) => `<a href="${rel(dir, x.file)}">${esc(x.title)}</a>`).join(" · ")}</p>` : ""}
 ${pk ? `<details open><summary><b>Titles, hook and outro</b></summary><ol>${pk.titles.map((t) => `<li>${esc(t)}</li>`).join("")}</ol><p><b>Hook:</b> ${esc(pk.hook)}</p><p><b>Outro:</b> ${esc(pk.outro)}</p></details>` : ""}
 ${state.rejected?.length ? `<details><summary>Rejected pairs</summary><ul>${state.rejected.map((r) => `<li>${esc(r.left)} / ${esc(r.right)}: ${esc(r.reason)}</li>`).join("")}</ul></details>` : ""}
 ${ordered.map((x) => x.html).join("\n")}
