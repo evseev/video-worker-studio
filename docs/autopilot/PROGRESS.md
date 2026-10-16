@@ -29,12 +29,18 @@ Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origi
 | 12 | Inngest functions (plan, source-assets, narrate, publish) + manual trigger | done | `src/lib/inngest/autopilot-functions.ts`, `POST /api/autopilot/run` |
 | 13 | Review page `/review/[id]` + download bundle route | done | needs migration applied to test in app; offline `review.html` works now |
 | 14 | YouTube OAuth + upload code (disabled until audit/keys) | done | `src/lib/youtube/{oauth,upload}.ts`; untested against Google (no keys) |
-| 15 | Wizard bug fixes (step names, bare array, audio nulling) | todo | |
-| 16 | Phase 3 host experiment scaffolding (interfaces, no keys) | todo | |
-| 17 | Tests, lint, build green; owner handoff notes | todo | |
+| 15 | Wizard bug fixes (step names, bare array, audio nulling) | done | + regression tests; dashboard 'Needs review' badge |
+| 16 | Phase 3 host experiment scaffolding (interfaces, no keys) | done | `src/lib/host/*`, `src/remotion/HostScene.tsx`; disabled without FAL_KEY |
+| 17 | Tests, lint, build green; owner handoff notes | in progress | 276+ tests pass, `next build` passes, RUNBOOK + CONTENT_PLAN written |
+
+| 18 | Shorts stage (3 vertical clips) | done | stacked layout opt-in, re-cropped from stored face boxes |
+| 19 | Narration QA (Soniox STT) | done | re-voices failing lines once, flags in review |
+| 20 | Content calendar + backlog seed | done | `docs/autopilot/CONTENT_PLAN.md`, `seed-backlog.sql` |
 
 ## Log
 - 2026-10-16: setup done; Soniox TTS verified with `[warm]`/`[softly]` tags (mp3 44.1 kHz mono).
 - Face calibration: same-person consensus 0.33–0.59 vs other-person 0.04–0.16; ref similarity drops with age gap. YuNet needs multi-scale (640/960/320).
 - Smoke run 1 found a wrong-person photo (low confidence) → pipeline now over-generates 20% pairs and drops pairs with unverified photos.
 - Portuguese runs 15–30% longer than English → all languages are voiced before the timeline is built.
+- Full 50-pair run started 18:28 UTC (`out/full-couples-90s.log`); it predates the Shorts/QA code — resume it afterwards to add them.
+- `next build` needed turbopackIgnore annotations + runtime fs in static-server (tracing pulled in .venv/out).
