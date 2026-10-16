@@ -24,7 +24,7 @@ Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origi
 | 7 | Remotion: per-scene audio, scene durations, music loop + duck | done | `VideoComposition.tsx` (sceneDurationsFrames, narrationUrl, narrationWindows, textScale) |
 | 8 | Thumbnail still (3 variants) | done | `src/remotion/ThumbnailStill.tsx` |
 | 9 | ffmpeg metadata post-process | done | `src/lib/video/postprocess.ts` |
-| 10 | Local runner `autopilot:local` → bundle; first real video produced | in progress | smoke runs OK (6 pairs, 720p, 7.9 min); full 50-pair run next |
+| 10 | Local runner `autopilot:local` → bundle; first real video produced | done | full 50-pair 1080p in 31 min; v2 with image fixes in `out/autopilot-v2` |
 | 11 | Migrations + RPCs (files only) | done | `supabase/migrations/20261016120000_autopilot.sql` — NOT applied |
 | 12 | Inngest functions (plan, source-assets, narrate, publish) + manual trigger | done | `src/lib/inngest/autopilot-functions.ts`, `POST /api/autopilot/run` |
 | 13 | Review page `/review/[id]` + download bundle route | done | needs migration applied to test in app; offline `review.html` works now |
@@ -37,6 +37,8 @@ Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origi
 | 19 | Narration QA (Soniox STT) | done | re-voices failing lines once, flags in review |
 | 20 | Content calendar + backlog seed | done | `docs/autopilot/CONTENT_PLAN.md`, `seed-backlog.sql` |
 
+| 21 | Image fixes from full-run review (group photos, partner exclusion, watermarks) | done | `scripts/face-match`, `src/lib/images/watermark.ts` |
+
 ## Log
 - 2026-10-16: setup done; Soniox TTS verified with `[warm]`/`[softly]` tags (mp3 44.1 kHz mono).
 - Face calibration: same-person consensus 0.33–0.59 vs other-person 0.04–0.16; ref similarity drops with age gap. YuNet needs multi-scale (640/960/320).
@@ -44,3 +46,5 @@ Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origi
 - Portuguese runs 15–30% longer than English → all languages are voiced before the timeline is built.
 - Full 50-pair run started 18:28 UTC (`out/full-couples-90s.log`); it predates the Shorts/QA code — resume it afterwards to add them.
 - `next build` needed turbopackIgnore annotations + runtime fs in static-server (tracing pulled in .venv/out).
+- Full run v1 review: spouse slot showed the partner (Ryan/Ethan Hawke), 2 Getty watermarks, ended partnership labelled PARTNER → fixed; v2 run started.
+- Narration QA on v1: 52/52 lines matched (min similarity 0.944).
