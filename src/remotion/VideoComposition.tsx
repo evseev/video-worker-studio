@@ -39,6 +39,8 @@ export type VideoCompositionProps = {
   musicDuckedVolume?: number;
   /** Multiplier for label/caption text (1 = sizes tuned for a 1080px short side). */
   textScale?: number;
+  /** Comparison scenes stack their photos in portrait frames (autopilot Shorts). */
+  stackComparisonInPortrait?: boolean;
   transitionFrames: number;
   musicUrl?: string | null;
   voiceoverUrl?: string | null;
@@ -136,6 +138,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
   musicVolume,
   musicDuckedVolume,
   textScale = 1,
+  stackComparisonInPortrait = false,
   transitionFrames,
   musicUrl,
   voiceoverUrl,
@@ -197,6 +200,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                         captionStyleId={captionStyle}
                         comparisonOverlayMode={comparisonOverlayMode}
                         textScale={textScale}
+                        stackInPortrait={stackComparisonInPortrait}
                       />
                     );
                   case "fact-card":

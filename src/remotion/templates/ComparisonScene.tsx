@@ -32,6 +32,8 @@ type ComparisonSceneProps = {
   comparisonOverlayMode: ComparisonOverlayMode;
   /** Multiplier for label and caption size (1 = tuned for a 1080px short side). */
   textScale?: number;
+  /** Stack the photos vertically when the frame is portrait (autopilot Shorts). Wizard renders keep side by side. */
+  stackInPortrait?: boolean;
 };
 
 type Style = Record<string, string | number | undefined>;
@@ -64,9 +66,12 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   captionStyleId,
   comparisonOverlayMode,
   textScale = 1,
+  stackInPortrait = false,
 }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames, fps } = useVideoConfig();
+  const { durationInFrames, fps, width, height } = useVideoConfig();
+  // Portrait (Shorts): stack the two photos instead of squeezing them side by side.
+  const stacked = stackInPortrait && height > width;
 
   const progress = frame / durationInFrames;
   const imageStyle = getImageTransform(imageMotion ?? "zoom-in", progress);
@@ -87,6 +92,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
           position: "absolute",
           inset: 0,
           display: "flex",
+          flexDirection: stacked ? "column" : "row",
           gap: 4,
         }}
       >

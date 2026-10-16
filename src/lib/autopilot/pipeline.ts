@@ -11,7 +11,7 @@ import { buildTimeline, cuesForTimeline, toSrt, buildChapters, chaptersToText, t
 import { narrateTranslations, assembleDub, buildMusicBed, mixDubbedTrack, translateLines, LOCALE_NAMES } from "@/lib/tts/localize";
 import { normalizeMp4Metadata } from "@/lib/video/postprocess";
 import { getMusicTrack } from "@/lib/music-presets";
-import { buildVerifiedPairs, writeNarration, writePackaging, type NarrationLineOut, type Packaging } from "./script";
+import { buildVerifiedPairs, writeNarration, writePackaging, writeShortHooks, type NarrationLineOut, type Packaging } from "./script";
 import { pairCaption, pairEras, pairLabels, type FormatSlug, type VerifiedPair } from "./formats";
 import { startStaticServer } from "./static-server";
 import { renderReviewHtml } from "./review-html";
@@ -26,6 +26,8 @@ export interface SlotPick {
 export interface PickedImage {
   path: string;
   objectPosition: string;
+  /** Face box in image pixels, kept so crops can be recomputed for other slot shapes (Shorts, thumbnails). */
+  faceBox?: [number, number, number, number] | null;
   confidence: RankedCandidate["confidence"];
   score: number;
   identityScore: number;
@@ -59,11 +61,11 @@ export interface PipelineState {
     timeline: Timeline;
   };
   dubs?: Record<string, { audioFile: string; srtFile: string; title: string; description: string }>;
-  outputs?: { video?: string; thumbnails?: string[]; bundleDir?: string };
+  outputs?: { video?: string; thumbnails?: string[]; bundleDir?: string; shorts?: Array<{ file: string; title: string }> };
 }
 
-export type StageName = "script" | "images" | "voice" | "render" | "thumbnails" | "localize" | "bundle";
-export const STAGES: StageName[] = ["script", "images", "voice", "render", "thumbnails", "localize", "bundle"];
+export type StageName = "script" | "images" | "voice" | "render" | "thumbnails" | "localize" | "bundle" | "shorts";
+export const STAGES: StageName[] = ["script", "images", "voice", "render", "thumbnails", "localize", "bundle", "shorts"];
 
 export interface PipelineOptions {
   topic: string;
@@ -77,6 +79,8 @@ export interface PipelineOptions {
   quality?: "720p" | "1080p";
   /** Stop after this stage (inclusive). */
   until?: StageName;
+  /** Number of vertical Shorts to cut (0 disables). Default 3. */
+  shorts?: number;
   /** Re-run these stages even if done. */
   force?: StageName[];
   exclude?: string[];
@@ -94,6 +98,24 @@ const TRANSITION_FRAMES = 15;
 const LEAD_IN_FRAMES = 10;
 const MUSIC_VOLUME = 0.22;
 const MUSIC_DUCKED = 0.045; // ≈ -14 dB under narration
+
+/** Webpack-bundle the Remotion project once per process (bundling takes ~10–20 s). */
+let serveUrlPromise: Promise<string> | null = null;
+export function remotionServeUrl(): Promise<string> {
+  if (!serveUrlPromise) {
+    serveUrlPromise = import("@remotion/bundler").then(({ bundle }) =>
+      bundle({
+        entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
+        webpackOverride: (config) => ({
+          ...config,
+          resolve: { ...config.resolve, alias: { ...(config.resolve?.alias ?? {}), "@": path.join(process.cwd(), "src") } },
+        }),
+      })
+    );
+    serveUrlPromise.catch(() => (serveUrlPromise = null));
+  }
+  return serveUrlPromise;
+}
 
 /** URL for a file inside the run directory, served by the local static server. */
 function runFileUrl(baseUrl: string, runDir: string, file: string): string {
@@ -131,6 +153,7 @@ function pick(c: RankedCandidate, template: string, slot: number, video: { width
   return {
     path: c.localPath,
     objectPosition,
+    faceBox: a.faceBox ?? null,
     confidence: c.confidence,
     score: Number(c.score.toFixed(3)),
     identityScore: Number(c.identityScore.toFixed(3)),
@@ -403,15 +426,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       };
       fs.writeFileSync(path.join(workDir, "render-props.json"), JSON.stringify(inputProps, null, 1));
 
-      const { bundle } = await import("@remotion/bundler");
       const { renderMedia, selectComposition } = await import("@remotion/renderer");
-      const serveUrl = await bundle({
-        entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
-        webpackOverride: (config) => ({
-          ...config,
-          resolve: { ...config.resolve, alias: { ...(config.resolve?.alias ?? {}), "@": path.join(process.cwd(), "src") } },
-        }),
-      });
+      const serveUrl = await remotionServeUrl();
       const composition = await selectComposition({ serveUrl, id: "VideoWorker", inputProps });
       composition.width = video.width;
       composition.height = video.height;
@@ -478,15 +494,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         rightName: pairs[i].right.name.split(" ").slice(-1)[0].toUpperCase(),
         headline: state.packaging!.thumbnailText,
       };
-      const { bundle } = await import("@remotion/bundler");
       const { renderStill, selectComposition } = await import("@remotion/renderer");
-      const serveUrl = await bundle({
-        entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
-        webpackOverride: (config) => ({
-          ...config,
-          resolve: { ...config.resolve, alias: { ...(config.resolve?.alias ?? {}), "@": path.join(process.cwd(), "src") } },
-        }),
-      });
+      const serveUrl = await remotionServeUrl();
       fs.mkdirSync(bundleDir, { recursive: true });
       const files: string[] = [];
       for (const variant of ["labels", "banner", "names"] as const) {
@@ -603,6 +612,110 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     fs.writeFileSync(path.join(dir, "review.html"), renderReviewHtml(state, dir));
     state.outputs = { ...(state.outputs ?? {}), bundleDir };
     done("bundle");
+  }
+  // ---------------------------------------------------------------- shorts
+  const shortCount = opts.shorts ?? 3;
+  if (shouldRun("shorts") && shortCount > 0 && pairs.length >= 4) {
+    log(`▶ shorts: ${shortCount} vertical clips`);
+    const perShort = 4;
+    // Use the best-verified pairs, spread across the video, never the same pair twice.
+    const order = pairs
+      .map((_, i) => i)
+      .sort((a, b) => {
+        const sc = (i: number) => (state.images![String(i)].left.chosen?.score ?? 0) + (state.images![String(i)].right.chosen?.score ?? 0);
+        return sc(b) - sc(a);
+      });
+    const groups: number[][] = [];
+    for (let k = 0; k < shortCount && (k + 1) * perShort <= order.length; k++) {
+      groups.push(order.slice(k * perShort, (k + 1) * perShort).sort((a, b) => a - b));
+    }
+    const hooks = await writeShortHooks({ topic: state.topic, groups: groups.map((g) => g.map((i) => pairCaption(pairs[i]))) });
+    const shortsDir = path.join(bundleDir, "shorts");
+    fs.mkdirSync(shortsDir, { recursive: true });
+    const portrait = { width: 1080, height: 1920 };
+    const server = await startStaticServer({ "/files": dir, "/music": path.join(process.cwd(), "public", "music") });
+    const outputs: Array<{ file: string; title: string }> = [];
+    try {
+      const fileUrl = (p: string) => runFileUrl(server.baseUrl, dir, p);
+      const { renderMedia, selectComposition } = await import("@remotion/renderer");
+      const serveUrl = await remotionServeUrl();
+      for (let k = 0; k < groups.length; k++) {
+        const hook = await narrateLines({ lines: [{ text: hooks[k]?.hook ?? state.packaging!.hook, tone: "warm" }], language: "en", outDir: path.join(workDir, "voice-en") });
+        const voiced = [hook[0], ...groups[k].map((i) => state.voice!.lines[i + 1])];
+        const tl = buildTimeline(voiced.map((v) => v.durationSec), { fps: FPS, transitionFrames: TRANSITION_FRAMES, leadInSec: LEAD_IN_FRAMES / FPS, minSceneSec: 3 });
+        if (tl.totalSec > 59) log(`  short ${k + 1} is ${tl.totalSec.toFixed(1)}s (>59s); YouTube may not classify it as a Short`);
+        const slotPos = (p: PickedImage, slot: number) => {
+          const size = slotSize("comparison", slot, portrait);
+          return p.faceBox && p.width && p.height
+            ? faceObjectPosition({ imageWidth: p.width, imageHeight: p.height, faceBox: p.faceBox, targetWidth: size.width, targetHeight: size.height })
+            : "50% 35%";
+        };
+        const sceneFor = (i: number, alt: boolean) => {
+          const img = state.images![String(i)];
+          const l = alt ? img.left.alternatives[0] ?? img.left.chosen! : img.left.chosen!;
+          const r = alt ? img.right.alternatives[0] ?? img.right.chosen! : img.right.chosen!;
+          const labels = pairLabels(pairs[i]);
+          return {
+            template: "comparison",
+            assets: [
+              { url: fileUrl(l.path), objectPosition: slotPos(l, 0) },
+              { url: fileUrl(r.path), objectPosition: slotPos(r, 1) },
+            ],
+            leftLabel: labels.leftLabel,
+            rightLabel: labels.rightLabel,
+          };
+        };
+        const scenes = [
+          { ...sceneFor(groups[k][0], true), captionText: state.packaging!.thumbnailText, scriptText: stripDeliveryMarkup(voiced[0].text), narrationUrl: fileUrl(voiced[0].file) },
+          ...groups[k].map((i, j) => ({ ...sceneFor(i, false), captionText: pairCaption(pairs[i]), scriptText: stripDeliveryMarkup(voiced[j + 1].text), narrationUrl: fileUrl(voiced[j + 1].file) })),
+        ];
+        const inputProps = {
+          scenes,
+          sceneDurationFrames: tl.scenes[0].durationFrames,
+          sceneDurationsFrames: tl.scenes.map((x) => x.durationFrames),
+          narrationLeadInFrames: LEAD_IN_FRAMES,
+          narrationWindows: tl.scenes.map((x) => [Math.round(x.audioStartSec * FPS), Math.round((x.audioStartSec + x.audioDurationSec) * FPS)] as [number, number]),
+          transitionFrames: TRANSITION_FRAMES,
+          musicUrl: musicTrack ? `${server.baseUrl}${musicTrack.url}` : null,
+          musicVolume: MUSIC_VOLUME,
+          musicDuckedVolume: MUSIC_DUCKED,
+          voiceoverUrl: null,
+          sceneTransitions: Array(scenes.length - 1).fill("fade"),
+          imageMotions: scenes.map((_, i) => (i % 2 === 0 ? "zoom-in" : "zoom-out")),
+          textAnimations: Array(scenes.length).fill("fade-in"),
+          captionStyle: "bold",
+          comparisonOverlayMode: "both",
+          textScale: 1.5,
+          stackComparisonInPortrait: true,
+          watermark: { logoUrl: null, position: "none", opacity: 0.7 },
+        };
+        const composition = await selectComposition({ serveUrl, id: "VideoWorker", inputProps });
+        composition.width = portrait.width;
+        composition.height = portrait.height;
+        composition.durationInFrames = tl.totalFrames;
+        const raw = path.join(workDir, `short-${k + 1}-raw.mp4`);
+        await renderMedia({ composition, serveUrl, codec: "h264", crf: 20, audioBitrate: "192k", outputLocation: raw, inputProps, concurrency: Math.max(2, Math.floor(os.cpus().length / 2)) });
+        const out = path.join(shortsDir, `short-${k + 1}.mp4`);
+        if (fs.existsSync(out)) fs.unlinkSync(out);
+        const title = hooks[k]?.title ?? `${pairCaption(pairs[groups[k][0]])} #Shorts`;
+        await normalizeMp4Metadata({ input: raw, output: out, title });
+        outputs.push({ file: out, title });
+        log(`  short ${k + 1}: ${tl.totalSec.toFixed(1)}s`);
+      }
+    } finally {
+      await server.close();
+    }
+    fs.writeFileSync(
+      path.join(shortsDir, "shorts.txt"),
+      outputs
+        .map((o, k) => `${path.basename(o.file)}
+TITLE: ${o.title}
+DESCRIPTION: Full video: "${state.packaging!.titles[0]}" on the channel. Link it as the Short's related video in Studio.
+`)
+        .join(`\n`)
+    );
+    state.outputs = { ...(state.outputs ?? {}), shorts: outputs };
+    done("shorts");
   }
   return state;
 }

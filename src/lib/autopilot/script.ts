@@ -364,3 +364,35 @@ Number of pairs: ${n}
 Featured (in order): ${names.join("; ")}`;
   return generateJson(system, packagingResponseSchema, user, PackagingSchema, 0.8);
 }
+
+// ---------------------------------------------------------------- shorts
+
+const ShortsSchema = z.object({
+  shorts: z.array(z.object({ hook: z.string().min(10), title: z.string().min(10).max(100) })),
+});
+const shortsResponseSchema: ResponseSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    shorts: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: { hook: { type: SchemaType.STRING }, title: { type: SchemaType.STRING } },
+        required: ["hook", "title"],
+      },
+    },
+  },
+  required: ["shorts"],
+};
+
+/** One spoken hook (≤ 14 words) and one title per Short; each Short features the given pairs. */
+export async function writeShortHooks(params: {
+  topic: string;
+  groups: string[][];
+}): Promise<Array<{ hook: string; title: string }>> {
+  const system = `${AUDIENCE}
+You write YouTube Shorts openers. For each group: hook = one warm spoken sentence of at most 14 words that makes viewers stay (no clickbait about deaths or scandals, no "smash like"); title = under 70 characters, ends with " #Shorts".`;
+  const user = `Topic: ${params.topic}\n${params.groups.map((g, i) => `Short ${i + 1}: ${g.join("; ")}`).join("\n")}`;
+  const res = await generateJson(system, shortsResponseSchema, user, ShortsSchema, 0.8);
+  return res.shorts.slice(0, params.groups.length);
+}
