@@ -148,7 +148,6 @@ export const autopilotRender = inngest.createFunction(
   },
   async ({ event, step }) => {
     const d = event.data as ProduceData;
-    const runDir = projectRunDir(d.projectId);
     await step.run("mark-rendering", () => updateAutopilot({ projectId: d.projectId, status: "rendering", reviewStatus: "approved" }));
     try {
       // "voice" is a no-op unless review edits cleared it.

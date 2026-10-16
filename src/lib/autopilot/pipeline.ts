@@ -499,7 +499,6 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
   // ---------------------------------------------------------------- localize
   if (shouldRun("localize") && state.locales.length > 0) {
     log(`▶ localize: ${state.locales.join(", ")}`);
-    const lines = sceneLines(state);
     const bedFile = path.join(workDir, "music-bed.wav");
     if (musicFile && fs.existsSync(musicFile) && !fs.existsSync(bedFile)) {
       await buildMusicBed({

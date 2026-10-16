@@ -1,4 +1,4 @@
-import { AbsoluteFill, Audio, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Sequence, interpolate, useVideoConfig } from "remotion";
 import { TransitionSeries, linearTiming, type TransitionPresentation } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
