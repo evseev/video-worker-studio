@@ -54,3 +54,4 @@ next-env.d.ts
 /out
 /.npm-ci.log
 /public/music/*.mp3
+/out-*.log
