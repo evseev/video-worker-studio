@@ -43,7 +43,7 @@ async function main() {
     publishSlot: arg("slot") ?? "5 PM Eastern",
     log: (m) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`),
   });
-  console.log(`\nDone in ${((Date.now() - started) / 60000).toFixed(1)} min → out/autopilot/${state.slug}/review.html`);
+  console.log(`\nDone in ${((Date.now() - started) / 60000).toFixed(1)} min → ${arg("out") ?? "out/autopilot"}/${state.slug}/review.html`);
 }
 
 main().catch((err) => {

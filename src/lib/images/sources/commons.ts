@@ -4,7 +4,7 @@ import { downloadImage, shortHash } from "../download";
 
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 const USER_AGENT =
-  process.env.WIKIMEDIA_USER_AGENT ?? "VideoWorkerStudio/0.5 (autopilot; contact via repository owner)";
+  process.env.WIKIMEDIA_USER_AGENT ?? "VideoWorkerStudio/0.5 (https://github.com/evseev/video-worker-studio; autopilot)";
 
 const ImageInfo = z.object({
   thumburl: z.string().optional(),

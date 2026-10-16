@@ -8,7 +8,7 @@ import type { RankedCandidate } from "@/lib/images/types";
 import { narrateLines } from "@/lib/tts/narration";
 import { stripDeliveryMarkup, type SonioxTag } from "@/lib/tts/soniox";
 import { buildTimeline, cuesForTimeline, toSrt, buildChapters, chaptersToText, type Timeline } from "@/lib/tts/timeline";
-import { dubLines, buildMusicBed, mixDubbedTrack, translateLines, LOCALE_NAMES } from "@/lib/tts/localize";
+import { narrateTranslations, assembleDub, buildMusicBed, mixDubbedTrack, translateLines, LOCALE_NAMES } from "@/lib/tts/localize";
 import { normalizeMp4Metadata } from "@/lib/video/postprocess";
 import { getMusicTrack } from "@/lib/music-presets";
 import { buildVerifiedPairs, writeNarration, writePackaging, type NarrationLineOut, type Packaging } from "./script";
@@ -52,7 +52,12 @@ export interface PipelineState {
   narration?: NarrationLineOut[];
   packaging?: Packaging;
   images?: Record<string, { left: SlotPick; right: SlotPick }>;
-  voice?: { lines: Array<{ file: string; durationSec: number; text: string }>; timeline: Timeline };
+  voice?: {
+    lines: Array<{ file: string; durationSec: number; text: string }>;
+    /** Translated + voiced lines per locale (same order as `lines`). */
+    dubs?: Record<string, Array<{ file: string; durationSec: number; text: string; translated: string }>>;
+    timeline: Timeline;
+  };
   dubs?: Record<string, { audioFile: string; srtFile: string; title: string; description: string }>;
   outputs?: { video?: string; thumbnails?: string[]; bundleDir?: string };
 }
@@ -65,6 +70,8 @@ export interface PipelineOptions {
   format: FormatSlug;
   pairs: number;
   outRoot: string;
+  /** Explicit run directory (DB-backed runs use <root>/projects/<projectId>). Overrides outRoot/slug. */
+  runDir?: string;
   musicId?: string;
   locales?: string[];
   quality?: "720p" | "1080p";
@@ -95,12 +102,19 @@ function runFileUrl(baseUrl: string, runDir: string, file: string): string {
   return `${baseUrl}/files/${rel.split(path.sep).map(encodeURIComponent).join("/")}`;
 }
 
-function statePath(dir: string) {
+export function statePath(dir: string) {
   return path.join(dir, "state.json");
 }
 
-function saveState(dir: string, state: PipelineState) {
-  fs.writeFileSync(statePath(dir), JSON.stringify(state, null, 2));
+export function saveState(dir: string, state: PipelineState) {
+  const tmp = `${statePath(dir)}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
+  fs.renameSync(tmp, statePath(dir));
+}
+
+export function loadState(dir: string): PipelineState | null {
+  const p = statePath(dir);
+  return fs.existsSync(p) ? (JSON.parse(fs.readFileSync(p, "utf8")) as PipelineState) : null;
 }
 
 function toVerified(p: NonNullable<PipelineState["pairs"]>[number]): VerifiedPair {
@@ -154,15 +168,13 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number
 
 export async function runPipeline(opts: PipelineOptions): Promise<PipelineState> {
   const log = opts.log ?? ((m: string) => console.log(m));
-  const slug = slugify(`${opts.format}-${opts.topic}`);
-  const dir = path.resolve(opts.outRoot, slug);
+  const slug = opts.runDir ? path.basename(opts.runDir) : slugify(`${opts.format}-${opts.topic}`);
+  const dir = opts.runDir ? path.resolve(opts.runDir) : path.resolve(opts.outRoot, slug);
   const workDir = path.join(dir, "work");
   const bundleDir = path.join(dir, "bundle");
   fs.mkdirSync(workDir, { recursive: true });
 
-  let state: PipelineState = fs.existsSync(statePath(dir))
-    ? (JSON.parse(fs.readFileSync(statePath(dir), "utf8")) as PipelineState)
-    : {
+  let state: PipelineState = loadState(dir) ?? {
         version: PIPELINE_VERSION,
         slug,
         topic: opts.topic,
@@ -188,10 +200,11 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
   // ---------------------------------------------------------------- script
   if (shouldRun("script")) {
     log(`▶ script: ${opts.pairs} ${opts.format} pairs for "${opts.topic}"`);
+    // Over-generate ~20%: pairs whose photos cannot be verified are dropped after the images stage.
     const { pairs, rejected } = await buildVerifiedPairs({
       topic: opts.topic,
       format: opts.format,
-      count: opts.pairs,
+      count: Math.ceil(opts.pairs * 1.2) + 1,
       exclude: opts.exclude,
       onLog: (m) => log(`  ${m}`),
     });
@@ -251,28 +264,38 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       };
       images[String(i)] = { left: choose(`${i}:L`, 0), right: choose(`${i}:R`, 1) };
     });
-    state.images = images;
-    const missing = Object.values(images).filter((v) => !v.left.chosen || !v.right.chosen).length;
-    const low = Object.values(images).flatMap((v) => [v.left.chosen, v.right.chosen]).filter((c) => c && c.confidence === "low").length;
-    log(`  ${missing} pair(s) missing a photo, ${low} low-confidence photo(s)`);
+    // Keep the target number of pairs, preferring pairs whose photos are all verified (medium/high),
+    // preserving the original (fame) order. Low-confidence pairs only fill gaps and get flagged in review.
+    const quality = (i: number) => {
+      const v = images[String(i)];
+      if (!v.left.chosen || !v.right.chosen) return 0;
+      return v.left.chosen.confidence === "low" || v.right.chosen.confidence === "low" ? 1 : 2;
+    };
+    const all = pairs.map((_, i) => i);
+    const good = all.filter((i) => quality(i) === 2);
+    const weak = all.filter((i) => quality(i) === 1);
+    const keep = [...good, ...weak].slice(0, state.pairsTarget).sort((a, b) => a - b);
+    const dropped = all.filter((i) => !keep.includes(i));
+    if (dropped.length) {
+      log(`  dropping ${dropped.length} pair(s): ${dropped.map((i) => `${pairs[i].left.name}/${pairs[i].right.name} (${quality(i) === 0 ? "no photo" : quality(i) === 1 ? "unverified photo" : "surplus"})`).join(", ")}`);
+      state.rejected = [
+        ...(state.rejected ?? []),
+        ...dropped.filter((i) => quality(i) < 2).map((i) => ({ left: pairs[i].left.name, right: pairs[i].right.name, reason: quality(i) === 0 ? "no usable photo" : "photo identity not confirmed" })),
+      ];
+    }
+    const remapped: NonNullable<PipelineState["images"]> = {};
+    keep.forEach((oldI, newI) => (remapped[String(newI)] = images[String(oldI)]));
+    state.pairs = keep.map((i) => state.pairs![i]);
+    state.narration = keep.map((i) => state.narration![i]);
+    state.images = remapped;
+    const low = keep.filter((i) => quality(i) === 1).length;
+    log(`  kept ${keep.length} pair(s); ${low} still need a photo check in review`);
     done("images");
   }
   if (stopAfter("images")) return state;
 
-  // Drop pairs without both photos (keeps narration and images aligned).
-  const usable = state.pairs!.map((_, i) => i).filter((i) => state.images![String(i)]?.left.chosen && state.images![String(i)]?.right.chosen);
-
   // ---------------------------------------------------------------- voice
   if (shouldRun("voice")) {
-    if (usable.length !== state.pairs!.length) {
-      log(`  dropping ${state.pairs!.length - usable.length} pair(s) without photos`);
-      const keep = (arr: unknown[]) => usable.map((i) => arr[i]);
-      const remapImages: NonNullable<PipelineState["images"]> = {};
-      usable.forEach((oldI, newI) => (remapImages[String(newI)] = state.images![String(oldI)]));
-      state.pairs = keep(state.pairs!) as PipelineState["pairs"];
-      state.narration = keep(state.narration!) as NarrationLineOut[];
-      state.images = remapImages;
-    }
     log(`▶ voice: narrating ${state.narration!.length + 2} lines with Soniox`);
     const lines = sceneLines(state);
     const narrated = await narrateLines({
@@ -281,8 +304,24 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       outDir: path.join(workDir, "voice-en"),
       onProgress: (d, t) => d % 10 === 0 && log(`  voice ${d}/${t}`),
     });
-    const timeline = buildTimeline(narrated.map((x) => x.durationSec), { fps: FPS, transitionFrames: TRANSITION_FRAMES, leadInSec: LEAD_IN_FRAMES / FPS });
-    state.voice = { lines: narrated.map((x) => ({ file: x.file, durationSec: x.durationSec, text: x.text })), timeline };
+    // Voice every dub language now, so each scene is long enough for the longest language.
+    const dubs: NonNullable<NonNullable<PipelineState["voice"]>["dubs"]> = {};
+    for (const locale of state.locales) {
+      const t = await narrateTranslations({
+        locale,
+        sourceLines: lines,
+        englishDurations: narrated.map((x) => x.durationSec),
+        outDir: path.join(workDir, "dubs"),
+        onLog: (m) => log(`  ${m}`),
+      });
+      dubs[locale] = t.map((x) => ({ file: x.file, durationSec: x.durationSec, text: x.text, translated: x.translated }));
+      log(`  ${locale}: ${t.length} lines voiced`);
+    }
+    const longest = narrated.map((x, i) => Math.max(x.durationSec, ...Object.values(dubs).map((d) => d[i]?.durationSec ?? 0)));
+    const timeline = buildTimeline(longest, { fps: FPS, transitionFrames: TRANSITION_FRAMES, leadInSec: LEAD_IN_FRAMES / FPS });
+    // English audio windows use the English durations (music ducks only while Emma speaks).
+    timeline.scenes.forEach((s, i) => (s.audioDurationSec = narrated[i].durationSec));
+    state.voice = { lines: narrated.map((x) => ({ file: x.file, durationSec: x.durationSec, text: x.text })), dubs, timeline };
     log(`  video length ${(timeline.totalSec / 60).toFixed(1)} min`);
     done("voice");
   }
@@ -349,7 +388,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         textAnimations: Array(scenes.length).fill("fade-in"),
         captionStyle: "bold",
         comparisonOverlayMode: "both",
-        textScale: (Math.min(video.width, video.height) / 1080) * 1.45,
+        textScale: (Math.min(video.width, video.height) / 1080) * 1.8,
         watermark: { logoUrl: null, position: "none", opacity: 0.7 },
       };
       fs.writeFileSync(path.join(workDir, "render-props.json"), JSON.stringify(inputProps, null, 1));
@@ -476,10 +515,22 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     fs.mkdirSync(bundleDir, { recursive: true });
     const dubs: NonNullable<PipelineState["dubs"]> = state.dubs ?? {};
     for (const locale of state.locales) {
-      const dub = await dubLines({ locale, sourceLines: lines, timeline, outDir: path.join(workDir, "dubs"), onLog: (m) => log(`  ${m}`) });
+      const voiced = state.voice!.dubs?.[locale];
+      if (!voiced) {
+        log(`  ${locale}: not voiced (locale added after the voice stage; re-run with --force voice)`);
+        continue;
+      }
+      // Dub windows use the dub durations.
+      const dubTimeline = { ...timeline, scenes: timeline.scenes.map((s, i) => ({ ...s, audioDurationSec: voiced[i].durationSec })) };
+      const { voiceFile, tempoed } = await assembleDub({
+        locale,
+        lines: voiced.map((v, index) => ({ file: v.file, durationSec: v.durationSec, index })),
+        timeline: dubTimeline,
+        outDir: path.join(workDir, "dubs"),
+      });
       const audioFile = path.join(bundleDir, `audio.${locale}.mp3`);
-      const dur = await mixDubbedTrack({ voiceFile: dub.voiceFile, musicBedFile: fs.existsSync(bedFile) ? bedFile : null, outFile: audioFile });
-      const cues = cuesForTimeline(dub.lines.map((l) => stripDeliveryMarkup(l.translated)), timeline);
+      const dur = await mixDubbedTrack({ voiceFile, musicBedFile: fs.existsSync(bedFile) ? bedFile : null, outFile: audioFile });
+      const cues = cuesForTimeline(voiced.map((v) => stripDeliveryMarkup(v.translated)), dubTimeline);
       const srtFile = path.join(bundleDir, `captions.${locale}.srt`);
       fs.writeFileSync(srtFile, toSrt(cues));
       const meta = await translateLines({
@@ -490,8 +541,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         ],
       });
       dubs[locale] = { audioFile, srtFile, title: meta.get(0) ?? "", description: meta.get(1) ?? "" };
-      const tempoed = dub.lines.filter((l) => l.tempo > 1.001).length;
-      log(`  ${locale}: ${dur.toFixed(1)}s track, ${tempoed} line(s) sped up ≤8%`);
+      log(`  ${locale}: ${dur.toFixed(1)}s track${tempoed ? `, ${tempoed} line(s) sped up ≤8%` : ""}`);
     }
     state.dubs = dubs;
     done("localize");

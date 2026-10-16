@@ -3,7 +3,7 @@ import * as path from "path";
 import { createHash } from "crypto";
 
 const USER_AGENT =
-  process.env.WIKIMEDIA_USER_AGENT ?? "VideoWorkerStudio/0.5 (autopilot; contact via repository owner)";
+  process.env.WIKIMEDIA_USER_AGENT ?? "VideoWorkerStudio/0.5 (https://github.com/evseev/video-worker-studio; autopilot)";
 
 export function shortHash(input: string): string {
   return createHash("sha1").update(input).digest("hex").slice(0, 12);

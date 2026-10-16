@@ -9,7 +9,7 @@ import { z } from "zod";
 const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
 const USER_AGENT =
   process.env.WIKIMEDIA_USER_AGENT ??
-  "VideoWorkerStudio/0.5 (autopilot; contact via repository owner) node-fetch";
+  "VideoWorkerStudio/0.5 (https://github.com/evseev/video-worker-studio; autopilot)";
 
 export interface Relation {
   qid: string;
@@ -114,6 +114,7 @@ async function wikidataGet(params: Record<string, string>, fetchImpl: typeof fet
         lastError = new Error(`Wikidata HTTP ${res.status}`);
         const retryAfter = Number(res.headers.get("retry-after"));
         const backoff = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2000 * 2 ** attempt;
+        console.warn(`[wikidata] HTTP ${res.status}, retrying in ${Math.round(backoff / 1000)}s`);
         await new Promise((r) => setTimeout(r, Math.min(backoff, 30_000)));
         continue;
       }

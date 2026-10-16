@@ -72,11 +72,61 @@ Rules: keep every person's name exactly as written; keep years and numbers as di
   return out;
 }
 
-export interface DubbedTrack {
+export interface TranslatedLine extends NarratedLine {
+  translated: string;
+}
+
+/**
+ * Translate and voice every line for `locale`. Runs BEFORE the timeline is built, so scene
+ * lengths can fit the longest language. Lines far longer than the English ones (> maxRatio)
+ * are re-translated once with a character budget to avoid long silent gaps in English.
+ */
+export async function narrateTranslations(params: {
   locale: string;
-  lines: Array<NarratedLine & { translated: string; tempo: number; slotSec: number }>;
-  /** Voice-only track, full video length (wav). */
-  voiceFile: string;
+  sourceLines: Array<{ text: string; tone?: SonioxTag | null }>;
+  englishDurations: number[];
+  outDir: string;
+  voice?: string;
+  maxRatio?: number;
+  onLog?: (m: string) => void;
+}): Promise<TranslatedLine[]> {
+  const log = params.onLog ?? (() => {});
+  const { locale } = params;
+  const voice = params.voice ?? DEFAULT_VOICES[locale] ?? DEFAULT_VOICES.en;
+  const maxRatio = params.maxRatio ?? 1.35;
+  const dir = path.join(params.outDir, locale);
+  await fs.promises.mkdir(dir, { recursive: true });
+
+  const withTags = params.sourceLines.map((l, index) => ({
+    index,
+    text: l.tone && !/^\[[a-z -]+\]/i.test(l.text) ? `[${l.tone}] ${l.text}` : l.text,
+  }));
+  const translated = await translateLines({ lines: withTags, locale });
+  const texts = withTags.map((l) => translated.get(l.index) ?? l.text);
+  let narrated = await narrateLines({ lines: texts.map((text) => ({ text })), language: locale, voice, outDir: dir });
+
+  const long = narrated.filter((n) => n.durationSec > (params.englishDurations[n.index] ?? n.durationSec) * maxRatio);
+  if (long.length) {
+    log(`[${locale}] ${long.length} line(s) much longer than English; requesting tighter translations`);
+    const tighter = await translateLines({
+      locale,
+      lines: long.map((n) => ({
+        index: n.index,
+        text: withTags[n.index].text,
+        maxChars: Math.max(
+          20,
+          Math.floor(stripDeliveryMarkup(texts[n.index]).length * ((params.englishDurations[n.index] * maxRatio) / n.durationSec) * 0.95)
+        ),
+      })),
+    });
+    for (const [i, t] of tighter) texts[i] = t;
+    const redo = await narrateLines({ lines: long.map((n) => ({ text: texts[n.index] })), language: locale, voice, outDir: dir });
+    narrated = narrated.map((n) => {
+      const k = long.findIndex((o) => o.index === n.index);
+      return k >= 0 ? { ...redo[k], index: n.index } : n;
+    });
+  }
+  return narrated.map((n) => ({ ...n, translated: texts[n.index] }));
 }
 
 /** Seconds available for line i before the next line starts (keeps a small gap). */
@@ -87,73 +137,26 @@ export function slotSeconds(timeline: Timeline, i: number, gapSec = 0.3): number
   return Math.max(0.5, end - s.audioStartSec);
 }
 
-/**
- * Dub every line into `locale`, fitting each dubbed line into the English line's slot:
- *  1) translate; 2) synthesize; 3) if too long, ask for a tighter translation once;
- *  4) if still long, speed up with atempo (≤ 1.08); anything left over is trimmed with a fade.
- */
-export async function dubLines(params: {
+/** Lay the translated lines onto the shared timeline as one full-length voice track (wav). */
+export async function assembleDub(params: {
   locale: string;
-  sourceLines: Array<{ text: string; tone?: SonioxTag | null }>;
+  lines: Array<{ file: string; durationSec: number; index: number }>;
   timeline: Timeline;
   outDir: string;
-  voice?: string;
-  onLog?: (m: string) => void;
-}): Promise<DubbedTrack> {
-  const log = params.onLog ?? (() => {});
-  const { locale, timeline } = params;
-  const voice = params.voice ?? DEFAULT_VOICES[locale] ?? DEFAULT_VOICES.en;
-  const dir = path.join(params.outDir, locale);
-  await fs.promises.mkdir(dir, { recursive: true });
-
-  const withTags = params.sourceLines.map((l, index) => ({
-    index,
-    text: l.tone && !/^\[[a-z -]+\]/i.test(l.text) ? `[${l.tone}] ${l.text}` : l.text,
-  }));
-  const translated = await translateLines({ lines: withTags, locale });
-  const texts = withTags.map((l) => translated.get(l.index) ?? l.text);
-
-  let narrated = await narrateLines({ lines: texts.map((text) => ({ text })), language: locale, voice, outDir: dir });
-
-  // Tighten lines that overflow their slot by more than 8 %.
-  const overflow = narrated.filter((n) => n.durationSec > slotSeconds(timeline, n.index) * 1.08);
-  if (overflow.length) {
-    log(`[${locale}] ${overflow.length} line(s) too long, requesting tighter translations`);
-    const tighter = await translateLines({
-      locale,
-      lines: overflow.map((n) => ({
-        index: n.index,
-        text: withTags[n.index].text,
-        maxChars: Math.max(20, Math.floor(stripDeliveryMarkup(texts[n.index]).length * (slotSeconds(timeline, n.index) / n.durationSec) * 0.95)),
-      })),
-    });
-    for (const [i, t] of tighter) texts[i] = t;
-    const redo = await narrateLines({
-      lines: overflow.map((n) => ({ text: texts[n.index] })),
-      language: locale,
-      voice,
-      outDir: dir,
-    });
-    narrated = narrated.map((n) => {
-      const k = overflow.findIndex((o) => o.index === n.index);
-      return k >= 0 ? { ...redo[k], index: n.index } : n;
-    });
-  }
-
-  const lines: DubbedTrack["lines"] = narrated.map((n) => {
-    const slot = slotSeconds(timeline, n.index);
-    const tempo = n.durationSec > slot ? Math.min(1.08, n.durationSec / slot) : 1;
-    return { ...n, translated: texts[n.index], tempo, slotSec: slot };
+}): Promise<{ voiceFile: string; tempoed: number }> {
+  const { timeline } = params;
+  let tempoed = 0;
+  const clips = params.lines.map((l) => {
+    const slot = slotSeconds(timeline, l.index);
+    // The timeline was sized for the longest language, so this is only a safety net.
+    const tempo = l.durationSec > slot ? Math.min(1.08, l.durationSec / slot) : 1;
+    if (tempo > 1.001) tempoed++;
+    return { file: l.file, startSec: timeline.scenes[l.index].audioStartSec, tempo, maxSec: slot };
   });
-
-  const voiceFile = path.join(dir, `voice-${locale}.wav`);
-  await assembleVoiceTrack({
-    clips: lines.map((l) => ({ file: l.file, startSec: timeline.scenes[l.index].audioStartSec, tempo: l.tempo, maxSec: l.slotSec })),
-    totalSec: timeline.totalSec,
-    outFile: voiceFile,
-    workDir: dir,
-  });
-  return { locale, lines, voiceFile };
+  const voiceFile = path.join(params.outDir, params.locale, `voice-${params.locale}.wav`);
+  await fs.promises.mkdir(path.dirname(voiceFile), { recursive: true });
+  await assembleVoiceTrack({ clips, totalSec: timeline.totalSec, outFile: voiceFile, workDir: path.dirname(voiceFile) });
+  return { voiceFile, tempoed };
 }
 
 /** Place clips on a silent timeline (adelay + amix) and write a full-length wav. */
