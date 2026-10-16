@@ -86,7 +86,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
     if (stream) {
       await supabase
         .from("projects")
-        .update({ wizard_step: "assets" })
+        .update({ wizard_step: "preview" })
         .eq("id", projectId)
         .eq("user_id", user.id);
 
@@ -155,7 +155,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
 
     await supabase
       .from("projects")
-      .update({ wizard_step: "assets" })
+      .update({ wizard_step: "preview" })
       .eq("id", projectId)
       .eq("user_id", user.id);
 
@@ -187,7 +187,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
 
   await supabase
     .from("projects")
-    .update({ wizard_step: "assets" })
+    .update({ wizard_step: "preview" })
     .eq("id", projectId)
     .eq("user_id", user.id);
 

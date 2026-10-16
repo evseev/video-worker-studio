@@ -13,11 +13,12 @@ type Props = { store: StoreApi<WizardState>; renderBackend: "local" | "lambda" }
 const QUALITY_LABELS: Record<string, string> = { hd: "HD (720p)", fullhd: "Full HD (1080p)", "4k": "4K (2160p)" };
 
 export function RenderStep({ store, renderBackend }: Props) {
-  const { projectId, channelId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, setStep } = useStore(store);
+  const { projectId, channelId, scenes, selectedTemplate, settings, projectStatus, videoUrl, renderErrorContext, setStep, savedBackgroundMusic, savedVoiceoverUrl } = useStore(store);
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [backgroundMusic, setBackgroundMusic] = useState<string | null>(null);
-  const [voiceoverUrl, setVoiceoverUrl] = useState<string | null>(null);
+  // Start from the saved choices: sending null would override the stored music/voiceover (merge-render-payload).
+  const [backgroundMusic, setBackgroundMusic] = useState<string | null>(savedBackgroundMusic);
+  const [voiceoverUrl, setVoiceoverUrl] = useState<string | null>(savedVoiceoverUrl);
   const router = useRouter();
 
   const isProcessing = projectStatus === "processing" || projectStatus === "rendering";

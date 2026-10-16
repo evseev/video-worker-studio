@@ -1,3 +1,5 @@
+import { mergeDraftScenes } from "@/lib/projects/draft";
+import type { Json } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/with-auth";
 import { generateStructure } from "@/lib/ai/wizard";
@@ -63,13 +65,19 @@ export const POST = withAuth(async (request, { user, supabase }) => {
   });
 
   if (projectId) {
+    // Merge into the existing draft so settings/idea/SEO survive a reload (was: bare array overwrite).
+    const { data: current } = await supabase
+      .from("projects")
+      .select("draft_scenes")
+      .eq("id", projectId)
+      .eq("user_id", user.id)
+      .maybeSingle();
     await supabase
       .from("projects")
       .update({
         selected_template: templateId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        draft_scenes: scenes as any,
-        wizard_step: "structure",
+        draft_scenes: mergeDraftScenes(current?.draft_scenes, scenes) as Json,
+        wizard_step: "script",
       })
       .eq("id", projectId)
       .eq("user_id", user.id);

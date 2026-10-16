@@ -22,7 +22,7 @@ export const POST = withAuth(async (request, { user, supabase }) => {
       .update({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         trend_validation_data: trendData as any,
-        wizard_step: "validation",
+        wizard_step: "refine",
       })
       .eq("id", projectId)
       .eq("user_id", user.id);

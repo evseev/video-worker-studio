@@ -18,6 +18,16 @@ type Project = Tables<"projects">;
 
 export type WizardStep = "template" | "idea" | "refine" | "script" | "preview" | "render";
 
+const WIZARD_STEPS: WizardStep[] = ["template", "idea", "refine", "script", "preview", "render"];
+/** Older server routes wrote step names outside the wizard's union; map them to real steps. */
+const LEGACY_STEPS: Record<string, WizardStep> = { validation: "refine", structure: "script", assets: "preview" };
+
+export function normalizeWizardStep(value: string | null | undefined): WizardStep {
+  if (!value) return "template";
+  if ((WIZARD_STEPS as string[]).includes(value)) return value as WizardStep;
+  return LEGACY_STEPS[value] ?? "template";
+}
+
 export type VideoSettings = {
   sceneCount: number;
   sceneDuration: number;
@@ -62,6 +72,9 @@ export type WizardState = {
   videoDescription: string;
   videoTags: string[];
   projectStatus: string;
+  /** Saved audio choices, so a render after a page reload keeps them. */
+  savedBackgroundMusic: string | null;
+  savedVoiceoverUrl: string | null;
   videoUrl: string | null;
   renderErrorContext: unknown;
   saving: boolean;
@@ -137,7 +150,7 @@ export function createWizardStore(project: Project) {
     projectId: project.id,
     channelId: project.channel_id,
     topic: project.topic || "",
-    currentStep: (project.wizard_step as WizardStep) || "template",
+    currentStep: normalizeWizardStep(project.wizard_step),
     scenes: draft.scenes || [],
     selectedTemplate: (project.selected_template as TemplateId) || "slideshow",
     settings: buildSettingsFromDraft(project, draft),
@@ -147,6 +160,8 @@ export function createWizardStore(project: Project) {
     videoDescription: draft.videoDescription || project.video_description || "",
     videoTags: draft.videoTags || (project.video_tags ? project.video_tags.split(", ") : []),
     projectStatus: project.status,
+    savedBackgroundMusic: project.background_music ?? null,
+    savedVoiceoverUrl: project.voiceover_url ?? null,
     videoUrl: project.video_url || null,
     renderErrorContext: (project as Record<string, unknown>).render_error_context ?? null,
     saving: false,

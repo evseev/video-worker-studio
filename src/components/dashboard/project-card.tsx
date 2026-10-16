@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Tables } from "@/lib/supabase/types";
 import { StatusBadge } from "./status-badge";
+import { normalizeWizardStep } from "@/lib/stores/wizard-store";
 
 type Project = Tables<"projects">;
 
@@ -21,9 +22,12 @@ export function ProjectCard({
 
   const isDraft = project.status === "draft";
   const isCompleted = project.status === "completed";
-  const href = isDraft
-    ? `/wizard/${project.id}?step=${project.wizard_step || "template"}`
-    : `/projects/${project.id}`;
+  const awaitingReview = (project.status as string) === "awaiting_review";
+  const href = awaitingReview
+    ? `/review/${project.id}`
+    : isDraft
+      ? `/wizard/${project.id}?step=${normalizeWizardStep(project.wizard_step)}`
+      : `/projects/${project.id}`;
 
   return (
     <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg hover:shadow-violet-500/5 group">

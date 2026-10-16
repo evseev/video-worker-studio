@@ -1,6 +1,7 @@
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   processing: "Generating…",
+  awaiting_review: "Needs review",
   rendering: "Rendering…",
   completed: "Completed",
   failed_ai: "AI Error",
