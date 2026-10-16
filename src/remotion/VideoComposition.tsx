@@ -8,6 +8,7 @@ import { clockWipe } from "@remotion/transitions/clock-wipe";
 import { SlideshowScene } from "./templates/SlideshowScene";
 import { ComparisonScene } from "./templates/ComparisonScene";
 import { FactCardScene } from "./templates/FactCardScene";
+import { HostScene } from "./HostScene";
 import { Watermark, type WatermarkPosition } from "./Watermark";
 import type { ResolvedTransition, ResolvedImageMotion, ResolvedTextAnimation } from "@/lib/effects";
 import type { CaptionStyleId, ComparisonOverlayMode } from "@/lib/comparison-caption-styles";
@@ -27,6 +28,8 @@ export type VideoCompositionProps = {
     facts?: { label: string; value: string }[];
     /** Per-scene narration clip (autopilot). Starts `narrationLeadInFrames` into the scene. */
     narrationUrl?: string | null;
+    /** template "host" (Phase 3 experiment): lip-synced host clip with its own audio. */
+    hostVideoUrl?: string | null;
   }>;
   sceneDurationFrames: number;
   /** Per-scene lengths (narration-driven). Falls back to `sceneDurationFrames` for every scene. */
@@ -184,6 +187,10 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
               ) : null}
               {(() => {
                 switch (scene.template) {
+                  case "host":
+                    return scene.hostVideoUrl ? (
+                      <HostScene videoUrl={scene.hostVideoUrl} caption={scene.captionText} textScale={textScale} />
+                    ) : null;
                   case "comparison":
                     return (
                       <ComparisonScene
