@@ -15,6 +15,8 @@ export const RANK_THRESHOLDS = {
   goodShortSide: 800,
   minBlur: 25,
   goodBlur: 150,
+  /** Similarity to an excluded person (the partner) at which a photo is rejected. */
+  excludeSame: 0.36,
   /** Hamming distance on 64-bit dHash below which two images are near-duplicates. */
   duplicateBits: 6,
 } as const;
@@ -99,6 +101,10 @@ export function rankCandidates(
     if (Math.min(a.width ?? 0, a.height ?? 0) < t.minShortSide) {
       rejected = true;
       flags.push("too small");
+    }
+    if ((a.excludeSimilarity ?? 0) >= t.excludeSame) {
+      rejected = true;
+      flags.push("shows the partner, not this person");
     }
     if (expectSingle && (a.faceCount ?? 0) > 1) flags.push(`${a.faceCount} faces in photo`);
     if (opts.excludeHashes?.length && a.dhash && opts.excludeHashes.some((h) => hammingHex(h, a.dhash!) <= t.duplicateBits)) {

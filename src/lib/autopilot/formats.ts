@@ -103,7 +103,7 @@ export function pairLabels(p: VerifiedPair, now = currentYear()): { leftLabel: s
       };
     }
     case "partner":
-      return { leftLabel: "PARTNER", rightLabel: "PARTNER" };
+      return p.relation?.endYear ? { leftLabel: "EX-PARTNER", rightLabel: "EX-PARTNER" } : { leftLabel: "PARTNER", rightLabel: "PARTNER" };
     case "child":
       return {
         leftLabel: role(p.left, "FATHER", "MOTHER", "PARENT"),

@@ -86,3 +86,16 @@ describe("face-aware crop", () => {
     expect(slotSize("comparison", 1, { width: 1080, height: 1920 })).toEqual({ width: 1080, height: 958 });
   });
 });
+
+describe("partner exclusion", () => {
+  it("rejects a photo that shows the famous partner instead", () => {
+    const ranked = rankCandidates([
+      cand("partner", { consensusSimilarity: 0.3, excludeSimilarity: 0.78, dhash: "1111111111111111" }),
+      cand("self", { consensusSimilarity: 0.22, excludeSimilarity: 0.1, dhash: "eeeeeeeeeeeeeeee" }),
+    ]);
+    expect(ranked[0].id).toBe("self");
+    const partner = ranked.find((c) => c.id === "partner")!;
+    expect(partner.rejected).toBe(true);
+    expect(partner.flags).toContain("shows the partner, not this person");
+  });
+});

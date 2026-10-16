@@ -17,6 +17,8 @@ const FaceAnalysisSchema = z.object({
   dhash: z.string().optional(),
   refSimilarity: z.number().nullable().optional(),
   consensusSimilarity: z.number().nullable().optional(),
+  excludeSimilarity: z.number().nullable().optional(),
+  faceIndex: z.number().optional(),
 });
 
 const ResponseSchema = z.object({
@@ -44,11 +46,11 @@ export function resolveFaceMatchCommand(cwd = /* turbopackIgnore: true */ proces
 export async function analyzeFaces(
   references: string[],
   candidates: string[],
-  opts: { timeoutMs?: number } = {}
+  opts: { timeoutMs?: number; exclude?: string[] } = {}
 ): Promise<FaceMatchResponse> {
   if (candidates.length === 0) return { references: [], candidates: [] };
   const { cmd, args } = resolveFaceMatchCommand();
-  const payload = JSON.stringify({ references, candidates });
+  const payload = JSON.stringify({ references, candidates, exclude: opts.exclude ?? [] });
   return await new Promise<FaceMatchResponse>((resolve, reject) => {
     const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";

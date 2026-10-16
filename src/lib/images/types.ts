@@ -31,6 +31,10 @@ export interface FaceAnalysis {
   dhash?: string;
   refSimilarity?: number | null;
   consensusSimilarity?: number | null;
+  /** Similarity to a person this photo must NOT show (e.g. the famous partner). */
+  excludeSimilarity?: number | null;
+  /** Which detected face was chosen (0 = largest). */
+  faceIndex?: number;
 }
 
 export type Confidence = "high" | "medium" | "low";

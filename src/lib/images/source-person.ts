@@ -59,6 +59,8 @@ export async function sourcePersonSlots(params: {
   workDir: string;
   perQuery?: number;
   excludeHashes?: string[];
+  /** People this person's photos must not show (couples: the partner). Their Wikidata photos are used. */
+  excludePeople?: PersonFacts[];
 }): Promise<PersonSourcingResult> {
   const { person, facts, slots, workDir } = params;
   const name = facts?.name ?? person;
@@ -94,12 +96,19 @@ export async function sourcePersonSlots(params: {
     eraPools.set(k, pool);
   }
 
+  const excludeRefs: string[] = [];
+  for (const other of params.excludePeople ?? []) {
+    if (!other.imageUrl || other.qid === facts?.qid) continue;
+    const ref = await downloadImage(other.imageUrl, path.join(personDir, "exclude"));
+    if (ref) excludeRefs.push(ref);
+  }
+
   // 3) Verify everything for this person in one pass.
   const all = new Map<string, ImageCandidate>();
   for (const pool of eraPools.values()) for (const c of pool) all.set(c.localPath, c);
   const analyses = new Map<string, FaceAnalysis>();
   if (all.size > 0) {
-    const res = await analyzeFaces(references, Array.from(all.keys()));
+    const res = await analyzeFaces(references, Array.from(all.keys()), { exclude: excludeRefs });
     for (const a of res.candidates) analyses.set(a.path, toFaceAnalysis(a));
   }
 

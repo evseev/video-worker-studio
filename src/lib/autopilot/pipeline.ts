@@ -4,6 +4,7 @@ import * as os from "os";
 import type { PersonFacts, Relation } from "@/lib/facts/wikidata";
 import { sourcePersonSlots, type PersonSlotRequest } from "@/lib/images/source-person";
 import { faceObjectPosition, slotSize } from "@/lib/images/crop";
+import { detectWatermarks } from "@/lib/images/watermark";
 import type { RankedCandidate } from "@/lib/images/types";
 import { narrateLines } from "@/lib/tts/narration";
 import { stripDeliveryMarkup, type SonioxTag } from "@/lib/tts/soniox";
@@ -253,33 +254,55 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     const pairs = state.pairs!.map(toVerified);
     log(`▶ images: sourcing and verifying photos for ${pairs.length} pairs`);
     // Group slots by person so each person is verified once with all their candidates.
-    const byPerson = new Map<string, { facts: PersonFacts; slots: PersonSlotRequest[] }>();
+    const byPerson = new Map<string, { facts: PersonFacts; slots: PersonSlotRequest[]; exclude: PersonFacts[] }>();
     pairs.forEach((p, i) => {
       const eras = pairEras(p);
-      const add = (facts: PersonFacts, key: string, era: { era: PersonSlotRequest["era"]; year: number | null }) => {
-        const entry = byPerson.get(facts.qid) ?? { facts, slots: [] };
+      const add = (facts: PersonFacts, other: PersonFacts, key: string, era: { era: PersonSlotRequest["era"]; year: number | null }) => {
+        const entry = byPerson.get(facts.qid) ?? { facts, slots: [], exclude: [] };
         entry.slots.push({ key, era: era.era, year: era.year });
+        // The partner often dominates the other person's search results: never accept their face.
+        if (other.qid !== facts.qid && !entry.exclude.some((e) => e.qid === other.qid)) entry.exclude.push(other);
         byPerson.set(facts.qid, entry);
       };
-      add(p.left, `${i}:L`, eras.left);
-      add(p.right, `${i}:R`, eras.right);
+      add(p.left, p.right, `${i}:L`, eras.left);
+      add(p.right, p.left, `${i}:R`, eras.right);
     });
     const people = Array.from(byPerson.values());
     const ranked = new Map<string, RankedCandidate[]>();
     let n = 0;
     await mapLimit(people, 2, async (person) => {
-      const res = await sourcePersonSlots({ person: person.facts.name, facts: person.facts, slots: person.slots, workDir: path.join(/* turbopackIgnore: true */ workDir, "images") });
+      const res = await sourcePersonSlots({
+        person: person.facts.name,
+        facts: person.facts,
+        slots: person.slots,
+        workDir: path.join(/* turbopackIgnore: true */ workDir, "images"),
+        excludePeople: person.exclude,
+      });
       for (const [key, list] of Object.entries(res.slots)) ranked.set(key, list);
       n++;
       log(`  photos ${n}/${people.length}: ${person.facts.name} (${res.referenceCount} ref)`);
     });
+
+    // Watermark check (Gemini vision) on the top 4 usable candidates of every slot.
+    const topFiles = Array.from(ranked.values()).flatMap((list) => list.filter((c) => !c.rejected).slice(0, 4).map((c) => c.localPath));
+    let watermarked: Record<string, boolean> = {};
+    try {
+      watermarked = await detectWatermarks(topFiles, workDir);
+      const n = Object.values(watermarked).filter(Boolean).length;
+      log(`  watermark check: ${n}/${Object.keys(watermarked).length} candidate photos carry a stock watermark`);
+    } catch (err) {
+      log(`  watermark check skipped: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     // Choose per slot; then-now uses distinct photos for left and right.
     const usedPaths = new Set<string>();
     const images: NonNullable<PipelineState["images"]> = {};
     pairs.forEach((_, i) => {
       const choose = (key: string, slot: number): SlotPick => {
-        const list = (ranked.get(key) ?? []).filter((c) => !c.rejected);
+        const all = (ranked.get(key) ?? []).filter((c) => !c.rejected);
+        for (const c of all) if (watermarked[c.localPath]) c.flags.push("stock watermark");
+        // Clean photos first (stable: keeps rank order within each group).
+        const list = [...all.filter((c) => !watermarked[c.localPath]), ...all.filter((c) => watermarked[c.localPath])];
         const fresh = list.filter((c) => !usedPaths.has(c.localPath));
         const chosen = fresh[0] ?? list[0] ?? null;
         if (chosen) usedPaths.add(chosen.localPath);

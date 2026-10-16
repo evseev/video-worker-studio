@@ -83,23 +83,36 @@ class FaceEngine:
             "blur": round(blur, 2),
             "dhash": dhash(img),
             "_feature": None,
+            "_faces": [],
         }
         if not faces:
             return result
-        # main face = largest area
-        main = max(faces, key=lambda f: f[2] * f[3])
-        aligned = self.recognizer.alignCrop(work, main)
-        feature = self.recognizer.feature(aligned)
         inv = 1.0 / scale
-        x, y, fw, fh = [float(v) * inv for v in main[:4]]
-        result["faceBox"] = [round(x, 1), round(y, 1), round(fw, 1), round(fh, 1)]
-        result["faceScore"] = round(float(main[14]), 4)
-        result["faceAreaRatio"] = round((fw * fh) / float(w * h), 5)
-        # count only faces at least 25% the area of the main face (ignore tiny background faces)
-        main_area = float(main[2] * main[3])
-        result["faceCount"] = int(sum(1 for f in faces if f[2] * f[3] >= 0.25 * main_area))
-        result["_feature"] = feature
+        largest = max(f[2] * f[3] for f in faces)
+        # Significant faces: at least 25% of the largest face's area (ignore tiny background faces).
+        significant = sorted((f for f in faces if f[2] * f[3] >= 0.25 * largest), key=lambda f: -(f[2] * f[3]))
+        result["faceCount"] = len(significant)
+        result["_faces"] = []
+        for f in significant:
+            feature = self.recognizer.feature(self.recognizer.alignCrop(work, f))
+            x, y, fw, fh = [float(v) * inv for v in f[:4]]
+            result["_faces"].append({
+                "box": [round(x, 1), round(y, 1), round(fw, 1), round(fh, 1)],
+                "score": round(float(f[14]), 4),
+                "area": round((fw * fh) / float(w * h), 5),
+                "feature": feature,
+            })
+        self.choose_face(result, 0)
         return result
+
+    @staticmethod
+    def choose_face(result, idx):
+        face = result["_faces"][idx]
+        result["faceBox"] = face["box"]
+        result["faceScore"] = face["score"]
+        result["faceAreaRatio"] = face["area"]
+        result["_feature"] = face["feature"]
+        result["faceIndex"] = idx
 
     def similarity(self, a, b):
         return float(self.recognizer.match(a, b, cv2.FaceRecognizerSF_FR_COSINE))
@@ -109,28 +122,64 @@ def main():
     req = json.load(sys.stdin)
     refs = req.get("references") or []
     cands = req.get("candidates") or []
+    # Faces that must NOT be this person (e.g. the famous partner who dominates a spouse's search results).
+    excludes = req.get("exclude") or []
     engine = FaceEngine()
 
     ref_results = [engine.analyze(p) for p in refs]
     ref_features = [r["_feature"] for r in ref_results if r.get("ok") and r.get("_feature") is not None]
+    excl_features = [r["_feature"] for r in (engine.analyze(p) for p in excludes) if r.get("ok") and r.get("_feature") is not None]
+
+    def excl_sim(feature):
+        return max((engine.similarity(feature, e) for e in excl_features), default=0.0)
     cand_results = [engine.analyze(p) for p in cands]
+
+    # In group photos pick the face that is this person: best reference match, else the face most
+    # similar to the person's single-face photos (couples photos are common for spouses).
+    singles = [
+        c["_feature"]
+        for c in cand_results
+        if c.get("ok") and c.get("faceCount") == 1 and c.get("_feature") is not None and excl_sim(c["_feature"]) < 0.36
+    ]
+    for c in cand_results:
+        faces = c.get("_faces") or []
+        if len(faces) < 2:
+            continue
+        def score(face):
+            penalty = excl_sim(face["feature"])
+            if ref_features:
+                return max(engine.similarity(face["feature"], rf) for rf in ref_features) - penalty
+            if singles:
+                return float(np.median([engine.similarity(face["feature"], g) for g in singles])) - penalty
+            return -penalty
+        best = max(range(len(faces)), key=lambda k: score(faces[k]))
+        engine.choose_face(c, best)
 
     feats = [c.get("_feature") if c.get("ok") else None for c in cand_results]
     for i, c in enumerate(cand_results):
         f = feats[i]
         c["refSimilarity"] = None
         c["consensusSimilarity"] = None
+        c["excludeSimilarity"] = None
         if f is None:
             continue
+        if excl_features:
+            c["excludeSimilarity"] = round(excl_sim(f), 4)
         if ref_features:
             c["refSimilarity"] = round(max(engine.similarity(f, rf) for rf in ref_features), 4)
-        others = [engine.similarity(f, g) for j, g in enumerate(feats) if j != i and g is not None]
+        # Consensus against the other photos' chosen faces, ignoring faces that match an excluded person.
+        others = [
+            engine.similarity(f, g)
+            for j, g in enumerate(feats)
+            if j != i and g is not None and (not excl_features or excl_sim(g) < 0.36)
+        ]
         if others:
             c["consensusSimilarity"] = round(float(np.median(others)), 4)
 
     def clean(r):
         r = dict(r)
         r.pop("_feature", None)
+        r.pop("_faces", None)
         return r
 
     out = {

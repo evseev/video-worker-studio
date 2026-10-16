@@ -79,8 +79,10 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
 
   const showLabels = showComparisonLabels(comparisonOverlayMode);
   const showCaption = showComparisonCaption(comparisonOverlayMode);
-  const labelLeft = scaleTextStyle(getComparisonLabelStyle(captionStyleId, "left"), textScale);
-  const labelRight = scaleTextStyle(getComparisonLabelStyle(captionStyleId, "right"), textScale);
+  // Stacked (Shorts): labels sit at the top of each photo so the lower one never meets the caption bar.
+  const placeLabel = (style: Style): Style => (stacked ? { ...style, bottom: undefined, top: Math.round(28 * textScale) } : style);
+  const labelLeft = placeLabel(scaleTextStyle(getComparisonLabelStyle(captionStyleId, "left"), textScale));
+  const labelRight = placeLabel(scaleTextStyle(getComparisonLabelStyle(captionStyleId, "right"), textScale));
   const capBase = getComparisonCaptionStyles(captionStyleId);
   const cap = { bar: capBase.bar, text: scaleTextStyle(capBase.text, textScale) };
   const displayCaption = resolveCaption(captionText, scriptText);
