@@ -290,6 +290,16 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     state.images = remapped;
     const low = keep.filter((i) => quality(i) === 1).length;
     log(`  kept ${keep.length} pair(s); ${low} still need a photo check in review`);
+    if (keep.length !== pairs.length) {
+      // Titles and hook mention the pair count and the leading names; rewrite them for the final list.
+      state.packaging = await writePackaging({
+        topic: state.topic,
+        format: state.format,
+        pairs: state.pairs!.map(toVerified),
+        seriesName: opts.seriesName,
+        publishSlot: opts.publishSlot,
+      });
+    }
     done("images");
   }
   if (stopAfter("images")) return state;

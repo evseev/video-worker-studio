@@ -202,6 +202,7 @@ HARD RULES:
 - Never say or imply that someone died, is ill or is struggling unless the facts say "died".
 - 18 to 32 words, one or two sentences, plain spoken American English, easy to follow on first listen.
 - Write years and numbers as digits ("1988", "35 years", "four children" is fine for small counts). Never spell years out as words.
+- Name at most two children in a line; otherwise give the count ("four children").
 - Every line must carry at least one concrete detail from the facts: a year, how long they have been together, an age, or a child's name. Avoid empty filler words such as "wonderful", "lovely", "journey", "amazing".
 - Vary sentence openings across lines; never start two consecutive lines the same way; no "Next up", no "Let's", no rhetorical question in every line.
 - You may use *one* word wrapped in asterisks for emphasis, and "..." for a gentle pause. No emojis, no hashtags.
