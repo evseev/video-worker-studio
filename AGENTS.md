@@ -172,6 +172,8 @@ supabase/
 - **The Inngest webhook endpoint (`/api/inngest`) must remain unauthenticated.** The middleware matcher explicitly excludes it. Do not add auth to this route.
 - **Remotion renders on AWS Lambda by default.** The worker dispatches renders via `@remotion/lambda`, while `RENDER_BACKEND=local` remains a fallback for rollback and debugging.
 - **Sentry is the observability layer.** Do not add other error tracking tools. Sentry is initialised in `src/instrumentation.ts` and `src/instrumentation-client.ts`.
+- **Autopilot** (`src/lib/autopilot/`, runbook `docs/autopilot/RUNBOOK.md`): topic → Wikidata-verified pairs → face-verified photos → Soniox narration (all languages before timing) → review gate → local Remotion render → dubs/bundle/Shorts. Stages resume from `state.json` under `AUTOPILOT_OUT_DIR`. Inngest jobs live in `src/lib/inngest/autopilot-functions.ts`; every DB write goes through a service-role-only SECURITY DEFINER RPC (`src/lib/autopilot/db.ts`). Never generate or alter real people's faces; never publish without the review gate.
+- **Runtime file paths in server modules** must stay out of Turbopack tracing: annotate dynamic `path.join/resolve` with `/* turbopackIgnore: true */` and serve arbitrary files via `process.getBuiltinModule("node:fs")` (see `src/lib/autopilot/static-server.ts`), otherwise `next build` tries to bundle `out/` and the Python venv.
 
 ---
 
@@ -186,12 +188,18 @@ supabase/
 | `channel_scene_presets` | Named preset JSON per `channel_id` |
 | `scenes` | `id`, `project_id`, `sequence_order`, `script_text`, `search_keywords`, `asset_url` |
 | `video_subjects` | `id`, `channel_id`, `project_id`, `subject_key`, `subject_normalized`, `embedding`, `created_at` |
+| `projects` (autopilot, migration `20261016120000`) | `autopilot`, `format_slug`, `autopilot_run_dir`, `autopilot_summary`, `review_status`, `thumbnail_url`, `youtube_video_id`, `publish_at`, `experiment_arm` |
+| `channels` (autopilot) | `autopilot_enabled`, `autopilot_config` |
+| `channel_topic_ideas` (autopilot) | `format_slug`, `pair_count`, `series_key`, `template_id` |
+| `subject_facts` | Wikidata cache (service role only) |
+| `youtube_connections` | OAuth tokens per channel (service role only; never readable by clients) |
 
 ### Project status lifecycle
 ```
 draft → processing → rendering → completed
                  ↘ failed_ai
                               ↘ failed_render
+autopilot: processing → awaiting_review (review_status pending_review) → rendering → completed
 ```
 
 - `draft`: Created by wizard, not yet sent to worker.
@@ -251,6 +259,11 @@ draft → processing → rendering → completed
 | `/api/channels/[id]/scene-presets` | GET, POST | ✅ | Preset library |
 | `/api/channels/[id]/scene-presets/[presetId]` | DELETE | ✅ | Remove preset |
 | `/api/channels/[id]/youtube/refresh` | POST | ✅ | Refresh cached YouTube public data |
+| `/api/autopilot/run` | POST | ✅ | Send `autopilot/run` for one owned channel ("Run autopilot now") |
+| `/api/autopilot/[id]` | GET, PUT, POST | ✅ | Review model; save review edits; approve (`autopilot/approved`) |
+| `/api/autopilot/[id]/file` | GET | ✅ | Owner-only files of a run (photos, narration, bundle; Range support) |
+| `/api/youtube/oauth/start` | GET | ✅ | Google consent for uploads (signed state) |
+| `/api/youtube/oauth/callback` | GET | ✅ | Stores tokens via `worker_save_youtube_tokens` |
 
 - Route handlers must return `NextResponse.json()` consistently.
 - All authenticated routes must validate the Supabase session and return `401` if missing.
@@ -269,6 +282,8 @@ draft → processing → rendering → completed
 | `worker_update_project_status` RPC | Same as above |
 | `worker_update_project_error` RPC | Same as above |
 | `worker_insert_video_subjects` RPC | Same as above |
+| `autopilot_*` / `worker_update_autopilot` / `worker_set_publish_result` / `worker_*_youtube_*` / `worker_cache_subject_facts` RPCs | Service-role only; autopilot worker depends on their signatures |
+| `scripts/face-match/face_match.py` JSON contract | `src/lib/images/verify.ts` parses it with Zod |
 | `.env.local` | Never commit; never log env values |
 
 ---
