@@ -39,6 +39,8 @@ export interface ReviewPair {
 export interface ReviewModel {
   projectId: string;
   reviewStatus: string | null;
+  /** projects.status (e.g. "failed_render" enables a retry). */
+  status: string | null;
   topic: string;
   format: string;
   titles: string[];
@@ -57,7 +59,13 @@ export function fileUrl(projectId: string, runDir: string, file: string, downloa
   return `/api/autopilot/${projectId}/file?path=${encodeURIComponent(rel)}${download ? "&download=1" : ""}`;
 }
 
-export function toReviewModel(projectId: string, runDir: string, state: PipelineState, reviewStatus: string | null): ReviewModel {
+export function toReviewModel(
+  projectId: string,
+  runDir: string,
+  state: PipelineState,
+  reviewStatus: string | null,
+  status: string | null = null
+): ReviewModel {
   const photo = (p: PickedImage | null | undefined): ReviewPhoto | null =>
     p
       ? {
@@ -120,6 +128,7 @@ export function toReviewModel(projectId: string, runDir: string, state: Pipeline
   return {
     projectId,
     reviewStatus,
+    status,
     topic: state.topic,
     format: state.format,
     titles: state.packaging?.titles ?? [],

@@ -23,7 +23,7 @@ async function load(id: string) {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const r = await load((await params).id);
   if ("error" in r) return r.error;
-  return NextResponse.json(toReviewModel(r.project.id, r.project.runDir, r.state, r.project.review_status));
+  return NextResponse.json(toReviewModel(r.project.id, r.project.runDir, r.state, r.project.review_status, r.project.status));
 }
 
 /** Save review edits (photo swaps, crop, narration, title). Allowed only while awaiting review. */
@@ -37,14 +37,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!parsed.success) return NextResponse.json({ error: "Invalid edits", issues: parsed.error.issues }, { status: 400 });
   const { state, rerun } = applyReviewEdits(r.state, parsed.data);
   saveState(r.project.runDir, state);
-  return NextResponse.json({ ok: true, rerun, review: toReviewModel(r.project.id, r.project.runDir, state, r.project.review_status) });
+  return NextResponse.json({ ok: true, rerun, review: toReviewModel(r.project.id, r.project.runDir, state, r.project.review_status, r.project.status) });
 }
 
 /** Approve: optionally apply final edits, then queue render → dubs → bundle → publish. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const r = await load((await params).id);
   if ("error" in r) return r.error;
-  if (r.project.review_status !== "pending_review") {
+  // Approve while awaiting review, or retry after a failed render.
+  const retry = r.project.status === "failed_render";
+  if (r.project.review_status !== "pending_review" && !retry) {
     return NextResponse.json({ error: "This video is no longer waiting for review" }, { status: 409 });
   }
   const body = await req.json().catch(() => ({}));
@@ -56,8 +58,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     saveState(r.project.runDir, state);
   }
   await inngest.send({
-    // Idempotent: a double-click cannot queue two renders (Inngest dedupes ids for 24h).
-    id: `autopilot-approved-${r.project.id}-${state.stages.images ?? ""}`,
+    // Dedupes double-clicks within the same minute; a later retry gets a new id.
+    id: `autopilot-approved-${r.project.id}-${Math.floor(Date.now() / 60_000)}`,
     name: "autopilot/approved",
     data: {
       projectId: r.project.id,

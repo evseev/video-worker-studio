@@ -151,7 +151,7 @@ export const autopilotRender = inngest.createFunction(
     await step.run("mark-rendering", () => updateAutopilot({ projectId: d.projectId, status: "rendering", reviewStatus: "approved" }));
     try {
       // "voice" is a no-op unless review edits cleared it.
-      for (const stage of ["voice", "render", "thumbnails", "localize", "bundle"] as const) {
+      for (const stage of ["voice", "render", "thumbnails", "localize", "bundle", "shorts"] as const) {
         await step.run(`stage-${stage}`, async () => {
           const state = await runPipeline(pipelineOpts(d, stage));
           await updateAutopilot({ projectId: d.projectId, summary: summarizeState(state) });

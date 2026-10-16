@@ -258,6 +258,14 @@ export function ReviewClient({ projectId }: { projectId: string }) {
           {message && <span className="text-xs text-zinc-400">{message}</span>}
         </div>
       )}
+      {!pending && model.status === "failed_render" && (
+        <div className="mt-6 flex items-center gap-3">
+          <button type="button" onClick={approve} disabled={busy !== null} className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold hover:bg-violet-500 disabled:opacity-50">
+            {busy === "approve" ? "Queuing…" : "Retry render"}
+          </button>
+          <span className="text-xs text-red-300">The last render failed; your approved edits are kept.</span>
+        </div>
+      )}
       {!pending && message && <p className="mt-4 text-sm text-zinc-400">{message}</p>}
     </main>
   );
