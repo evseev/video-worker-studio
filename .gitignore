@@ -47,3 +47,9 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# autopilot
+/scripts/face-match/.venv
+/scripts/face-match/models
+/out
+/.npm-ci.log

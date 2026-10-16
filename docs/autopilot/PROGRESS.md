@@ -1,0 +1,38 @@
+# Autopilot — implementation progress
+
+Design: `docs/superpowers/specs/2026-10-16-autopilot-pipeline-design.md`.
+Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origin/develop` c6a1cde).
+
+## Ground rules for this run (owner away, autonomous)
+- Do NOT apply migrations to the live Supabase project. Write migration files only; owner applies them.
+- Do NOT publish anything to YouTube or any external account.
+- Available credentials: Gemini, Supabase (existing), Remotion AWS, Soniox (new, in `.env.local` as `SONIOX_API_KEY`).
+  Missing: DataForSEO, YouTube OAuth, Kling/Wan/Seedance. Code for them is written behind interfaces and stays disabled until keys exist.
+- Everything must be runnable offline from the DB via `npm run autopilot:local -- --topic "..."` which writes a full bundle to `out/autopilot/<slug>/`.
+
+## Status (update after each step)
+
+| # | Step | Status | Notes |
+|---|---|---|---|
+| 0 | Worktree, env, deps, design doc committed | done | Soniox key verified, 200 voices |
+| 1 | Soniox TTS client + voice choice | in progress | API verified; candidates en Sloane/Hazel, pt-BR Larissa, es Lucia |
+| 2 | Wikidata facts resolver | done | `src/lib/facts/wikidata.ts`, throttled 400ms + Retry-After |
+| 3 | Image sources (pinterest-dl, Wikimedia Commons; DataForSEO stub) | done | `src/lib/images/sources/*`; Google Images auto-enables when DATAFORSEO_* set |
+| 4 | Face match CLI (OpenCV YuNet + SFace) + quality + rank + crop | done | `scripts/face-match/` (run setup.sh), `src/lib/images/{verify,rank,crop,source-person}.ts`; ~17 s/person; verified visually on Kurt Russell/Goldie Hawn |
+| 5 | Narration builder (per-scene audio, durations, SRT, chapters) | todo | |
+| 6 | Localization (pt-BR, es) timing-fit tracks | todo | |
+| 7 | Remotion: per-scene audio, scene durations, music loop + duck | todo | |
+| 8 | Thumbnail still (3 variants) | todo | |
+| 9 | ffmpeg metadata post-process | todo | |
+| 10 | Local runner `autopilot:local` → bundle; first real video produced | todo | |
+| 11 | Migrations + RPCs (files only) | todo | |
+| 12 | Inngest functions (plan, source-assets, narrate, publish) + manual trigger | todo | |
+| 13 | Review page `/review/[id]` + download bundle route | todo | |
+| 14 | YouTube OAuth + upload code (disabled until audit/keys) | todo | |
+| 15 | Wizard bug fixes (step names, bare array, audio nulling) | todo | |
+| 16 | Phase 3 host experiment scaffolding (interfaces, no keys) | todo | |
+| 17 | Tests, lint, build green; owner handoff notes | todo | |
+
+## Log
+- 2026-10-16: setup done; Soniox TTS verified with `[warm]`/`[softly]` tags (mp3 44.1 kHz mono).
+- Face calibration: same-person consensus 0.33–0.59 vs other-person 0.04–0.16; ref similarity drops with age gap. YuNet needs multi-scale (640/960/320).
