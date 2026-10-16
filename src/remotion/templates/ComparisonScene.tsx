@@ -30,7 +30,22 @@ type ComparisonSceneProps = {
   textAnimation?: ResolvedTextAnimation;
   captionStyleId: CaptionStyleId;
   comparisonOverlayMode: ComparisonOverlayMode;
+  /** Multiplier for label and caption size (1 = tuned for a 1080px short side). */
+  textScale?: number;
 };
+
+type Style = Record<string, string | number | undefined>;
+
+/** Scale numeric font sizes and offsets so text stays legible at any resolution. */
+export function scaleTextStyle(style: Style, scale: number): Style {
+  if (scale === 1) return style;
+  const out: Style = { ...style };
+  for (const key of ["fontSize", "bottom"] as const) {
+    const v = out[key];
+    if (typeof v === "number") out[key] = Math.round(v * scale);
+  }
+  return out;
+}
 
 const LEFT_GRADIENT = "linear-gradient(135deg, #f5576c 0%, #f093fb 100%)";
 const RIGHT_GRADIENT = "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)";
@@ -48,6 +63,7 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
   textAnimation,
   captionStyleId,
   comparisonOverlayMode,
+  textScale = 1,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
@@ -58,9 +74,10 @@ export const ComparisonScene: React.FC<ComparisonSceneProps> = ({
 
   const showLabels = showComparisonLabels(comparisonOverlayMode);
   const showCaption = showComparisonCaption(comparisonOverlayMode);
-  const labelLeft = getComparisonLabelStyle(captionStyleId, "left");
-  const labelRight = getComparisonLabelStyle(captionStyleId, "right");
-  const cap = getComparisonCaptionStyles(captionStyleId);
+  const labelLeft = scaleTextStyle(getComparisonLabelStyle(captionStyleId, "left"), textScale);
+  const labelRight = scaleTextStyle(getComparisonLabelStyle(captionStyleId, "right"), textScale);
+  const capBase = getComparisonCaptionStyles(captionStyleId);
+  const cap = { bar: capBase.bar, text: scaleTextStyle(capBase.text, textScale) };
   const displayCaption = resolveCaption(captionText, scriptText);
 
   return (

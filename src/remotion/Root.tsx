@@ -1,5 +1,6 @@
-import { Composition } from "remotion";
+import { Composition, Still } from "remotion";
 import { VideoComposition, type VideoCompositionProps } from "./VideoComposition";
+import { ThumbnailStill, type ThumbnailProps } from "./ThumbnailStill";
 
 const FPS = 30;
 const SCENE_DURATION_SECONDS = 5;
@@ -20,6 +21,7 @@ const TOTAL_FRAMES =
 
 export const RemotionRoot = () => {
   return (
+    <>
     <Composition
       id="VideoWorker"
       component={VideoComposition}
@@ -40,5 +42,21 @@ export const RemotionRoot = () => {
         } satisfies VideoCompositionProps
       }
     />
+    <Still
+      id="Thumbnail"
+      component={ThumbnailStill}
+      width={1280}
+      height={720}
+      defaultProps={
+        {
+          leftUrl: null,
+          rightUrl: null,
+          leftLabel: "HUSBAND",
+          rightLabel: "WIFE",
+          variant: "labels",
+        } satisfies ThumbnailProps
+      }
+    />
+    </>
   );
 };

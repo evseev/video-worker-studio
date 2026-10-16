@@ -1,4 +1,4 @@
-import { AbsoluteFill, Audio, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { TransitionSeries, linearTiming, type TransitionPresentation } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
@@ -25,8 +25,20 @@ export type VideoCompositionProps = {
     title?: string;
     subtitle?: string;
     facts?: { label: string; value: string }[];
+    /** Per-scene narration clip (autopilot). Starts `narrationLeadInFrames` into the scene. */
+    narrationUrl?: string | null;
   }>;
   sceneDurationFrames: number;
+  /** Per-scene lengths (narration-driven). Falls back to `sceneDurationFrames` for every scene. */
+  sceneDurationsFrames?: number[];
+  narrationLeadInFrames?: number;
+  /** Absolute [start, end) frames where narration is audible; music is ducked inside them. */
+  narrationWindows?: Array<[number, number]>;
+  musicVolume?: number;
+  /** Music volume while narration plays (≈ -14 dB below musicVolume by default). */
+  musicDuckedVolume?: number;
+  /** Multiplier for label/caption text (1 = sizes tuned for a 1080px short side). */
+  textScale?: number;
   transitionFrames: number;
   musicUrl?: string | null;
   voiceoverUrl?: string | null;
@@ -72,24 +84,58 @@ function resolveTransitionPresentation(
   }
 }
 
-function BackgroundMusic({ src }: { src: string }) {
-  const frame = useCurrentFrame();
+function BackgroundMusic({
+  src,
+  volume = 0.3,
+  duckedVolume,
+  windows,
+}: {
+  src: string;
+  volume?: number;
+  duckedVolume?: number;
+  windows?: Array<[number, number]>;
+}) {
   const { durationInFrames, fps } = useVideoConfig();
   const fadeFrames = Math.min(fps * 2, durationInFrames / 4); // 2s fade or 25% of duration
+  const ramp = Math.round(fps * 0.25);
+  const ducked = duckedVolume ?? volume * 0.2;
 
-  const volume = interpolate(
-    frame,
-    [0, fadeFrames, durationInFrames - fadeFrames, durationInFrames],
-    [0, 0.3, 0.3, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
+  const volumeAt = (frame: number) => {
+    const envelope = interpolate(
+      frame,
+      [0, fadeFrames, durationInFrames - fadeFrames, durationInFrames],
+      [0, 1, 1, 0],
+      { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    );
+    let level = volume;
+    if (windows && windows.length > 0) {
+      // Smoothly duck under narration: distance (in frames) to the nearest window.
+      let duck = 0;
+      for (const [start, end] of windows) {
+        if (frame >= start && frame < end) {
+          duck = 1;
+          break;
+        }
+        const d = frame < start ? start - frame : frame - end;
+        if (d < ramp) duck = Math.max(duck, 1 - d / ramp);
+      }
+      level = volume + (ducked - volume) * duck;
+    }
+    return level * envelope;
+  };
 
-  return <Audio src={src} volume={volume} />;
+  return <Audio src={src} loop volume={volumeAt} />;
 }
 
 export const VideoComposition: React.FC<VideoCompositionProps> = ({
   scenes,
   sceneDurationFrames,
+  sceneDurationsFrames,
+  narrationLeadInFrames = 10,
+  narrationWindows,
+  musicVolume,
+  musicDuckedVolume,
+  textScale = 1,
   transitionFrames,
   musicUrl,
   voiceoverUrl,
@@ -110,7 +156,14 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {musicUrl && <BackgroundMusic src={musicUrl} />}
+      {musicUrl && (
+        <BackgroundMusic
+          src={musicUrl}
+          volume={musicVolume}
+          duckedVolume={musicDuckedVolume}
+          windows={narrationWindows}
+        />
+      )}
       {voiceoverUrl && <Audio src={voiceoverUrl} volume={0.9} />}
 
       <TransitionSeries>
@@ -119,8 +172,13 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
           const elements = [
             <TransitionSeries.Sequence
               key={`scene-${index}`}
-              durationInFrames={sceneDurationFrames}
+              durationInFrames={sceneDurationsFrames?.[index] ?? sceneDurationFrames}
             >
+              {scene.narrationUrl ? (
+                <Sequence from={narrationLeadInFrames} layout="none">
+                  <Audio src={scene.narrationUrl} volume={1} />
+                </Sequence>
+              ) : null}
               {(() => {
                 switch (scene.template) {
                   case "comparison":
@@ -138,6 +196,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
                         textAnimation={textAnimations[i] ?? "slide-up"}
                         captionStyleId={captionStyle}
                         comparisonOverlayMode={comparisonOverlayMode}
+                        textScale={textScale}
                       />
                     );
                   case "fact-card":

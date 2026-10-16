@@ -29,6 +29,8 @@ export interface PersonFacts {
   /** True when Wikidata has a date of death. Narration must never claim death otherwise. */
   isDeceased: boolean;
   occupations: string[];
+  /** From P21; null when unknown or not male/female. */
+  sex: "male" | "female" | null;
   spouses: Relation[];
   partners: Relation[];
   children: Relation[];
@@ -234,9 +236,13 @@ export function buildPersonFacts(entity: EntityT, labels: Record<string, EntityT
     .filter((id): id is string => Boolean(id))
     .map(nameOf);
 
+  const sexId = entityIdOf(usableClaims(entity, "P21")[0]?.mainsnak);
+  const sex = sexId === "Q6581097" || sexId === "Q2449503" ? "male" : sexId === "Q6581072" || sexId === "Q1052281" ? "female" : null;
+
   return {
     qid: entity.id,
     name: label(entity) ?? entity.id,
+    sex,
     description: entity.descriptions?.en?.value ?? "",
     birthYear,
     deathYear,

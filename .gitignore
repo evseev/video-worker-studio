@@ -53,3 +53,4 @@ next-env.d.ts
 /scripts/face-match/models
 /out
 /.npm-ci.log
+/public/music/*.mp3

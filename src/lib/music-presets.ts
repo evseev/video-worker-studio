@@ -14,6 +14,29 @@ export interface MusicTrack {
  * place in `/public/music/` and reference the public path here.
  */
 export const MUSIC_PRESETS: MusicTrack[] = [
+  // Tracks already used on the channel (YouTube Audio Library, Aakash Gandhi). Files live in
+  // /public/music/ (gitignored); copy them there on a new machine. Looped by the composition.
+  {
+    id: "lifting-dreams",
+    name: "Lifting Dreams",
+    mood: "Warm, nostalgic piano",
+    url: "/music/lifting-dreams.mp3",
+    duration: 188,
+  },
+  {
+    id: "twinkle-in-the-night",
+    name: "Twinkle in the Night",
+    mood: "Gentle, tender",
+    url: "/music/twinkle-in-the-night.mp3",
+    duration: 168,
+  },
+  {
+    id: "mysterious-sorrows",
+    name: "Mysterious Sorrows",
+    mood: "Wistful, reflective",
+    url: "/music/mysterious-sorrows.mp3",
+    duration: 146,
+  },
   {
     id: "upbeat",
     name: "Upbeat Energy",
