@@ -126,6 +126,11 @@ function PairCard({ pair, edit, onEdit }: { pair: ReviewPair; edit: PairEdit | u
         />
       </label>
       {pair.problems.length > 0 && <p className="mt-1 text-[11px] text-amber-300/80">Fact check: {pair.problems.join("; ")}</p>}
+      {pair.voiceCheck && !pair.voiceCheck.ok && (
+        <p className="mt-1 text-[11px] text-amber-300/80">
+          Voice check {Math.round(pair.voiceCheck.similarity * 100)}%: heard “{pair.voiceCheck.transcript}”
+        </p>
+      )}
     </section>
   );
 }

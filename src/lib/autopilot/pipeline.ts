@@ -10,6 +10,7 @@ import { stripDeliveryMarkup, type SonioxTag } from "@/lib/tts/soniox";
 import { buildTimeline, cuesForTimeline, toSrt, buildChapters, chaptersToText, type Timeline } from "@/lib/tts/timeline";
 import { narrateTranslations, assembleDub, buildMusicBed, mixDubbedTrack, translateLines, LOCALE_NAMES } from "@/lib/tts/localize";
 import { normalizeMp4Metadata } from "@/lib/video/postprocess";
+import { checkNarration, type VoiceCheck } from "@/lib/qa/soniox-stt";
 import { getMusicTrack } from "@/lib/music-presets";
 import { buildVerifiedPairs, writeNarration, writePackaging, writeShortHooks, type NarrationLineOut, type Packaging } from "./script";
 import { pairCaption, pairEras, pairLabels, type FormatSlug, type VerifiedPair } from "./formats";
@@ -56,6 +57,8 @@ export interface PipelineState {
   images?: Record<string, { left: SlotPick; right: SlotPick }>;
   voice?: {
     lines: Array<{ file: string; durationSec: number; text: string }>;
+    /** Speech-to-text check of the English lines (scene order: hook, pairs…, outro). */
+    qa?: VoiceCheck[];
     /** Translated + voiced lines per locale (same order as `lines`). */
     dubs?: Record<string, Array<{ file: string; durationSec: number; text: string; translated: string }>>;
     timeline: Timeline;
@@ -337,6 +340,26 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       outDir: path.join(/* turbopackIgnore: true */ workDir, "voice-en"),
       onProgress: (d, t) => d % 10 === 0 && log(`  voice ${d}/${t}`),
     });
+    // Narration QA: transcribe what the TTS said; re-voice failing lines once with a different delivery tag.
+    let qa: VoiceCheck[] | undefined;
+    try {
+      qa = await checkNarration({ files: narrated.map((x) => x.file), scripts: narrated.map((x) => x.text), workDir });
+      const bad = qa.filter((q) => !q.ok);
+      if (bad.length) {
+        log(`  voice check: ${bad.length} line(s) did not match the script; re-voicing once`);
+        const redo = await narrateLines({
+          lines: bad.map((b) => ({ text: lines[b.index].text, tone: lines[b.index].tone === "calm" ? "warm" : "calm" })),
+          language: "en",
+          outDir: path.join(workDir, "voice-en"),
+        });
+        bad.forEach((b, k) => (narrated[b.index] = { ...redo[k], index: b.index }));
+        qa = await checkNarration({ files: narrated.map((x) => x.file), scripts: narrated.map((x) => x.text), workDir });
+      }
+      log(`  voice check: ${qa.filter((q) => q.ok).length}/${qa.length} lines match the script`);
+    } catch (err) {
+      log(`  voice check skipped: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
     // Voice every dub language now, so each scene is long enough for the longest language.
     const dubs: NonNullable<NonNullable<PipelineState["voice"]>["dubs"]> = {};
     for (const locale of state.locales) {
@@ -354,7 +377,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     const timeline = buildTimeline(longest, { fps: FPS, transitionFrames: TRANSITION_FRAMES, leadInSec: LEAD_IN_FRAMES / FPS });
     // English audio windows use the English durations (music ducks only while Emma speaks).
     timeline.scenes.forEach((s, i) => (s.audioDurationSec = narrated[i].durationSec));
-    state.voice = { lines: narrated.map((x) => ({ file: x.file, durationSec: x.durationSec, text: x.text })), dubs, timeline };
+    state.voice = { lines: narrated.map((x) => ({ file: x.file, durationSec: x.durationSec, text: x.text })), qa, dubs, timeline };
     log(`  video length ${(timeline.totalSec / 60).toFixed(1)} min`);
     done("voice");
   }

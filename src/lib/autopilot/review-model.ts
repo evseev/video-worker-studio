@@ -31,6 +31,8 @@ export interface ReviewPair {
   scriptText: string;
   narrationSource: string;
   problems: string[];
+  /** Speech-to-text check of this pair's narration (null when not run). */
+  voiceCheck: { ok: boolean; similarity: number; transcript: string } | null;
   needsAttention: boolean;
 }
 
@@ -78,6 +80,9 @@ export function toReviewModel(projectId: string, runDir: string, state: Pipeline
     const left = photo(img?.left.chosen);
     const right = photo(img?.right.chosen);
     const rel = p.relation;
+    // voice lines are hook, pairs…, outro → pair i is voice line i + 1
+    const vc = state.voice?.qa?.[i + 1];
+    const voiceCheck = vc ? { ok: vc.ok, similarity: vc.similarity, transcript: vc.transcript } : null;
     return {
       index: i,
       caption: pairCaption(vp),
@@ -95,7 +100,9 @@ export function toReviewModel(projectId: string, runDir: string, state: Pipeline
       scriptText: n?.scriptText ?? "",
       narrationSource: n?.source ?? "",
       problems: n?.problems ?? [],
-      needsAttention: !left || !right || left.confidence === "low" || right.confidence === "low" || n?.source === "fallback",
+      voiceCheck,
+      needsAttention:
+        !left || !right || left.confidence === "low" || right.confidence === "low" || n?.source === "fallback" || voiceCheck?.ok === false,
     };
   });
 
