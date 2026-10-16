@@ -4,18 +4,18 @@ import type { PipelineState, PickedImage, SlotPick, StageName } from "./pipeline
 
 /** Root folder for DB-backed autopilot runs. */
 export function autopilotRoot(): string {
-  return path.resolve(process.env.AUTOPILOT_OUT_DIR ?? path.join(process.cwd(), "out", "autopilot"));
+  return path.resolve(/* turbopackIgnore: true */ process.env.AUTOPILOT_OUT_DIR ?? path.join(/* turbopackIgnore: true */ process.cwd(), "out", "autopilot"));
 }
 
 export function projectRunDir(projectId: string): string {
   if (!/^[0-9a-f-]{36}$/i.test(projectId)) throw new Error("Invalid project id");
-  return path.join(autopilotRoot(), "projects", projectId);
+  return path.join(/* turbopackIgnore: true */ autopilotRoot(), "projects", projectId);
 }
 
 /** Resolve a user-supplied relative path inside a run directory, refusing traversal. */
 export function safeRunPath(runDir: string, rel: string): string | null {
-  const root = path.resolve(runDir);
-  const full = path.resolve(root, rel);
+  const root = path.resolve(/* turbopackIgnore: true */ runDir);
+  const full = path.resolve(/* turbopackIgnore: true */ root, rel);
   return full === root || full.startsWith(root + path.sep) ? full : null;
 }
 

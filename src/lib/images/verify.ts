@@ -30,14 +30,14 @@ export type FaceMatchResponse = z.infer<typeof ResponseSchema>;
  * Resolve the face-match command. FACE_MATCH_BIN may be
  * "/path/python /path/face_match.py" (space separated); defaults to the repo venv.
  */
-export function resolveFaceMatchCommand(cwd = process.cwd()): { cmd: string; args: string[] } {
+export function resolveFaceMatchCommand(cwd = /* turbopackIgnore: true */ process.cwd()): { cmd: string; args: string[] } {
   const configured = process.env.FACE_MATCH_BIN?.trim();
   if (configured) {
     const [cmd, ...args] = configured.split(/\s+/);
     return { cmd, args };
   }
-  const dir = path.join(cwd, "scripts", "face-match");
-  return { cmd: path.join(dir, ".venv", "bin", "python"), args: [path.join(dir, "face_match.py")] };
+  const dir = path.join(/* turbopackIgnore: true */ cwd, "scripts", "face-match");
+  return { cmd: path.join(/* turbopackIgnore: true */ dir, ".venv", "bin", "python"), args: [path.join(/* turbopackIgnore: true */ dir, "face_match.py")] };
 }
 
 /** Run face analysis for candidates against reference photos of the same person. */

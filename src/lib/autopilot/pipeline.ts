@@ -105,10 +105,10 @@ export function remotionServeUrl(): Promise<string> {
   if (!serveUrlPromise) {
     serveUrlPromise = import("@remotion/bundler").then(({ bundle }) =>
       bundle({
-        entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
+        entryPoint: path.join(/* turbopackIgnore: true */ process.cwd(), "src/remotion/index.ts"),
         webpackOverride: (config) => ({
           ...config,
-          resolve: { ...config.resolve, alias: { ...(config.resolve?.alias ?? {}), "@": path.join(process.cwd(), "src") } },
+          resolve: { ...config.resolve, alias: { ...(config.resolve?.alias ?? {}), "@": path.join(/* turbopackIgnore: true */ process.cwd(), "src") } },
         }),
       })
     );
@@ -125,7 +125,7 @@ function runFileUrl(baseUrl: string, runDir: string, file: string): string {
 }
 
 export function statePath(dir: string) {
-  return path.join(dir, "state.json");
+  return path.join(/* turbopackIgnore: true */ dir, "state.json");
 }
 
 export function saveState(dir: string, state: PipelineState) {
@@ -192,9 +192,9 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number
 export async function runPipeline(opts: PipelineOptions): Promise<PipelineState> {
   const log = opts.log ?? ((m: string) => console.log(m));
   const slug = opts.runDir ? path.basename(opts.runDir) : slugify(`${opts.format}-${opts.topic}`);
-  const dir = opts.runDir ? path.resolve(opts.runDir) : path.resolve(opts.outRoot, slug);
-  const workDir = path.join(dir, "work");
-  const bundleDir = path.join(dir, "bundle");
+  const dir = opts.runDir ? path.resolve(/* turbopackIgnore: true */ opts.runDir) : path.resolve(/* turbopackIgnore: true */ opts.outRoot, slug);
+  const workDir = path.join(/* turbopackIgnore: true */ dir, "work");
+  const bundleDir = path.join(/* turbopackIgnore: true */ dir, "bundle");
   fs.mkdirSync(workDir, { recursive: true });
 
   let state: PipelineState = loadState(dir) ?? {
@@ -265,7 +265,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     const ranked = new Map<string, RankedCandidate[]>();
     let n = 0;
     await mapLimit(people, 2, async (person) => {
-      const res = await sourcePersonSlots({ person: person.facts.name, facts: person.facts, slots: person.slots, workDir: path.join(workDir, "images") });
+      const res = await sourcePersonSlots({ person: person.facts.name, facts: person.facts, slots: person.slots, workDir: path.join(/* turbopackIgnore: true */ workDir, "images") });
       for (const [key, list] of Object.entries(res.slots)) ranked.set(key, list);
       n++;
       log(`  photos ${n}/${people.length}: ${person.facts.name} (${res.referenceCount} ref)`);
@@ -334,7 +334,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     const narrated = await narrateLines({
       lines,
       language: "en",
-      outDir: path.join(workDir, "voice-en"),
+      outDir: path.join(/* turbopackIgnore: true */ workDir, "voice-en"),
       onProgress: (d, t) => d % 10 === 0 && log(`  voice ${d}/${t}`),
     });
     // Voice every dub language now, so each scene is long enough for the longest language.
@@ -344,7 +344,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         locale,
         sourceLines: lines,
         englishDurations: narrated.map((x) => x.durationSec),
-        outDir: path.join(workDir, "dubs"),
+        outDir: path.join(/* turbopackIgnore: true */ workDir, "dubs"),
         onLog: (m) => log(`  ${m}`),
       });
       dubs[locale] = t.map((x) => ({ file: x.file, durationSec: x.durationSec, text: x.text, translated: x.translated }));
@@ -363,18 +363,18 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
   const pairs = state.pairs!.map(toVerified);
   const timeline = state.voice!.timeline;
   const musicTrack = getMusicTrack(state.musicId);
-  const musicFile = musicTrack ? path.join(process.cwd(), "public", musicTrack.url) : null;
+  const musicFile = musicTrack ? path.join(/* turbopackIgnore: true */ process.cwd(), "public", musicTrack.url) : null;
   const narrationWindows = (base: number = FPS): Array<[number, number]> =>
     timeline.scenes.map((s) => [Math.round(s.audioStartSec * base), Math.round((s.audioStartSec + s.audioDurationSec) * base)]);
 
   // ---------------------------------------------------------------- render
   if (shouldRun("render")) {
     log(`▶ render: ${timeline.scenes.length} scenes, ${video.width}x${video.height}`);
-    const assetDir = path.join(workDir, "render-assets");
+    const assetDir = path.join(/* turbopackIgnore: true */ workDir, "render-assets");
     fs.mkdirSync(assetDir, { recursive: true });
     const server = await startStaticServer({
       "/files": dir,
-      "/music": path.join(process.cwd(), "public", "music"),
+      "/music": path.join(/* turbopackIgnore: true */ process.cwd(), "public", "music"),
     });
     const fileUrl = (p: string) => runFileUrl(server.baseUrl, dir, p);
     try {
@@ -424,7 +424,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         textScale: (Math.min(video.width, video.height) / 1080) * 1.8,
         watermark: { logoUrl: null, position: "none", opacity: 0.7 },
       };
-      fs.writeFileSync(path.join(workDir, "render-props.json"), JSON.stringify(inputProps, null, 1));
+      fs.writeFileSync(path.join(/* turbopackIgnore: true */ workDir, "render-props.json"), JSON.stringify(inputProps, null, 1));
 
       const { renderMedia, selectComposition } = await import("@remotion/renderer");
       const serveUrl = await remotionServeUrl();
@@ -432,7 +432,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       composition.width = video.width;
       composition.height = video.height;
       composition.durationInFrames = timeline.totalFrames;
-      const raw = path.join(workDir, "render-raw.mp4");
+      const raw = path.join(/* turbopackIgnore: true */ workDir, "render-raw.mp4");
       let lastPct = -1;
       await renderMedia({
         composition,
@@ -452,7 +452,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         },
       });
       fs.mkdirSync(bundleDir, { recursive: true });
-      const final = path.join(bundleDir, "video.mp4");
+      const final = path.join(/* turbopackIgnore: true */ bundleDir, "video.mp4");
       if (fs.existsSync(final)) fs.unlinkSync(final);
       await normalizeMp4Metadata({ input: raw, output: final, title: pk.titles[0] });
       state.outputs = { ...(state.outputs ?? {}), video: final, bundleDir };
@@ -503,7 +503,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         const composition = await selectComposition({ serveUrl, id: "Thumbnail", inputProps });
         composition.width = thumbSize.width;
         composition.height = thumbSize.height;
-        const out = path.join(bundleDir, `thumbnail-${variant}.png`);
+        const out = path.join(/* turbopackIgnore: true */ bundleDir, `thumbnail-${variant}.png`);
         await renderStill({ composition, serveUrl, output: out, inputProps, imageFormat: "png" });
         files.push(out);
       }
@@ -518,7 +518,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
   // ---------------------------------------------------------------- localize
   if (shouldRun("localize") && state.locales.length > 0) {
     log(`▶ localize: ${state.locales.join(", ")}`);
-    const bedFile = path.join(workDir, "music-bed.wav");
+    const bedFile = path.join(/* turbopackIgnore: true */ workDir, "music-bed.wav");
     if (musicFile && fs.existsSync(musicFile) && !fs.existsSync(bedFile)) {
       await buildMusicBed({
         musicFile,
@@ -544,12 +544,12 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         locale,
         lines: voiced.map((v, index) => ({ file: v.file, durationSec: v.durationSec, index })),
         timeline: dubTimeline,
-        outDir: path.join(workDir, "dubs"),
+        outDir: path.join(/* turbopackIgnore: true */ workDir, "dubs"),
       });
-      const audioFile = path.join(bundleDir, `audio.${locale}.mp3`);
+      const audioFile = path.join(/* turbopackIgnore: true */ bundleDir, `audio.${locale}.mp3`);
       const dur = await mixDubbedTrack({ voiceFile, musicBedFile: fs.existsSync(bedFile) ? bedFile : null, outFile: audioFile });
       const cues = cuesForTimeline(voiced.map((v) => stripDeliveryMarkup(v.translated)), dubTimeline);
-      const srtFile = path.join(bundleDir, `captions.${locale}.srt`);
+      const srtFile = path.join(/* turbopackIgnore: true */ bundleDir, `captions.${locale}.srt`);
       fs.writeFileSync(srtFile, toSrt(cues));
       const meta = await translateLines({
         locale,
@@ -572,7 +572,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
     fs.mkdirSync(bundleDir, { recursive: true });
     const lines = sceneLines(state);
     const cues = cuesForTimeline(lines.map((l) => stripDeliveryMarkup(l.text)), timeline);
-    fs.writeFileSync(path.join(bundleDir, "captions.en.srt"), toSrt(cues));
+    fs.writeFileSync(path.join(/* turbopackIgnore: true */ bundleDir, "captions.en.srt"), toSrt(cues));
     const chapterTitles = ["Intro", ...pairs.map((p) => pairCaption(p)), "Thank you"];
     const chapters = buildChapters(chapterTitles, timeline, { introTitle: "Intro" });
     const credits = Array.from(
@@ -607,9 +607,9 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
 5. Translations: add the localized titles and descriptions above.
 6. Schedule for the next free weekday slot at 5:00 PM Eastern; add the end screen and pin a comment question.`,
     ].join("\n");
-    fs.writeFileSync(path.join(bundleDir, "metadata.txt"), metadata);
-    fs.writeFileSync(path.join(bundleDir, "chapters.txt"), chaptersToText(chapters));
-    fs.writeFileSync(path.join(dir, "review.html"), renderReviewHtml(state, dir));
+    fs.writeFileSync(path.join(/* turbopackIgnore: true */ bundleDir, "metadata.txt"), metadata);
+    fs.writeFileSync(path.join(/* turbopackIgnore: true */ bundleDir, "chapters.txt"), chaptersToText(chapters));
+    fs.writeFileSync(path.join(/* turbopackIgnore: true */ dir, "review.html"), renderReviewHtml(state, dir));
     state.outputs = { ...(state.outputs ?? {}), bundleDir };
     done("bundle");
   }
@@ -630,17 +630,17 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       groups.push(order.slice(k * perShort, (k + 1) * perShort).sort((a, b) => a - b));
     }
     const hooks = await writeShortHooks({ topic: state.topic, groups: groups.map((g) => g.map((i) => pairCaption(pairs[i]))) });
-    const shortsDir = path.join(bundleDir, "shorts");
+    const shortsDir = path.join(/* turbopackIgnore: true */ bundleDir, "shorts");
     fs.mkdirSync(shortsDir, { recursive: true });
     const portrait = { width: 1080, height: 1920 };
-    const server = await startStaticServer({ "/files": dir, "/music": path.join(process.cwd(), "public", "music") });
+    const server = await startStaticServer({ "/files": dir, "/music": path.join(/* turbopackIgnore: true */ process.cwd(), "public", "music") });
     const outputs: Array<{ file: string; title: string }> = [];
     try {
       const fileUrl = (p: string) => runFileUrl(server.baseUrl, dir, p);
       const { renderMedia, selectComposition } = await import("@remotion/renderer");
       const serveUrl = await remotionServeUrl();
       for (let k = 0; k < groups.length; k++) {
-        const hook = await narrateLines({ lines: [{ text: hooks[k]?.hook ?? state.packaging!.hook, tone: "warm" }], language: "en", outDir: path.join(workDir, "voice-en") });
+        const hook = await narrateLines({ lines: [{ text: hooks[k]?.hook ?? state.packaging!.hook, tone: "warm" }], language: "en", outDir: path.join(/* turbopackIgnore: true */ workDir, "voice-en") });
         const voiced = [hook[0], ...groups[k].map((i) => state.voice!.lines[i + 1])];
         const tl = buildTimeline(voiced.map((v) => v.durationSec), { fps: FPS, transitionFrames: TRANSITION_FRAMES, leadInSec: LEAD_IN_FRAMES / FPS, minSceneSec: 3 });
         if (tl.totalSec > 59) log(`  short ${k + 1} is ${tl.totalSec.toFixed(1)}s (>59s); YouTube may not classify it as a Short`);
@@ -693,9 +693,9 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
         composition.width = portrait.width;
         composition.height = portrait.height;
         composition.durationInFrames = tl.totalFrames;
-        const raw = path.join(workDir, `short-${k + 1}-raw.mp4`);
+        const raw = path.join(/* turbopackIgnore: true */ workDir, `short-${k + 1}-raw.mp4`);
         await renderMedia({ composition, serveUrl, codec: "h264", crf: 20, audioBitrate: "192k", outputLocation: raw, inputProps, concurrency: Math.max(2, Math.floor(os.cpus().length / 2)) });
-        const out = path.join(shortsDir, `short-${k + 1}.mp4`);
+        const out = path.join(/* turbopackIgnore: true */ shortsDir, `short-${k + 1}.mp4`);
         if (fs.existsSync(out)) fs.unlinkSync(out);
         const title = hooks[k]?.title ?? `${pairCaption(pairs[groups[k][0]])} #Shorts`;
         await normalizeMp4Metadata({ input: raw, output: out, title });
@@ -706,7 +706,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       await server.close();
     }
     fs.writeFileSync(
-      path.join(shortsDir, "shorts.txt"),
+      path.join(/* turbopackIgnore: true */ shortsDir, "shorts.txt"),
       outputs
         .map((o) => `${path.basename(o.file)}
 TITLE: ${o.title}

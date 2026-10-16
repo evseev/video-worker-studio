@@ -34,7 +34,7 @@ export async function getOwnedAutopilotProject(
   const row = data as unknown as AutopilotProjectRow;
   if (!row.autopilot || !row.autopilot_run_dir) return null;
   const root = autopilotRoot();
-  const runDir = path.resolve(row.autopilot_run_dir);
+  const runDir = path.resolve(/* turbopackIgnore: true */ row.autopilot_run_dir);
   if (!runDir.startsWith(root + path.sep)) return null;
   return { ...row, runDir };
 }

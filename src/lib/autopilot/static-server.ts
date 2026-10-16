@@ -1,7 +1,10 @@
 import * as http from "http";
-import * as fs from "fs";
 import * as path from "path";
 import type { AddressInfo } from "net";
+
+// Obtained at runtime so Next's file tracing does not treat served paths as build assets
+// (a dynamic fs path makes Turbopack try to include the whole project, incl. out/ and .venv symlinks).
+const fs = process.getBuiltinModule("node:fs") as typeof import("fs");
 
 const TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -19,7 +22,7 @@ const TYPES: Record<string, string> = {
  * Mounts: { "/assets": "/abs/dir", "/music": "/abs/public/music" }. Bound to 127.0.0.1.
  */
 export async function startStaticServer(mounts: Record<string, string>): Promise<{ baseUrl: string; close: () => Promise<void> }> {
-  const roots = Object.entries(mounts).map(([prefix, dir]) => [prefix.replace(/\/$/, ""), path.resolve(dir)] as const);
+  const roots = Object.entries(mounts).map(([prefix, dir]) => [prefix.replace(/\/$/, ""), path.resolve(/* turbopackIgnore: true */ dir)] as const);
   const server = http.createServer((req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
@@ -30,7 +33,7 @@ export async function startStaticServer(mounts: Record<string, string>): Promise
         return;
       }
       const [prefix, root] = mount;
-      const file = path.resolve(root, `.${pathname.slice(prefix.length)}`);
+      const file = path.resolve(/* turbopackIgnore: true */ root, `.${pathname.slice(prefix.length)}`);
       if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         res.writeHead(404).end();
         return;
