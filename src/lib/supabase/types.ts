@@ -51,6 +51,10 @@ export type Database = {
       };
       channel_topic_ideas: {
         Row: {
+          format_slug: string | null;
+          pair_count: number | null;
+          series_key: string | null;
+          template_id: string | null;
           ai_reasoning: string | null;
           channel_id: string;
           created_at: string;
@@ -62,6 +66,10 @@ export type Database = {
           youtube_seed_video_id: string | null;
         };
         Insert: {
+          format_slug?: string | null;
+          pair_count?: number | null;
+          series_key?: string | null;
+          template_id?: string | null;
           ai_reasoning?: string | null;
           channel_id: string;
           created_at?: string;
@@ -73,6 +81,10 @@ export type Database = {
           youtube_seed_video_id?: string | null;
         };
         Update: {
+          format_slug?: string | null;
+          pair_count?: number | null;
+          series_key?: string | null;
+          template_id?: string | null;
           ai_reasoning?: string | null;
           channel_id?: string;
           created_at?: string;
@@ -102,6 +114,8 @@ export type Database = {
       };
       channels: {
         Row: {
+          autopilot_config: Json;
+          autopilot_enabled: boolean;
           created_at: string;
           default_settings: Json;
           id: string;
@@ -123,6 +137,8 @@ export type Database = {
           youtube_meta: Json;
         };
         Insert: {
+          autopilot_config?: Json;
+          autopilot_enabled?: boolean;
           created_at?: string;
           default_settings?: Json;
           id?: string;
@@ -144,6 +160,8 @@ export type Database = {
           youtube_meta?: Json;
         };
         Update: {
+          autopilot_config?: Json;
+          autopilot_enabled?: boolean;
           created_at?: string;
           default_settings?: Json;
           id?: string;
@@ -168,6 +186,15 @@ export type Database = {
       };
       projects: {
         Row: {
+          autopilot: boolean;
+          autopilot_run_dir: string | null;
+          autopilot_summary: Json | null;
+          experiment_arm: string | null;
+          format_slug: string | null;
+          publish_at: string | null;
+          review_status: string | null;
+          thumbnail_url: string | null;
+          youtube_video_id: string | null;
           aspect_ratio: string;
           background_music: string | null;
           caption_style: string | null;
@@ -195,6 +222,15 @@ export type Database = {
           wizard_step: string | null;
         };
         Insert: {
+          autopilot?: boolean;
+          autopilot_run_dir?: string | null;
+          autopilot_summary?: Json | null;
+          experiment_arm?: string | null;
+          format_slug?: string | null;
+          publish_at?: string | null;
+          review_status?: string | null;
+          thumbnail_url?: string | null;
+          youtube_video_id?: string | null;
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
@@ -222,6 +258,15 @@ export type Database = {
           wizard_step?: string | null;
         };
         Update: {
+          autopilot?: boolean;
+          autopilot_run_dir?: string | null;
+          autopilot_summary?: Json | null;
+          experiment_arm?: string | null;
+          format_slug?: string | null;
+          publish_at?: string | null;
+          review_status?: string | null;
+          thumbnail_url?: string | null;
+          youtube_video_id?: string | null;
           aspect_ratio?: string;
           background_music?: string | null;
           caption_style?: string | null;
@@ -296,6 +341,27 @@ export type Database = {
           },
         ];
       };
+      subject_facts: {
+        Row: {
+          facts: Json;
+          fetched_at: string;
+          name: string;
+          qid: string;
+        };
+        Insert: {
+          facts: Json;
+          fetched_at?: string;
+          name: string;
+          qid: string;
+        };
+        Update: {
+          facts?: Json;
+          fetched_at?: string;
+          name?: string;
+          qid?: string;
+        };
+        Relationships: [];
+      };
       video_subjects: {
         Row: {
           channel_id: string;
@@ -341,11 +407,67 @@ export type Database = {
           },
         ];
       };
+      youtube_connections: {
+        Row: {
+          access_token: string | null;
+          access_token_expires_at: string | null;
+          channel_id: string;
+          created_at: string;
+          refresh_token: string;
+          scopes: string[];
+          updated_at: string;
+          upload_enabled: boolean;
+          youtube_channel_id: string | null;
+        };
+        Insert: {
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          channel_id: string;
+          created_at?: string;
+          refresh_token: string;
+          scopes?: string[];
+          updated_at?: string;
+          upload_enabled?: boolean;
+          youtube_channel_id?: string | null;
+        };
+        Update: {
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          channel_id?: string;
+          created_at?: string;
+          refresh_token?: string;
+          scopes?: string[];
+          updated_at?: string;
+          upload_enabled?: boolean;
+          youtube_channel_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "youtube_connections_channel_id_fkey";
+            columns: ["channel_id"];
+            isOneToOne: true;
+            referencedRelation: "channels";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      autopilot_claim_next_idea: {
+        Args: { p_channel_id: string };
+        Returns: Json;
+      };
+      autopilot_create_project: {
+        Args: { p_channel_id: string; p_idea_id: string; p_payload: Json };
+        Returns: string;
+      };
+      autopilot_list_enabled_channels: {
+        Args: never;
+        Returns: Json;
+      };
       worker_create_default_channel_for_user: {
         Args: { p_user_id: string };
         Returns: string;
@@ -366,8 +488,47 @@ export type Database = {
         Args: { p_channel_id: string; p_rows: Json };
         Returns: undefined;
       };
+      worker_cache_subject_facts: {
+        Args: { p_rows: Json };
+        Returns: undefined;
+      };
+      worker_get_youtube_connection: {
+        Args: { p_channel_id: string };
+        Returns: Json;
+      };
+      worker_save_youtube_tokens: {
+        Args: {
+          p_access_token: string;
+          p_channel_id: string;
+          p_expires_at: string;
+          p_refresh_token: string;
+          p_scopes: string[];
+          p_youtube_channel_id: string;
+        };
+        Returns: undefined;
+      };
+      worker_set_publish_result: {
+        Args: {
+          p_project_id: string;
+          p_publish_at: string;
+          p_thumbnail_url: string;
+          p_video_url: string;
+          p_youtube_video_id: string;
+        };
+        Returns: undefined;
+      };
       worker_update_channel_youtube_meta: {
         Args: { p_channel_id: string; p_meta: Json };
+        Returns: undefined;
+      };
+      worker_update_autopilot: {
+        Args: {
+          p_project_id: string;
+          p_review_status: string;
+          p_run_dir: string;
+          p_status: string;
+          p_summary: Json;
+        };
         Returns: undefined;
       };
       worker_update_project_error: {
@@ -377,6 +538,10 @@ export type Database = {
       worker_update_project_status: {
         Args: { p_project_id: string; p_status: string; p_video_url?: string };
         Returns: undefined;
+      };
+      youtube_connection_status: {
+        Args: { p_channel_id: string };
+        Returns: Json;
       };
     };
     Enums: {

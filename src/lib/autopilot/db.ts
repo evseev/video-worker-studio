@@ -4,8 +4,8 @@ import { FORMAT_SLUGS, type FormatSlug } from "./formats";
 
 /**
  * Autopilot DB access. Every write goes through a SECURITY DEFINER RPC granted to
- * service_role only (migration 20261016120000_autopilot.sql). The client is untyped until
- * src/lib/supabase/types.ts is regenerated after that migration is applied.
+ * service_role only (migration 20261016120000_autopilot.sql). The client is deliberately untyped:
+ * generated RPC arg types are non-nullable, while these functions accept NULL for "leave unchanged".
  */
 export function autopilotDb(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
