@@ -1,7 +1,7 @@
 # ADR-001: Upgrade Script Generation Model to Gemini 3.0 Flash
 
 **Date:** 2026-03-14
-**Status:** Superseded (current runtime uses `gemini-2.5-flash`)
+**Status:** Superseded by [ADR 004](004-gemini-3-8-flash.md) (runtime uses `gemini-3.8-flash`)
 **Affects:** `src/lib/ai/generate-script.ts`
 
 ## Context

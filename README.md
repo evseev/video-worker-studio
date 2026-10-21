@@ -78,7 +78,7 @@ Required environment variables:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required for server-side project/storage operations and the Inngest worker’s `worker_fetch_channel_for_project` RPC) |
 | `GEMINI_API_KEY` | Google Gemini API key |
-| `GEMINI_TEXT_MODEL` | Optional Gemini text generation model override (default: `gemini-2.5-flash`) |
+| `GEMINI_TEXT_MODEL` | Optional Gemini text generation model override (default: `gemini-3.8-flash`) |
 | `GEMINI_EMBEDDING_MODEL` | Optional Gemini embedding model override (default: `text-embedding-004`) |
 | `PINTEREST_DL_BIN` | Absolute path to the `pinterest-dl` binary (e.g. `/path/to/.venv/bin/pinterest-dl`) |
 | `PINTEREST_BATCH_SIZE` | Number of keyword fetches per Pinterest batch before pausing (default: `60`) |
@@ -273,6 +273,7 @@ Detailed design docs are in the [`docs/`](docs/) directory:
 - [Transitions & Effects Design](docs/superpowers/specs/2026-03-27-transitions-and-effects-design.md) — configurable scene transitions and animation effects
 - [Gemini 3 Flash Upgrade ADR](docs/adr/001-gemini-3-flash-upgrade.md) — architecture decision record
 - [Subject De-duplication ADR](docs/adr/002-subject-deduplication.md) — architecture decision record for in-video + cross-video duplicate avoidance
+- [Gemini 3.8 Flash ADR](docs/adr/004-gemini-3-8-flash.md) — current default text model
 
 Optional **AWS agent skills** for AI-assisted ops (S3, Lambda, IAM, etc.) live under [`.agents/skills/`](.agents/skills/) (see [`AGENTS.md`](AGENTS.md)).
 

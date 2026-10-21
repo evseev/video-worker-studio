@@ -24,7 +24,7 @@ describe("gemini helpers error paths", () => {
       getTextModel({
         genAI: genAI as unknown as Parameters<typeof getTextModel>[0]["genAI"],
       })
-    ).toThrow('Invalid Gemini text model "gemini-2.5-flash"');
+    ).toThrow('Invalid Gemini text model "gemini-3.8-flash"');
   });
 
   it("wraps text generation errors", async () => {
@@ -36,7 +36,7 @@ describe("gemini helpers error paths", () => {
 
     await expect(
       generateTextOrThrow(model as unknown as GenerativeModel, "hello")
-    ).rejects.toThrow('Gemini text generation failed using model "gemini-2.5-flash"');
+    ).rejects.toThrow('Gemini text generation failed using model "gemini-3.8-flash"');
   });
 
   it("wraps embedding model initialization errors", () => {

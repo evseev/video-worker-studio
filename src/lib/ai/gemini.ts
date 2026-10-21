@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, type GenerativeModel, type GenerationConfig } from "@google/generative-ai";
 
-export const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL ?? "gemini-2.5-flash";
+export const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL ?? "gemini-3.8-flash";
 export const GEMINI_EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL ?? "text-embedding-004";
 
 export function createGeminiClient(apiKey?: string): GoogleGenerativeAI {
