@@ -55,3 +55,19 @@ with the Studio checklist in `bundle/metadata.txt`.
 - The DB-backed flow (Inngest + review page) is typechecked, built and unit-tested but has not run end-to-end,
   because the migration is not applied.
 - Multi-language audio tracks must be added in YouTube Studio (no public API); captions and localized titles are automated.
+
+## Update 2026-10-21
+
+- **Fixed:** wrong photo for Erdenetuya Batsukh (Steven Seagal's wife). Causes: no Wikidata portrait, "<name> 2025"
+  queries returned unrelated men, and no sex check. Now: plain-name + couple queries, DataForSEO Google Images,
+  and a Gemini vision check (watermark + sex of the chosen face vs Wikidata). An audit of all 100 v2 photos found two
+  more problems (Sunrise Coigney showed a man, a Jennifer Lopez photo had a watermark); all three slots were repaired
+  and v2 re-rendered.
+- **Database:** migration applied by the owner; `types.ts` updated to match the live schema; Emma's Angle has autopilot
+  enabled; backlog = 20-topic calendar (first item marked shot, it is the v2 video) + the owner's 13 earlier ideas,
+  all tagged with a format.
+- **End-to-end DB test:** the first autopilot project ("50 Iconic Hollywood Fathers and Their Daughters", 50 pairs,
+  0 photos flagged, 52/52 voice check, 11.5 min) is waiting at `/review/1560159e-6ed5-4b1c-8d83-e0b126aa7700`.
+  Approving it runs render → dubs → bundle → Shorts (needs `npm run dev` + the Inngest dev server).
+- **Gemini:** default text model `gemini-3.8-flash` (ADR 004).
+- **Run folders:** `AUTOPILOT_OUT_DIR=/Users/evs/www/video-worker-studio/out/autopilot` (main checkout).

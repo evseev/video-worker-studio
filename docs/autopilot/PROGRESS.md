@@ -49,3 +49,4 @@ Branch: `feature/autopilot` (worktree `.claude/worktrees/autopilot`, from `origi
 - Full run v1 review: spouse slot showed the partner (Ryan/Ethan Hawke), 2 Getty watermarks, ended partnership labelled PARTNER → fixed; v2 run started.
 - Narration QA on v1: 52/52 lines matched (min similarity 0.944).
 - v2 done 19:40 UTC: 9.2 min, 3 flagged photos, 41/487 watermarked candidates avoided, 52/52 voice check. See HANDOFF.md.
+- 2026-10-21: photo fix (plain-name/couple queries, sex+watermark vision check), DataForSEO live, Gemini 3.8 Flash, types updated, autopilot enabled + backlog seeded, DB E2E reached the review gate; merged to develop.
