@@ -31,16 +31,23 @@ export function thenYear(facts: PersonFacts | null, requested?: number | null): 
   return null;
 }
 
-export function queriesForEra(name: string, era: SlotEra, year: number | null): string[] {
-  if (era === "now") return [`${name} 2025`, `${name} recent photo`];
+/**
+ * Search queries for one era. The plain name always comes first: for little-known people
+ * (often the spouses) modifiers such as "2025" make Pinterest return unrelated photos.
+ * Couple queries ("<name> <partner>") find red-carpet photos of the pair; the face matcher
+ * then picks this person's face and excludes the partner's.
+ */
+export function queriesForEra(name: string, era: SlotEra, year: number | null, partners: string[] = []): string[] {
+  const couple = partners.slice(0, 1).map((p) => `${name} ${p}`);
+  if (era === "now") return [name, `${name} 2025`, ...couple];
   if (era === "then") {
     if (year) {
       const decade = Math.floor(year / 10) * 10;
-      return [`${name} ${decade}s`, `young ${name} ${year}`];
+      return [`${name} ${decade}s`, `young ${name} ${year}`, ...couple.map((q) => `${q} ${decade}s`)];
     }
-    return [`young ${name}`, `${name} young photo`];
+    return [`young ${name}`, name, ...couple];
   }
-  return [`${name} portrait`];
+  return [name, ...couple];
 }
 
 function slug(s: string) {
@@ -85,7 +92,8 @@ export async function sourcePersonSlots(params: {
     const k = eraKey(s.era, year);
     if (eraPools.has(k)) continue;
     const pool: ImageCandidate[] = [];
-    for (const q of queriesForEra(name, s.era, year)) {
+    const partners = (params.excludePeople ?? []).filter((p) => p.qid !== facts?.qid).map((p) => p.name);
+    for (const q of queriesForEra(name, s.era, year, partners)) {
       queries.push(q);
       pool.push(...(await searchPinterest(q, path.join(personDir, slug(q)), perQuery)));
       if (isGoogleImagesEnabled()) {

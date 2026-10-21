@@ -99,3 +99,32 @@ describe("partner exclusion", () => {
     expect(partner.flags).toContain("shows the partner, not this person");
   });
 });
+
+import { queriesForEra } from "@/lib/images/source-person";
+import { faceCropRect } from "@/lib/images/photo-check";
+
+describe("search queries", () => {
+  it("always searches the plain name first and adds a couple query", () => {
+    expect(queriesForEra("Erdenetuya Batsukh", "now", null, ["Steven Seagal"])).toEqual([
+      "Erdenetuya Batsukh",
+      "Erdenetuya Batsukh 2025",
+      "Erdenetuya Batsukh Steven Seagal",
+    ]);
+  });
+  it("uses the decade for 'then' slots", () => {
+    expect(queriesForEra("Goldie Hawn", "then", 1985, ["Kurt Russell"])).toEqual([
+      "Goldie Hawn 1980s",
+      "young Goldie Hawn 1985",
+      "Goldie Hawn Kurt Russell 1980s",
+    ]);
+  });
+});
+
+describe("face crop for the sex check", () => {
+  it("stays inside the image", () => {
+    const r = faceCropRect([900, 10, 100, 120], 1000, 800);
+    expect(r.x + r.size).toBeLessThanOrEqual(1000);
+    expect(r.y).toBeGreaterThanOrEqual(0);
+    expect(r.size).toBe(264);
+  });
+});

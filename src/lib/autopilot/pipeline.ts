@@ -4,7 +4,7 @@ import * as os from "os";
 import type { PersonFacts, Relation } from "@/lib/facts/wikidata";
 import { sourcePersonSlots, type PersonSlotRequest } from "@/lib/images/source-person";
 import { faceObjectPosition, slotSize } from "@/lib/images/crop";
-import { detectWatermarks } from "@/lib/images/watermark";
+import { checkPhotos, photoCheckKey, type PhotoCheck } from "@/lib/images/photo-check";
 import type { RankedCandidate } from "@/lib/images/types";
 import { narrateLines } from "@/lib/tts/narration";
 import { stripDeliveryMarkup, type SonioxTag } from "@/lib/tts/soniox";
@@ -283,26 +283,55 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       log(`  photos ${n}/${people.length}: ${person.facts.name} (${res.referenceCount} ref)`);
     });
 
-    // Watermark check (Gemini vision) on the top 4 usable candidates of every slot.
-    const topFiles = Array.from(ranked.values()).flatMap((list) => list.filter((c) => !c.rejected).slice(0, 4).map((c) => c.localPath));
-    let watermarked: Record<string, boolean> = {};
+    // Vision check (Gemini) on the top usable candidates of every slot: stock watermark + sex of the chosen face.
+    const CHECK_TOP = 6;
+    const slotSex = (key: string): PersonFacts["sex"] => {
+      const [i, side] = key.split(":");
+      const p = pairs[Number(i)];
+      return (side === "L" ? p?.left : p?.right)?.sex ?? null;
+    };
+    const toCheck = Array.from(ranked.values()).flatMap((list) =>
+      list
+        .filter((c) => !c.rejected)
+        .slice(0, CHECK_TOP)
+        .map((c) => ({ file: c.localPath, faceBox: c.analysis.faceBox ?? null, width: c.analysis.width, height: c.analysis.height }))
+    );
+    let checks: Record<string, PhotoCheck> = {};
     try {
-      watermarked = await detectWatermarks(topFiles, workDir);
-      const n = Object.values(watermarked).filter(Boolean).length;
-      log(`  watermark check: ${n}/${Object.keys(watermarked).length} candidate photos carry a stock watermark`);
+      checks = await checkPhotos(toCheck, workDir);
+      const all = Object.values(checks);
+      log(`  photo check: ${all.filter((c) => c.watermark).length}/${all.length} watermarked, ${all.filter((c) => c.sex === "unclear").length} unclear faces`);
     } catch (err) {
-      log(`  watermark check skipped: ${err instanceof Error ? err.message : String(err)}`);
+      log(`  photo check skipped: ${err instanceof Error ? err.message : String(err)}`);
     }
+    const checkOf = (c: RankedCandidate) =>
+      checks[photoCheckKey({ file: c.localPath, faceBox: c.analysis.faceBox ?? null })] as PhotoCheck | undefined;
 
     // Choose per slot; then-now uses distinct photos for left and right.
     const usedPaths = new Set<string>();
     const images: NonNullable<PipelineState["images"]> = {};
+    let sexRejected = 0;
     pairs.forEach((_, i) => {
       const choose = (key: string, slot: number): SlotPick => {
-        const all = (ranked.get(key) ?? []).filter((c) => !c.rejected);
-        for (const c of all) if (watermarked[c.localPath]) c.flags.push("stock watermark");
+        const sex = slotSex(key);
+        const checkedAvailable = Object.keys(checks).length > 0;
+        const eligible = (ranked.get(key) ?? [])
+          .filter((c) => !c.rejected)
+          .filter((c) => {
+            const chk = checkOf(c);
+            // With a known sex, only photos whose face was checked and matches are eligible.
+            if (sex && checkedAvailable) {
+              if (!chk) return false;
+              if (chk.sex !== "unclear" && chk.sex !== sex) {
+                sexRejected++;
+                return false;
+              }
+            }
+            return true;
+          });
+        for (const c of eligible) if (checkOf(c)?.watermark) c.flags.push("stock watermark");
         // Clean photos first (stable: keeps rank order within each group).
-        const list = [...all.filter((c) => !watermarked[c.localPath]), ...all.filter((c) => watermarked[c.localPath])];
+        const list = [...eligible.filter((c) => !checkOf(c)?.watermark), ...eligible.filter((c) => checkOf(c)?.watermark)];
         const fresh = list.filter((c) => !usedPaths.has(c.localPath));
         const chosen = fresh[0] ?? list[0] ?? null;
         if (chosen) usedPaths.add(chosen.localPath);
@@ -313,6 +342,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineState>
       };
       images[String(i)] = { left: choose(`${i}:L`, 0), right: choose(`${i}:R`, 1) };
     });
+    if (sexRejected) log(`  ${sexRejected} candidate photo(s) removed: face does not match the person's sex`);
     // Keep the target number of pairs, preferring pairs whose photos are all verified (medium/high),
     // preserving the original (fame) order. Low-confidence pairs only fill gaps and get flagged in review.
     const quality = (i: number) => {
