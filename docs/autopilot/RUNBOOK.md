@@ -27,7 +27,7 @@ Every stage writes `state.json`; re-running the same command resumes after the l
 
 | Variable | Needed for | Status on 2026-10-16 |
 |---|---|---|
-| `GEMINI_API_KEY` | script, translation | present |
+| `GEMINI_API_KEY` (+ `GEMINI_TEXT_MODEL=gemini-3.8-flash`) | script, translation, photo vision checks | present |
 | `SONIOX_API_KEY` | narration (all languages) | present |
 | `PINTEREST_DL_BIN` | photo candidates | present |
 | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | DB-backed autopilot (Inngest) | present |
@@ -59,18 +59,19 @@ To fix something before rendering: run with `--until voice`, open `review.html`,
 Typical cost per 50-pair video: Soniox ≈ $0.40 (≈ 30 min of speech across 3 languages), Gemini ≈ $0.10,
 Pinterest/Wikidata/Commons free. Local render: ~10–20 min on an Apple Silicon Mac.
 
-## DB-backed autopilot (after you apply the migration)
+## DB-backed autopilot
 
-1. Apply `supabase/migrations/20261016120000_autopilot.sql` (Supabase SQL editor or `supabase db push`).
-2. Regenerate types: `supabase gen types typescript --project-id <id> > src/lib/supabase/types.ts`.
-3. Enable the channel and seed the backlog:
-   ```sql
-   UPDATE channels SET autopilot_enabled = true,
-     autopilot_config = '{"weekdays":[1,2,3,4,5],"publishHour":17,"timezone":"America/New_York","locales":["pt-BR","es"],"maxPendingReview":3}'
-   WHERE id = '<channel id>';
-   ```
-   `psql "$DATABASE_URL" -v channel_id=<channel id> -f docs/autopilot/seed-backlog.sql`
-4. Run the app and Inngest dev server (`npm run dev` + `npx inngest-cli@latest dev`).
+State on 2026-10-21: migration applied, `types.ts` updated to match the live schema, Emma's Angle has
+`autopilot_enabled = true` (weekdays 5 PM ET, pt-BR + es, max 3 waiting for review), and the backlog holds the
+20-topic calendar followed by the owner's 13 earlier ideas (all tagged with a format). For another channel:
+
+1. `UPDATE channels SET autopilot_enabled = true, autopilot_config = '{"weekdays":[1,2,3,4,5],"publishHour":17,"timezone":"America/New_York","locales":["pt-BR","es"],"maxPendingReview":3}' WHERE id = '<channel id>';`
+2. Seed ideas with `format_slug` and `pair_count` (`docs/autopilot/seed-backlog.sql` shows the shape).
+3. Types: `supabase gen types typescript --project-id <id> > src/lib/supabase/types.ts` needs a Supabase access token
+   (or `--db-url` with the database password); neither is in `.env.local`, so the last update was made by hand
+   against the live REST schema.
+
+4. Run the app and Inngest dev server (`npx inngest-cli@latest dev -u http://localhost:3000/api/inngest`) (`npm run dev` + `npx inngest-cli@latest dev`).
 5. Weekdays 06:00 ET the cron starts one video per enabled channel; or press **Run autopilot now**
    (`POST /api/autopilot/run {channelId}`).
 6. The dashboard shows **Needs review** → `/review/<projectId>`: flagged pairs first; swap photos, drag to re-crop,
@@ -93,6 +94,7 @@ redeploy the Remotion site after any change in `src/remotion/*`: `npx remotion l
 | Symptom | Fix |
 |---|---|
 | `face-match exited …` | `npm run face-match:setup`; check `scripts/face-match/models/*.onnx` exist |
+| A slot shows the wrong person or sex | photo check (Gemini) removes faces whose sex does not match Wikidata; couple queries + partner exclusion find little-known spouses; check `review.html` |
 | Many "identity not confirmed" photos | add DataForSEO keys (more candidates) or lower `--pairs`; review flags in `review.html` |
 | `[wikidata] HTTP 429` | transient; the client backs off (Retry-After) |
 | Soniox 429 / 5xx | client retries with backoff; 3 concurrent requests max |

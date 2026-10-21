@@ -100,6 +100,10 @@ Required environment variables:
 | `REMOTION_OUTPUT_BUCKET` | Optional. When set, Lambda output deletion requires the URL’s bucket to match this value (and key `videos/{projectId}.mp4`). When unset, deletion still runs for recognized S3 URL shapes with that key—set this in production to constrain which bucket can be targeted. |
 | `AWS_ACCESS_KEY_ID` | AWS credentials for Lambda render calls |
 | `AWS_SECRET_ACCESS_KEY` | AWS credentials for Lambda render calls |
+| `SONIOX_API_KEY` | Autopilot narration (Soniox TTS) and narration QA (Soniox speech-to-text) |
+| `DataForSEO_API_LOGIN`, `DataForSEO_API_PASSWORD` | Optional. Extra Google Images photo candidates for the autopilot (DataForSEO Live API) |
+| `AUTOPILOT_OUT_DIR` | Optional. Where autopilot runs are stored (default `out/autopilot`) |
+| `YOUTUBE_OAUTH_CLIENT_ID`, `YOUTUBE_OAUTH_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` | Optional. Autopilot YouTube uploads (after the API audit) |
 
 ### 4. Set up the database
 
@@ -116,6 +120,8 @@ You'll also need RPC functions used by the worker (all `SECURITY DEFINER` to byp
 - `worker_fetch_channel_for_project(p_project_id)` — channel + watermark context for renders; **EXECUTE granted to `service_role` only** (the worker calls it with `SUPABASE_SERVICE_ROLE_KEY`).
 
 If you use the local render fallback (`RENDER_BACKEND=local`), final MP4 files are written to `public/local_renders` and served directly from your app (for example `/local_renders/<projectId>.mp4`) instead of being uploaded to Supabase Storage.
+
+Autopilot (migration `20261016120000_autopilot.sql`) adds review/publish columns, `subject_facts`, `youtube_connections`, the `render-assets` bucket and service-role-only RPCs (`autopilot_*`, `worker_update_autopilot`, `worker_set_publish_result`, `worker_*_youtube_*`, `worker_cache_subject_facts`).
 
 ### 5. Run the dev server
 
@@ -143,6 +149,9 @@ The app runs at [http://localhost:3000](http://localhost:3000) and the Inngest d
 | `npm run lint` | Run ESLint |
 | `npm run remotion:preview` | Open Remotion Studio for visual previewing |
 | `npm run remotion:render` | Manually render a video to `out/video.mp4` |
+| `npm run autopilot:local -- --topic "…" --format couples --pairs 50` | Produce a complete video bundle without the database (see `docs/autopilot/RUNBOOK.md`) |
+| `npm run face-match:setup` | One-time setup of the face-verification CLI used by the autopilot |
+| `npm test` | Run the Vitest suite |
 
 ## Project Structure
 

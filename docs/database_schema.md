@@ -108,6 +108,23 @@ All tables must have RLS enabled.
 *   **Channels** and channel-derived rows (`channel_topic_ideas`, `channel_scene_presets`, `video_subjects`): Policies tie access to owning `channels.user_id = auth.uid()` (or equivalent `EXISTS` on `channels`).
 *   Workers (Inngest) use SECURITY DEFINER RPC functions to bypass RLS for background updates (for example setting `video_url`, inserting scenes, inserting `video_subjects`). The channel read RPC `worker_fetch_channel_for_project` is restricted to `service_role` so project UUIDs in URLs cannot be used to scrape another user’s channel metadata via the public anon key.
 
+## 7. Autopilot (migration `20261016120000_autopilot.sql`, applied 2026-10-21)
+
+| Table | Added columns / purpose |
+|---|---|
+| `projects` | `autopilot` bool, `format_slug` (couples / parent-child / then-now / mega), `autopilot_run_dir` (run folder under `AUTOPILOT_OUT_DIR`), `autopilot_summary` jsonb, `review_status` (pending_review / approved / rejected), `thumbnail_url`, `youtube_video_id`, `publish_at`, `experiment_arm`; status `awaiting_review` added |
+| `channels` | `autopilot_enabled`, `autopilot_config` jsonb (weekdays, publishHour, timezone, locales, maxPendingReview, musicId, seriesName, hostMode) |
+| `channel_topic_ideas` | `format_slug`, `pair_count` (6–150), `series_key`, `template_id` |
+| `subject_facts` | Wikidata facts cache (qid, name, facts, fetched_at); RLS on, no client policies |
+| `youtube_connections` | OAuth tokens per channel, `upload_enabled` (keep false until the API audit passes); RLS on, no client policies |
+
+RPCs, EXECUTE for `service_role` only: `autopilot_list_enabled_channels()`, `autopilot_claim_next_idea(channel)`
+(oldest backlog row, `FOR UPDATE SKIP LOCKED`), `autopilot_create_project(channel, idea, payload)`,
+`worker_update_autopilot(project, status, review_status, run_dir, summary)`, `worker_set_publish_result(...)`,
+`worker_cache_subject_facts(rows)`, `worker_save_youtube_tokens(...)`, `worker_get_youtube_connection(channel)`.
+For signed-in owners: `youtube_connection_status(channel)` (never returns tokens).
+Storage: public-read bucket `render-assets` (service-role writes).
+
 ## Application deletes
 
 Deleting a project from the app (`DELETE /api/projects/[id]`, authenticated, owner-only) removes the `projects` row. Child `scenes` rows are removed via **ON DELETE CASCADE** on `scenes.project_id`. The route handler also attempts to delete the rendered MP4 in Supabase Storage (when the URL matches the expected shape) and to remove local temp assets under `TMP_ASSETS_PATH`; failures there are surfaced as warnings but do not block row deletion.
