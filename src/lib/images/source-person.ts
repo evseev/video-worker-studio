@@ -93,12 +93,16 @@ export async function sourcePersonSlots(params: {
     if (eraPools.has(k)) continue;
     const pool: ImageCandidate[] = [];
     const partners = (params.excludePeople ?? []).filter((p) => p.qid !== facts?.qid).map((p) => p.name);
-    for (const q of queriesForEra(name, s.era, year, partners)) {
+    const eraQueries = queriesForEra(name, s.era, year, partners);
+    for (const q of eraQueries) {
       queries.push(q);
       pool.push(...(await searchPinterest(q, path.join(personDir, slug(q)), perQuery)));
-      if (isGoogleImagesEnabled()) {
-        pool.push(...(await searchGoogleImages(q, path.join(personDir, `g-${slug(q)}`), perQuery)));
-      }
+    }
+    // Google Images (DataForSEO, ≈ $0.002/query): the first query of each era only — the plain name for
+    // "now" slots, which is where little-known people need more candidates.
+    if (isGoogleImagesEnabled()) {
+      const q = eraQueries[0];
+      pool.push(...(await searchGoogleImages(q, path.join(personDir, `g-${slug(q)}`), perQuery)));
     }
     if (s.era !== "then") pool.push(...commons);
     eraPools.set(k, pool);

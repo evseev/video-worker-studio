@@ -128,3 +128,20 @@ describe("face crop for the sex check", () => {
     expect(r.size).toBe(264);
   });
 });
+
+import { pickImageItems } from "@/lib/images/sources/google-images";
+
+describe("Google Images item filter", () => {
+  it("keeps image results and skips stock agencies", () => {
+    const picked = pickImageItems(
+      [
+        { type: "images_search", source_url: "https://media.gettyimages.com/a.jpg", url: "https://getty" },
+        { type: "images_search", source_url: "https://people.com/x.jpg", url: "https://people.com/p" },
+        { type: "carousel", source_url: "https://x.com/y.jpg" },
+        { type: "images_search", source_url: null },
+      ],
+      5
+    );
+    expect(picked).toEqual([{ source: "https://people.com/x.jpg", page: "https://people.com/p" }]);
+  });
+});

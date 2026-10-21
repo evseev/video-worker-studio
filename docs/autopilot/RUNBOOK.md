@@ -31,7 +31,7 @@ Every stage writes `state.json`; re-running the same command resumes after the l
 | `SONIOX_API_KEY` | narration (all languages) | present |
 | `PINTEREST_DL_BIN` | photo candidates | present |
 | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | DB-backed autopilot (Inngest) | present |
-| `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | extra Google Images candidates (auto-enabled) | missing |
+| `DataForSEO_API_LOGIN`, `DataForSEO_API_PASSWORD` | extra Google Images candidates via the Live API (≈ $0.002 per person-era, auto-enabled) | present |
 | `YOUTUBE_OAUTH_CLIENT_ID`, `YOUTUBE_OAUTH_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` | YouTube upload | missing |
 | `FAL_KEY` (+ optional `HOST_I2V_MODEL`, `HOST_LIPSYNC_MODEL`) | Phase 3 animated host | missing |
 | `NARRATION_VOICE_EN` / `_PT` / `_ES` | override voices (default Sloane / Larissa / Lucia) | optional |
